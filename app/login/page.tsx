@@ -1,4 +1,5 @@
 import { LoginForm } from './login-form'
+import Image from 'next/image'
 
 export const metadata = {
   title: 'Login | CRM Multi-Unidades',
@@ -10,6 +11,14 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
+          <div className='flex justify-center mb-6'>
+            <Image
+              src={'simonetto.webp'}
+              width={225}
+              height={51}
+              alt=''
+            />
+          </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             CRM Multi-Unidades
           </h1>
@@ -17,7 +26,7 @@ export default function LoginPage() {
             Acesse o sistema com suas credenciais
           </p>
         </div>
-        
+
         <LoginForm />
       </div>
     </main>
