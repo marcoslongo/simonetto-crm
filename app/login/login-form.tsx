@@ -4,7 +4,13 @@ import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
 import { AlertCircle, Loader2, Mail, Lock } from 'lucide-react'
 import { loginAction, type LoginState } from './actions'
 
@@ -22,6 +28,7 @@ export function LoginForm() {
           Digite seu email e senha para acessar o sistema
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form action={formAction} className="space-y-4">
           {state.error && (
@@ -30,7 +37,7 @@ export function LoginForm() {
               <span>{state.error}</span>
             </div>
           )}
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -42,12 +49,11 @@ export function LoginForm() {
                 placeholder="seu@email.com"
                 required
                 className="pl-10"
-                autoComplete="email"
                 disabled={isPending}
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
             <div className="relative">
@@ -59,12 +65,11 @@ export function LoginForm() {
                 placeholder="••••••••"
                 required
                 className="pl-10"
-                autoComplete="current-password"
                 disabled={isPending}
               />
             </div>
           </div>
-          
+
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? (
               <>

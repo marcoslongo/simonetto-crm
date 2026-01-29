@@ -13,7 +13,7 @@ import type {
 // CONFIGURAÇÃO DA API
 // =====================================
 
-const API_BASE_URL = process.env.WORDPRESS_API_URL || 'https://seu-site.com.br/wp-json'
+const API_BASE_URL = process.env.WORDPRESS_API_URL || 'https://manager.simonetto.com.br/wp-json'
 
 // =====================================
 // CLIENTE DE API (SERVER-SIDE)
@@ -40,7 +40,7 @@ async function fetchApi<T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
-    cache: options.cache || 'no-store', // Sempre busca dados frescos
+    cache: options.cache || 'no-store',
   })
 
   if (!response.ok) {
