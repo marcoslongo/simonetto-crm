@@ -21,10 +21,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
   
-  // Busca leads com filtro opcional de loja
   const leadsResponse = getFilteredLeads(lojaId, page, 10)
 
-  // Nome da loja selecionada
   const selectedLoja = lojaId
     ? mockLojas.find((l) => l.id === lojaId)?.nome
     : undefined

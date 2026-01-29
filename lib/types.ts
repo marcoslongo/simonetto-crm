@@ -11,7 +11,7 @@ export interface User {
   email: string
   name: string
   role: UserRole
-  loja_id: number | null // ID da loja associada (null para admin)
+  loja_id: number | null
   loja_nome?: string
 }
 
@@ -34,33 +34,32 @@ export interface Loja {
 
 // Lead
 export interface Lead {
-  id: number
-  nome: string
-  email: string
-  telefone: string
-  cidade: string | null
-  estado: string | null
-  interesse: string | null
-  expectativa_investimento: string | null
-  loja_regiao: string | null
-  mensagem: string | null
-  pipefy_card_id: string | null
-  loja_id: number | null
-  loja_nome?: string
-  loja_cidade?: string
-  loja_estado?: string
-  data_criacao: string
-  data_atualizacao: string
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  cidade: string;
+  estado: string;
+  interesse: string;
+  expectativa_investimento: string;
+  loja_regiao: string;
+  mensagem: string;
+  pipefy_card_id: string | null;
+  loja_id: string;
+  data_criacao: string;
+  data_atualizacao: string;
+  loja_nome: string;
+  loja_cidade: string;
+  loja_estado: string;
 }
 
-// Resposta de listagem de leads
 export interface LeadsResponse {
-  success: boolean
-  leads: Lead[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
+  success: boolean;
+  leads: Lead[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
 
 // Resposta de lojas
