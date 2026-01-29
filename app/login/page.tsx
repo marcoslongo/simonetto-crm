@@ -19,15 +19,6 @@ export default function LoginPage() {
         </div>
         
         <LoginForm />
-
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p className="font-medium mb-2">Usuários de demonstração:</p>
-          <div className="space-y-1">
-            <p><code className="bg-muted px-1.5 py-0.5 rounded text-xs">admin@empresa.com</code> / admin123</p>
-            <p><code className="bg-muted px-1.5 py-0.5 rounded text-xs">loja1@empresa.com</code> / loja123</p>
-            <p><code className="bg-muted px-1.5 py-0.5 rounded text-xs">loja2@empresa.com</code> / loja123</p>
-          </div>
-        </div>
       </div>
     </main>
   )
