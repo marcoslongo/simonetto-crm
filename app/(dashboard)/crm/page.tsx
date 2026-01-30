@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { LeadsTable } from '@/components/dashboard/leads-table'
-import { getFilteredLeads, getDashboardStats } from '@/lib/mock-data'
+import { getDashboardStats, getLeads } from '@/lib/api' // Importando da sua API real
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const metadata = {
@@ -11,16 +11,18 @@ export const metadata = {
 
 export default async function CrmDashboardPage() {
   const user = await requireAuth()
-  console.log(user);
   
-  // Usuários de loja só veem seus próprios dados
-  const lojaId = user.role ? user.loja_id : undefined
+  // Se for admin, o lojaId fica null/undefined para trazer tudo.
+  // Se for loja, usa o ID vinculado ao usuário.
+  const lojaId = user.role === 'loja' ? (user.loja_id ?? undefined) : undefined
   
-  // Busca estatísticas e últimos leads
-  const stats = getDashboardStats(lojaId)
-  const recentLeads = getFilteredLeads(lojaId, 1, 5)
+  // Busca dados reais da API em paralelo para performance
+  const [stats, recentLeadsResponse] = await Promise.all([
+    getDashboardStats(lojaId),
+    getLeads({ page: 1, per_page: 5, loja_id: lojaId })
+  ])
 
-  // Formata a última captura
+  // Formata a data da última captura
   const ultimaCaptura = stats.ultimoLead
     ? new Date(stats.ultimoLead.data_criacao).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -36,8 +38,8 @@ export default async function CrmDashboardPage() {
         <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">
           {user.role === 'loja'
-            ? `Visão geral da sua unidade: ${user.loja_nome}`
-            : 'Visão geral de todas as unidades'}
+            ? `Visão geral da sua unidade: ${user.loja_nome || user.name}`
+            : 'Visão geral de todas as unidades (Administrador)'}
         </p>
       </div>
 
@@ -51,12 +53,12 @@ export default async function CrmDashboardPage() {
         <CardHeader>
           <CardTitle>Leads Recentes</CardTitle>
           <CardDescription>
-            Últimos leads capturados {user.role === 'loja' ? 'na sua unidade' : ''}
+            Últimos leads capturados {user.role === 'loja' ? 'na sua unidade' : 'em todas as unidades'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <LeadsTable
-            leads={recentLeads.leads}
+            leads={recentLeadsResponse.leads}
             basePath="/crm"
             showLoja={user.role === 'administrator'}
           />
