@@ -5,6 +5,10 @@ import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { getLeads, getLojas } from '@/lib/leads-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartLineInteractive } from '@/components/dashboard/chart-line'
+import { ChartPieSeparatorNone } from '@/components/dashboard/pie-chart'
+import { ChartBarLabel } from '@/components/dashboard/bar-chart'
+import { ChartBarMixed } from '@/components/dashboard/bar-chart-mixed'
+import { StatsCards } from '@/components/dashboard/stats-cards'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -39,8 +43,18 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           Gerencie os leads de todas as unidades
         </p>
       </div>
+      <div>
+        <StatsCards totalLeads={0} leadsHoje={0}/>
+      </div>
+      <div className='grid grid-cols-2 gap-4'>
+        <ChartLineInteractive />
+        <ChartPieSeparatorNone />
+      </div>
 
-      <ChartLineInteractive />
+      <div className='grid grid-cols-2 gap-4'>
+        <ChartBarLabel />
+        <ChartBarMixed />
+      </div>
 
       <Card>
         <CardHeader>

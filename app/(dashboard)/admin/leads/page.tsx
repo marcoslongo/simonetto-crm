@@ -53,7 +53,6 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <CardContent className="space-y-4">
           <LeadsTable
             leads={leadsResponse.leads}
-            basePath="/admin"
             showLoja={true}
           />
           
