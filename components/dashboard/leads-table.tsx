@@ -1,13 +1,21 @@
+"use client";
+
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Lead } from "@/lib/types";
+import { LeadDialog } from "./lead-dialog";
 
 interface LeadsTableProps {
   leads: Lead[];
-  basePath: string;
   showLoja?: boolean;
 }
 
@@ -27,7 +35,7 @@ const investmentLabels: Record<string, string> = {
   "acima-250k": "Acima R$ 250k",
 };
 
-export function LeadsTable({ leads, basePath, showLoja = false }: LeadsTableProps) {
+export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
   return (
     <div className="rounded-md border">
       <Table>
@@ -47,19 +55,10 @@ export function LeadsTable({ leads, basePath, showLoja = false }: LeadsTableProp
           {leads.map((lead) => (
             <TableRow key={lead.id}>
               <TableCell>
-                <Link
-                  href={`${basePath}/leads/${lead.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {lead.nome}
-                </Link>
+                <LeadDialog lead={lead} />
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {lead.email}
-              </TableCell>
-              <TableCell className="text-sm">
-                {lead.telefone}
-              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">{lead.email}</TableCell>
+              <TableCell className="text-sm">{lead.telefone}</TableCell>
               <TableCell className="text-sm">
                 {lead.cidade}, {lead.estado}
               </TableCell>
@@ -71,11 +70,7 @@ export function LeadsTable({ leads, basePath, showLoja = false }: LeadsTableProp
               <TableCell className="text-sm">
                 {investmentLabels[lead.expectativa_investimento] || lead.expectativa_investimento}
               </TableCell>
-              {showLoja && (
-                <TableCell className="text-sm">
-                  {lead.loja_nome}
-                </TableCell>
-              )}
+              {showLoja && <TableCell className="text-sm">{lead.loja_nome}</TableCell>}
               <TableCell className="text-sm text-muted-foreground">
                 {formatDistanceToNow(new Date(lead.data_criacao), {
                   addSuffix: true,
