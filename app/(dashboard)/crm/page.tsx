@@ -11,9 +11,10 @@ export const metadata = {
 
 export default async function CrmDashboardPage() {
   const user = await requireAuth()
+  console.log(user);
   
   // Usuários de loja só veem seus próprios dados
-  const lojaId = user.role === 'loja' ? user.loja_id : undefined
+  const lojaId = user.role ? user.loja_id : undefined
   
   // Busca estatísticas e últimos leads
   const stats = getDashboardStats(lojaId)

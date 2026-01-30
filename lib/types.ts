@@ -2,24 +2,34 @@
 // TIPOS DO CRM MULTI-UNIDADES
 // =====================================
 
-// Roles de usuário
-export type UserRole = 'administrator' | 'loja'
+export type UserRole = 'administrator' | 'loja';
 
-// Usuário autenticado
-export interface User {
-  id: number
-  email: string
-  name: string
-  role: UserRole
-  loja_id: number | null
-  loja_nome?: string
+export interface AuthResponse {
+  token: string;
+  user_email: string;
+  user_nicename: string;
+  user_display_name: string;
+  user_id: number;
+  role: string[];
+  acf: {
+    loja_id: number | string | null;
+  };
 }
 
-// Sessão do usuário
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  nicename: string;
+  role: UserRole;
+  loja_id: number | null;
+  loja_nome?: string;
+}
+
 export interface Session {
-  user: User
-  token: string
-  expires: string
+  user: User;
+  token: string;
+  expires: string;
 }
 
 // Loja

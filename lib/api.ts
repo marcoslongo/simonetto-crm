@@ -6,12 +6,9 @@ import type {
   LojasResponse, 
   LeadsFilters,
   User,
-  Session
+  Session,
+  AuthResponse
 } from './types'
-
-// =====================================
-// CONFIGURAÇÃO DA API
-// =====================================
 
 const API_BASE_URL = process.env.WORDPRESS_API_URL || 'https://manager.simonetto.com.br/wp-json'
 
@@ -27,14 +24,14 @@ async function fetchApi<T>(
   const cookieStore = await cookies()
   const token = cookieStore.get('auth_token')?.value
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
+  const headers = new Headers(options.headers)
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
   }
 
-  // Adiciona autenticação se necessário
   if (requireAuth && token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers.set('Authorization', `Bearer ${token}`)
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -59,7 +56,6 @@ export async function authenticateUser(
   username: string, 
   password: string
 ): Promise<Session> {
-  // Usa Application Passwords ou JWT do WordPress
   const response = await fetch(`${API_BASE_URL}/jwt-auth/v1/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -71,39 +67,24 @@ export async function authenticateUser(
     throw new Error(error.message || 'Credenciais inválidas')
   }
 
-  const data = await response.json()
+  const data: AuthResponse = await response.json()
   
-  // Busca informações adicionais do usuário (loja_id, role)
-  const userInfo = await fetchUserInfo(data.token)
+  const normalizedRole = data.role.includes('administrator') ? 'administrator' : 'loja'
+
+  const user: User = {
+    id: data.user_id,
+    email: data.user_email,
+    name: data.user_display_name,
+    nicename: data.user_nicename,
+    role: normalizedRole,
+    loja_id: data.acf?.loja_id ? Number(data.acf.loja_id) : null,
+    loja_nome: data.user_display_name
+  }
 
   return {
-    user: userInfo,
+    user,
     token: data.token,
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
-  }
-}
-
-async function fetchUserInfo(token: string): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/wp/v2/users/me?context=edit`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-
-  if (!response.ok) {
-    throw new Error('Falha ao buscar informações do usuário')
-  }
-
-  const wpUser = await response.json()
-  
-  // Determina o role do usuário
-  const isAdmin = wpUser.roles?.includes('administrator')
-  
-  return {
-    id: wpUser.id,
-    email: wpUser.email,
-    name: wpUser.name,
-    role: isAdmin ? 'administrator' : 'loja',
-    loja_id: wpUser.meta?.loja_id || null,
-    loja_nome: wpUser.meta?.loja_nome || undefined,
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   }
 }
 
@@ -129,16 +110,16 @@ export async function getLeads(filters: LeadsFilters = {}): Promise<LeadsRespons
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
   if (filters.email) params.set('email', filters.email)
-  if (filters.loja_id) params.set('loja_id', String(filters.loja_id))
+  
+  // Só adiciona o filtro de loja_id se ele for fornecido
+  if (filters.loja_id !== undefined && filters.loja_id !== null) {
+    params.set('loja_id', String(filters.loja_id))
+  }
 
   const queryString = params.toString()
   const endpoint = `/api/v1/leads${queryString ? `?${queryString}` : ''}`
   
   return fetchApi<LeadsResponse>(endpoint)
-}
-
-export async function getLeadById(id: number): Promise<LeadResponse> {
-  return fetchApi<LeadResponse>(`/api/v1/leads/${id}`)
 }
 
 // =====================================
