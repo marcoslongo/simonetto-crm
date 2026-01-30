@@ -30,7 +30,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             width={200}
             height={30}
             alt='Simonetto'
-            src={'simonetto-white.webp'}
+            src={'/simonetto-white.webp'}
           />
           {!isAdmin && user.loja_nome && (
             <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
