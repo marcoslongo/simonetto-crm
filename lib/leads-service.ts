@@ -106,3 +106,20 @@ export async function getFaturamentoStats(lojaId?: number) {
   const leads = await getAllLeads(lojaId);
   return groupLeadsByFaturamento(leads);
 }
+
+export function groupLeadsByInteresse(leads: Lead[]) {
+  const grupos: Record<string, number> = {}
+
+  for (const lead of leads) {
+    const interesse = lead.interesse?.trim() || "Não informado"
+
+    grupos[interesse] = (grupos[interesse] || 0) + 1
+  }
+
+  return grupos
+}
+
+export async function getInteresseStats(lojaId?: number) {
+  const leads = await getAllLeads(lojaId)
+  return groupLeadsByInteresse(leads)
+}
