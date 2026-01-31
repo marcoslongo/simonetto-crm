@@ -6,9 +6,9 @@ export async function getLeads(
   lojaId?: number
 ): Promise<LeadsResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  
+
   let url = `${baseUrl}/api/leads?page=${page}&per_page=${perPage}`;
-  
+
   if (lojaId) {
     url += `&loja_id=${lojaId}`;
   }
@@ -22,7 +22,7 @@ export async function getLeads(
   }
 
   const data: LeadsResponse = await res.json();
-  
+
   if (!data.success) {
     throw new Error("Resposta da API indica falha");
   }
@@ -32,7 +32,7 @@ export async function getLeads(
 
 export async function getLojas() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  
+
   const res = await fetch(`${baseUrl}/api/lojas`, {
     cache: "no-store",
   });
@@ -44,8 +44,7 @@ export async function getLojas() {
   return res.json();
 }
 
-
-export async function getLeadsStats(lojaId?: number) {
+export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
@@ -54,10 +53,14 @@ export async function getLeadsStats(lojaId?: number) {
   }
 
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("Erro ao buscar estatísticas de leads");
+  if (!res.ok) throw new Error("Erro ao buscar todos os leads");
 
   const data = await res.json();
-  const leads: Lead[] = data.leads;
+  return data.leads || [];
+}
+
+export async function getLeadsStats(lojaId?: number) {
+  const leads = await getAllLeads(lojaId);
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -85,4 +88,21 @@ export function getLastLeadDate(leads: Lead[]): string | null {
   });
 
   return lastLead.data_criacao;
+}
+
+export function groupLeadsByFaturamento(leads: Lead[]) {
+  const grupos: Record<string, number> = {};
+
+  for (const lead of leads) {
+    const faixa = lead.expectativa_investimento?.trim() || "Não informado";
+
+    grupos[faixa] = (grupos[faixa] || 0) + 1;
+  }
+
+  return grupos;
+}
+
+export async function getFaturamentoStats(lojaId?: number) {
+  const leads = await getAllLeads(lojaId);
+  return groupLeadsByFaturamento(leads);
 }

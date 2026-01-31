@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsTable } from '@/components/dashboard/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
-import { getLeadsStats, getLeads, getLojas } from '@/lib/leads-service'
+import { getLeadsStats, getLeads, getLojas, groupLeadsByFaturamento, getFaturamentoStats } from '@/lib/leads-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartLineInteractive } from '@/components/dashboard/chart-line'
 import { ChartPieSeparatorNone } from '@/components/dashboard/pie-chart'
@@ -27,11 +27,21 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
 
-  const [leadsResponse, lojasData, stats] = await Promise.all([
+  const [leadsResponse, lojasData, stats, faturamentoPorFaixa] = await Promise.all([
     getLeads(page, 10, lojaId),
     getLojas().catch(() => ({ lojas: [] })),
     getLeadsStats(lojaId),
+    getFaturamentoStats(lojaId),
   ])
+
+  const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
+    ([faixa, total], index) => ({
+      faixa,
+      total,
+      fill: `var(--chart-${index + 1})`,
+    })
+  )
+
 
   const selectedLoja =
     lojaId && leadsResponse.leads.length > 0
@@ -55,7 +65,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
       <div className="grid grid-cols-2 gap-4">
         <ChartLineInteractive />
-        <ChartPieSeparatorNone />
+        <ChartPieSeparatorNone data={faturamentoChartData} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
