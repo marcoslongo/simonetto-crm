@@ -15,7 +15,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-interface ChartBarFaturamentoProps {
+interface ChartBarInvestProps {
   data: {
     faixa: string
     total: number
@@ -28,11 +28,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartBarFaturamento({ data }: ChartBarFaturamentoProps) {
+export function ChartBarInvest({ data }: ChartBarInvestProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Leads por Faturamento</CardTitle>
+        <CardTitle>Leads por Investimento</CardTitle>
         <CardDescription>Distribuição por faixa</CardDescription>
       </CardHeader>
 

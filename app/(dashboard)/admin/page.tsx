@@ -9,7 +9,7 @@ import { ChartBarLabel } from '@/components/dashboard/bar-chart'
 import { ChartBarMixed } from '@/components/dashboard/bar-chart-mixed'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
-import { ChartBarFaturamento } from '@/components/dashboard/chart-bar-faturamento'
+import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -64,7 +64,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
       <div className="grid grid-cols-2 gap-4">
         <ChartLineInteractive />
-        <ChartBarFaturamento data={faturamentoChartData} />
+        <ChartBarInvest data={faturamentoChartData} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
