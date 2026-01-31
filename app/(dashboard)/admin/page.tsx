@@ -2,14 +2,14 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsTable } from '@/components/dashboard/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
-import { getLeadsStats, getLeads, getLojas, groupLeadsByFaturamento, getFaturamentoStats } from '@/lib/leads-service'
+import { getLeadsStats, getLeads, getLojas, getFaturamentoStats } from '@/lib/leads-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartLineInteractive } from '@/components/dashboard/chart-line'
-import { ChartPieSeparatorNone } from '@/components/dashboard/pie-chart'
 import { ChartBarLabel } from '@/components/dashboard/bar-chart'
 import { ChartBarMixed } from '@/components/dashboard/bar-chart-mixed'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
+import { ChartBarFaturamento } from '@/components/dashboard/chart-bar-faturamento'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -35,10 +35,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   ])
 
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
-    ([faixa, total], index) => ({
+    ([faixa, total]) => ({
       faixa,
       total,
-      fill: `var(--chart-${index + 1})`,
     })
   )
 
@@ -65,7 +64,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
       <div className="grid grid-cols-2 gap-4">
         <ChartLineInteractive />
-        <ChartPieSeparatorNone data={faturamentoChartData} />
+        <ChartBarFaturamento data={faturamentoChartData} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">

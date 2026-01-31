@@ -1,6 +1,6 @@
 "use client"
 
-import { Pie, PieChart } from "recharts"
+import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import {
   Card,
   CardContent,
@@ -15,11 +15,10 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-interface PieChartProps {
+interface ChartBarFaturamentoProps {
   data: {
     faixa: string
     total: number
-    fill: string
   }[]
 }
 
@@ -29,31 +28,42 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartPieSeparatorNone({ data }: PieChartProps) {
+export function ChartBarFaturamento({ data }: ChartBarFaturamentoProps) {
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="items-center pb-0">
+    <Card>
+      <CardHeader>
         <CardTitle>Leads por Faturamento</CardTitle>
         <CardDescription>Distribuição por faixa</CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-62.5"
-        >
-          <PieChart>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 0 }}
+          >
+            <YAxis
+              dataKey="faixa"
+              type="category"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+            />
+
+            <XAxis dataKey="total" type="number" hide />
+
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent />}
             />
-            <Pie
-              data={data}
+
+            <Bar
               dataKey="total"
-              nameKey="faixa"
-              stroke="0"
+              radius={5}
+              fill="var(--chart-1)"
             />
-          </PieChart>
+          </BarChart>
         </ChartContainer>
       </CardContent>
     </Card>
