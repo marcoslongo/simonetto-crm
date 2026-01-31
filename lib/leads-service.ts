@@ -1,4 +1,4 @@
-import { LeadsResponse } from "./types";
+import { Lead, LeadsResponse } from "./types";
 
 export async function getLeads(
   page = 1,
@@ -42,4 +42,47 @@ export async function getLojas() {
   }
 
   return res.json();
+}
+
+
+export async function getLeadsStats(lojaId?: number) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+  let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
+  if (lojaId) {
+    url += `&loja_id=${lojaId}`;
+  }
+
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("Erro ao buscar estatísticas de leads");
+
+  const data = await res.json();
+  const leads: Lead[] = data.leads;
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const leadsHoje = leads.filter(lead => {
+    const d = new Date(lead.data_criacao);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === hoje.getTime();
+  }).length;
+
+  return {
+    total: leads.length,
+    today: leadsHoje,
+    ultimaCaptura: getLastLeadDate(leads),
+  };
+}
+
+export function getLastLeadDate(leads: Lead[]): string | null {
+  if (!leads.length) return null;
+
+  const lastLead = leads.reduce((latest, current) => {
+    return new Date(current.data_criacao) > new Date(latest.data_criacao)
+      ? current
+      : latest;
+  });
+
+  return lastLead.data_criacao;
 }

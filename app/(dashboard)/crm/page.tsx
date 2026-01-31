@@ -59,7 +59,6 @@ export default async function CrmDashboardPage() {
         <CardContent>
           <LeadsTable
             leads={recentLeadsResponse.leads}
-            basePath="/crm"
             showLoja={user.role === 'administrator'}
           />
         </CardContent>
