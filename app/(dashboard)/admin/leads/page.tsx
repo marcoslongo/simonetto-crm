@@ -4,6 +4,7 @@ import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { getFilteredLeads, mockLojas } from '@/lib/mock-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getLeads, getLojas } from '@/lib/leads-service'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -21,11 +22,18 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
   
-  const leadsResponse = getFilteredLeads(lojaId, page, 10)
+  const [
+      leadsResponse,
+      lojasData,
+    ] = await Promise.all([
+      getLeads(page, 10, lojaId),
+      getLojas().catch(() => ({ lojas: [] })),
+    ])
 
-  const selectedLoja = lojaId
-    ? mockLojas.find((l) => l.id === lojaId)?.nome
-    : undefined
+  const selectedLoja =
+    lojaId && leadsResponse.leads.length > 0
+      ? leadsResponse.leads[0].loja_nome
+      : undefined
 
   return (
     <div className="space-y-6">
@@ -47,21 +55,33 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                   : `Total de ${leadsResponse.total} leads`}
               </CardDescription>
             </div>
-            <LojaFilter lojas={mockLojas} selectedLojaId={lojaId} />
+
+            {lojasData.lojas?.length > 0 && (
+              <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
+            )}
           </div>
         </CardHeader>
+
         <CardContent className="space-y-4">
-          <LeadsTable
-            leads={leadsResponse.leads}
-            showLoja={true}
-          />
-          
-          <LeadsPagination
-            currentPage={leadsResponse.page}
-            totalPages={leadsResponse.total_pages}
-            total={leadsResponse.total}
-            perPage={leadsResponse.per_page}
-          />
+          {leadsResponse.leads.length > 0 ? (
+            <>
+              <LeadsTable
+                leads={leadsResponse.leads}
+                showLoja
+              />
+
+              <LeadsPagination
+                currentPage={leadsResponse.page}
+                totalPages={leadsResponse.total_pages}
+                total={leadsResponse.total}
+                perPage={leadsResponse.per_page}
+              />
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhum lead encontrado
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

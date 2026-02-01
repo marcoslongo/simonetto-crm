@@ -55,11 +55,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))
     .sort((a, b) => b.total - a.total)
-
-  const selectedLoja =
-    lojaId && leadsResponse.leads.length > 0
-      ? leadsResponse.leads[0].loja_nome
-      : undefined
+  
 
   const lojaChartData = Object.entries(lojasGroup)
     .map(([loja, total]) => ({
@@ -96,47 +92,6 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <ChartLeadsPorLoja data={lojaChartData} />
         <ChartPieInteresse data={interesseChartData} />
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Leads</CardTitle>
-              <CardDescription>
-                {selectedLoja
-                  ? `Filtrando por: ${selectedLoja}`
-                  : `Total de ${leadsResponse.total} leads`}
-              </CardDescription>
-            </div>
-
-            {lojasData.lojas?.length > 0 && (
-              <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {leadsResponse.leads.length > 0 ? (
-            <>
-              <LeadsTable
-                leads={leadsResponse.leads}
-                showLoja
-              />
-
-              <LeadsPagination
-                currentPage={leadsResponse.page}
-                totalPages={leadsResponse.total_pages}
-                total={leadsResponse.total}
-                perPage={leadsResponse.per_page}
-              />
-            </>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhum lead encontrado
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }
