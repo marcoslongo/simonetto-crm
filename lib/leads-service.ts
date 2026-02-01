@@ -141,3 +141,34 @@ export async function getLojaStats(lojaId?: number) {
   const leads = await getAllLeads(lojaId)
   return groupLeadsByLoja(leads)
 }
+
+export async function getLeadsLast30Days(lojaId?: number) {
+  const leads = await getAllLeads(lojaId)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const days: Record<string, number> = {}
+
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const key = d.toISOString().slice(0, 10)
+    days[key] = 0
+  }
+
+  for (const lead of leads) {
+    const d = new Date(lead.data_criacao)
+    d.setHours(0, 0, 0, 0)
+    const key = d.toISOString().slice(0, 10)
+
+    if (key in days) {
+      days[key]++
+    }
+  }
+
+  return Object.entries(days).map(([date, total]) => ({
+    date,
+    total,
+  }))
+}
