@@ -172,3 +172,19 @@ export async function getLeadsLast30Days(lojaId?: number) {
     total,
   }))
 }
+
+export function groupLeadsByEstado(leads: Lead[]) {
+  const grupos: Record<string, number> = {}
+
+  for (const lead of leads) {
+    const estado = lead.estado?.trim().toUpperCase() || "N/I"
+    grupos[estado] = (grupos[estado] || 0) + 1
+  }
+
+  return grupos
+}
+
+export async function getEstadoStats(lojaId?: number) {
+  const leads = await getAllLeads(lojaId)
+  return groupLeadsByEstado(leads)
+}

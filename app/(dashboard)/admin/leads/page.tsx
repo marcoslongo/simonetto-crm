@@ -2,7 +2,6 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsTable } from '@/components/dashboard/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
-import { getFilteredLeads, mockLojas } from '@/lib/mock-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getLeads, getLojas } from '@/lib/leads-service'
 

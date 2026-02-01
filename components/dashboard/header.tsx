@@ -42,15 +42,15 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="gap-2 bg-white">
+            <Button className="gap-2 bg-white cursor-pointer hover:bg-[#B68B1B] text-black hover:text-white">
               <div className="flex h-8 w-8 items-center justify-center rounded-full">
                 {isAdmin ? (
-                  <Shield className="h-4 w-4 text-black" />
+                  <Shield className="h-4 w-4" />
                 ) : (
-                  <User className="h-4 w-4 text-black" />
+                  <User className="h-4 w-4" />
                 )}
               </div>
-              <span className="hidden sm:inline-block text-sm text-black">
+              <span className="hidden sm:inline-block text-sm">
                 {user.name}
               </span>
             </Button>

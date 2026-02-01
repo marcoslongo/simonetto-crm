@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsTable } from '@/components/dashboard/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
-import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days } from '@/lib/leads-service'
+import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days, getEstadoStats } from '@/lib/leads-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
@@ -10,6 +10,7 @@ import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartLeadsPorLoja } from '@/components/dashboard/chart-bar-loja'
 import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
+import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -35,6 +36,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     interessePorGrupo,
     lojasGroup,
     leads30Days,
+    estadosGroup,
   ] = await Promise.all([
     getLeads(page, 10, lojaId),
     getLojas().catch(() => ({ lojas: [] })),
@@ -43,8 +45,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getInteresseStats(lojaId),
     getLojaStats(lojaId),
     getLeadsLast30Days(lojaId),
+    getEstadoStats(lojaId),
   ])
-  
+
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
     ([faixa, total]) => ({
       faixa,
@@ -55,7 +58,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))
     .sort((a, b) => b.total - a.total)
-  
+
 
   const lojaChartData = Object.entries(lojasGroup)
     .map(([loja, total]) => ({
@@ -63,6 +66,11 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       total,
     }))
     .sort((a, b) => b.total - a.total)
+
+  const estadoChartData = Object.entries(estadosGroup)
+    .map(([estado, total]) => ({ estado, total }))
+    .sort((a, b) => b.total - a.total)
+
 
   return (
     <div className="space-y-6">
@@ -84,7 +92,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <ChartBarInvest data={faturamentoChartData} />
+        <ChartGeoBrasil data={estadoChartData} />
         <ChartBarInvest data={faturamentoChartData} />
       </div>
 
