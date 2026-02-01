@@ -42,7 +42,7 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[260px] w-full"
+          className="aspect-auto h-65 w-full"
         >
           <LineChart
             accessibilityLayer

@@ -128,7 +128,7 @@ export function groupLeadsByLoja(leads: Lead[]) {
   const grupos: Record<string, number> = {}
 
   for (const lead of leads) {
-    const loja = lead.loja_nome?.trim() || "Não informado"
+    const loja = lead.loja_regiao?.trim() || "Não informado"
 
     grupos[loja] = (grupos[loja] || 0) + 1
   }
