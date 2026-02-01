@@ -2,15 +2,14 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsTable } from '@/components/dashboard/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
-import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats } from '@/lib/leads-service'
+import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats } from '@/lib/leads-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartLineInteractive } from '@/components/dashboard/chart-line'
-import { ChartBarLabel } from '@/components/dashboard/bar-chart'
-import { ChartBarMixed } from '@/components/dashboard/bar-chart-mixed'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
+import { ChartLeadsPorLoja } from '@/components/dashboard/chart-bar-loja'
 
 export const metadata = {
   title: 'Todos os Leads | CRM Multi-Unidades',
@@ -34,12 +33,14 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     stats,
     faturamentoPorFaixa,
     interessePorGrupo,
+    lojasGroup,
   ] = await Promise.all([
     getLeads(page, 10, lojaId),
     getLojas().catch(() => ({ lojas: [] })),
     getLeadsStats(lojaId),
     getFaturamentoStats(lojaId),
     getInteresseStats(lojaId),
+    getLojaStats(lojaId),
   ])
 
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
@@ -57,6 +58,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     lojaId && leadsResponse.leads.length > 0
       ? leadsResponse.leads[0].loja_nome
       : undefined
+
+  const lojaChartData = Object.entries(lojasGroup)
+  .map(([loja, total]) => ({
+    loja,
+    total,
+  }))
+  .sort((a, b) => b.total - a.total)
 
   return (
     <div className="space-y-6">
@@ -79,7 +87,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <ChartBarLabel />
+        <ChartLeadsPorLoja data={lojaChartData} />
         <ChartPieInteresse data={interesseChartData} />
       </div>
 

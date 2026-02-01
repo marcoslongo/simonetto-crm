@@ -1,10 +1,13 @@
 "use client"
 
+import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
+
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -15,11 +18,13 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-interface ChartBarInvestProps {
-  data: {
-    faixa: string
-    total: number
-  }[]
+interface LeadsPorLoja {
+  loja: string
+  total: number
+}
+
+interface Props {
+  data: LeadsPorLoja[]
 }
 
 const chartConfig = {
@@ -28,12 +33,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartBarInvest({ data }: ChartBarInvestProps) {
+export function ChartLeadsPorLoja({ data }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Leads por Investimento</CardTitle>
-        <CardDescription>Distribuição por faixa</CardDescription>
+        <CardTitle>Leads por Loja</CardTitle>
+        <CardDescription>Distribuição por unidade</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -47,7 +52,7 @@ export function ChartBarInvest({ data }: ChartBarInvestProps) {
             }}
           >
             <YAxis
-              dataKey="faixa"
+              dataKey="loja"
               type="category"
               axisLine={false}
               tickLine={false}
@@ -71,6 +76,15 @@ export function ChartBarInvest({ data }: ChartBarInvestProps) {
           </BarChart>
         </ChartContainer>
       </CardContent>
+
+      <CardFooter className="flex-col items-start gap-2 text-sm">
+        <div className="flex gap-2 leading-none font-medium">
+          Total de leads por unidade <TrendingUp className="h-4 w-4" />
+        </div>
+        <div className="text-muted-foreground leading-none">
+          Considera todo o período selecionado
+        </div>
+      </CardFooter>
     </Card>
   )
 }

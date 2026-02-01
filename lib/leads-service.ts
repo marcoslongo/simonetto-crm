@@ -123,3 +123,21 @@ export async function getInteresseStats(lojaId?: number) {
   const leads = await getAllLeads(lojaId)
   return groupLeadsByInteresse(leads)
 }
+
+export function groupLeadsByLoja(leads: Lead[]) {
+  const grupos: Record<string, number> = {}
+
+  for (const lead of leads) {
+    const loja = lead.loja_nome?.trim() || "Não informado"
+
+    grupos[loja] = (grupos[loja] || 0) + 1
+  }
+
+  return grupos
+}
+
+
+export async function getLojaStats(lojaId?: number) {
+  const leads = await getAllLeads(lojaId)
+  return groupLeadsByLoja(leads)
+}
