@@ -44,7 +44,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getLojaStats(lojaId),
     getLeadsLast30Days(lojaId),
   ])
-  console.log(leadsResponse);
+  
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
     ([faixa, total]) => ({
       faixa,
