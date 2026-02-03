@@ -49,18 +49,15 @@ export default async function AdminLojasPage({
   const params = await searchParams
   const page = Number(params.page) || 1
 
-  // 🔹 Busca lojas
   const lojasResponse = await getLojas()
   if (!lojasResponse.success) {
     throw new Error('Falha ao carregar lojas')
   }
 
-  // 🔹 Ordenação alfabética
   const lojasOrdenadas = [...lojasResponse.lojas].sort((a, b) =>
     a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
   )
 
-  // 🔹 Paginação
   const total = lojasOrdenadas.length
   const totalPages = Math.ceil(total / PER_PAGE)
 
@@ -68,7 +65,6 @@ export default async function AdminLojasPage({
   const end = start + PER_PAGE
   const lojasPaginadas = lojasOrdenadas.slice(start, end)
 
-  // 🔹 Estatísticas apenas da página atual
   const lojasWithStats: LojaWithStats[] = await Promise.all(
     lojasPaginadas.map(async (loja) => {
       const stats = await getLeadsStats(loja.id)
@@ -172,7 +168,6 @@ export default async function AdminLojasPage({
                 </Table>
               </div>
 
-              {/* 🔹 Paginação reutilizando o mesmo componente */}
               <LeadsPagination
                 currentPage={page}
                 totalPages={totalPages}

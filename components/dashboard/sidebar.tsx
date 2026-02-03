@@ -21,19 +21,19 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       href: basePath,
       icon: LayoutDashboard,
     },
-    {
-      name: 'Leads',
-      href: `${basePath}/leads`,
-      icon: Users,
-    },
     ...(isAdmin
       ? [
-          {
-            name: 'Lojas',
-            href: '/admin/lojas',
-            icon: Building2,
-          },
-        ]
+        {
+          name: 'Lojas',
+          href: '/admin/lojas',
+          icon: Building2,
+        },
+        {
+          name: 'Leads',
+          href: `${basePath}/leads`,
+          icon: Users,
+        },
+      ]
       : []),
   ]
 
@@ -41,9 +41,9 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     <aside className="hidden lg:flex w-64 flex-col border-r bg-muted/30 min-h-[calc(100vh-4rem)]">
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || 
+          const isActive = pathname === item.href ||
             (item.href !== basePath && pathname.startsWith(item.href))
-          
+
           return (
             <Link
               key={item.name}
