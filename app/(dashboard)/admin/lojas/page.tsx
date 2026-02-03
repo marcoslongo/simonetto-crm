@@ -1,8 +1,19 @@
 import { requireAdmin } from '@/lib/auth'
-import { mockLojas, getDashboardStats } from '@/lib/mock-data'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getLojas } from '@/lib/api'
+import { getLeadsStats } from '@/lib/leads-service'
+import type { Loja } from '@/lib/types'
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+
 import { Badge } from '@/components/ui/badge'
-import { 
+
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,150 +21,170 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Building2, Mail, MapPin, Users } from 'lucide-react'
+
+import { Building2, Mail, MapPin } from 'lucide-react'
+import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 
 export const metadata = {
   title: 'Lojas | Admin CRM',
   description: 'Gerenciamento de unidades',
 }
 
-export default async function AdminLojasPage() {
-  await requireAdmin()
-  
-  // Estatísticas por loja
-  const lojasWithStats = mockLojas.map((loja) => {
-    const stats = getDashboardStats(loja.id)
-    return {
-      ...loja,
-      totalLeads: stats.totalLeads,
-      leadsHoje: stats.leadsHoje,
-    }
-  })
+interface AdminLojasPageProps {
+  searchParams: Promise<{ page?: string }>
+}
 
-  const totalLeads = lojasWithStats.reduce((acc, l) => acc + l.totalLeads, 0)
+interface LojaWithStats extends Loja {
+  totalLeads: number
+  leadsHoje: number
+}
+
+const PER_PAGE = 10
+
+export default async function AdminLojasPage({
+  searchParams,
+}: AdminLojasPageProps) {
+  await requireAdmin()
+
+  const params = await searchParams
+  const page = Number(params.page) || 1
+
+  // 🔹 Busca lojas
+  const lojasResponse = await getLojas()
+  if (!lojasResponse.success) {
+    throw new Error('Falha ao carregar lojas')
+  }
+
+  // 🔹 Ordenação alfabética
+  const lojasOrdenadas = [...lojasResponse.lojas].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+  )
+
+  // 🔹 Paginação
+  const total = lojasOrdenadas.length
+  const totalPages = Math.ceil(total / PER_PAGE)
+
+  const start = (page - 1) * PER_PAGE
+  const end = start + PER_PAGE
+  const lojasPaginadas = lojasOrdenadas.slice(start, end)
+
+  // 🔹 Estatísticas apenas da página atual
+  const lojasWithStats: LojaWithStats[] = await Promise.all(
+    lojasPaginadas.map(async (loja) => {
+      const stats = await getLeadsStats(loja.id)
+
+      return {
+        ...loja,
+        totalLeads: stats.total,
+        leadsHoje: stats.today,
+      }
+    })
+  )
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Unidades</h2>
         <p className="text-muted-foreground">
-          Gerenciamento de todas as lojas do sistema
+          Gerencie todas as lojas do sistema
         </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Unidades
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{mockLojas.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Leads
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalLeads}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Média por Loja
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(totalLeads / mockLojas.length).toFixed(1)}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Todas as Unidades</CardTitle>
+          <CardTitle>Lojas</CardTitle>
           <CardDescription>
-            Lista de todas as lojas cadastradas no sistema
+            Total de {total} unidades • Ordenadas alfabeticamente
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Localização</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="text-center">Leads</TableHead>
-                  <TableHead className="text-center">Hoje</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lojasWithStats.map((loja) => (
-                  <TableRow key={loja.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                          <Building2 className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{loja.nome}</p>
-                          <p className="text-xs text-muted-foreground">
-                            ID: {loja.id}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {loja.localizacao}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {loja.emails && loja.emails[0] ? (
-                        <a
-                          href={`mailto:${loja.emails[0].email}`}
-                          className="flex items-center gap-1 text-sm hover:underline"
-                        >
-                          <Mail className="h-3 w-3 text-muted-foreground" />
-                          {loja.emails[0].email}
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {loja.totalLeads}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {loja.leadsHoje > 0 ? (
-                        <Badge variant="default">
-                          +{loja.leadsHoje}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+
+        <CardContent className="space-y-4">
+          {lojasWithStats.length > 0 ? (
+            <>
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Unidade</TableHead>
+                      <TableHead>Localização</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-center">Leads</TableHead>
+                      <TableHead className="text-center">Hoje</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {lojasWithStats.map((loja) => (
+                      <TableRow key={loja.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                              <Building2 className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{loja.nome}</p>
+                              <p className="text-xs text-muted-foreground">
+                                ID: {loja.id}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {loja.localizacao}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          {loja.emails && loja.emails[0] ? (
+                            <a
+                              href={`mailto:${loja.emails[0].email}`}
+                              className="text-sm hover:underline"
+                            >
+                              <Mail className="h-3 w-3 inline mr-1 text-muted-foreground" />
+                              {loja.emails[0].email}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Badge variant="secondary">
+                            {loja.totalLeads}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          {loja.leadsHoje > 0 ? (
+                            <Badge variant="default">
+                              +{loja.leadsHoje}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* 🔹 Paginação reutilizando o mesmo componente */}
+              <LeadsPagination
+                currentPage={page}
+                totalPages={totalPages}
+                total={total}
+                perPage={PER_PAGE}
+              />
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhuma loja encontrada
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
