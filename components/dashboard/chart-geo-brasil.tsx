@@ -75,7 +75,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gradient-to-br from-emerald-100 to-teal-100 p-3 rounded-lg border border-emerald-200">
+          <div className="bg-linear-to-br from-emerald-100 to-teal-100 p-3 rounded-lg border border-emerald-200">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
               <p className="text-xs text-emerald-700 font-semibold">Total Nacional</p>
@@ -84,7 +84,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
             <p className="text-xs text-emerald-600 font-medium">leads capturados</p>
           </div>
 
-          <div className="bg-gradient-to-br from-teal-100 to-cyan-100 p-3 rounded-lg border border-teal-200">
+          <div className="bg-linear-to-br from-teal-100 to-cyan-100 p-3 rounded-lg border border-teal-200">
             <div className="flex items-center gap-2 mb-1">
               <MapPin className="h-4 w-4 text-teal-600" />
               <p className="text-xs text-teal-700 font-semibold">Estados Ativos</p>

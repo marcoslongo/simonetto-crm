@@ -36,7 +36,7 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
   const maxLeads = Math.max(...data.map(item => item.total))
 
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-gray-50">
+    <Card className="border-0 shadow-lg bg-linear-to-br from-slate-50 to-gray-50">
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -65,7 +65,7 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[350px] w-full"
+          className="aspect-auto h-87.5 w-full"
         >
           <AreaChart
             accessibilityLayer
