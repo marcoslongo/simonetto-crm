@@ -39,7 +39,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2">
+            <Button variant="outline" className="gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                 {isAdmin ? (
                   <Shield className="h-4 w-4 text-primary" />
