@@ -12,17 +12,13 @@ export const metadata = {
 export default async function CrmDashboardPage() {
   const user = await requireAuth()
   
-  // Se for admin, o lojaId fica null/undefined para trazer tudo.
-  // Se for loja, usa o ID vinculado ao usuário.
   const lojaId = user.role === 'loja' ? (user.loja_id ?? undefined) : undefined
   
-  // Busca dados reais da API em paralelo para performance
   const [stats, recentLeadsResponse] = await Promise.all([
     getDashboardStats(lojaId),
     getLeads({ page: 1, per_page: 5, loja_id: lojaId })
   ])
 
-  // Formata a data da última captura
   const ultimaCaptura = stats.ultimoLead
     ? new Date(stats.ultimoLead.data_criacao).toLocaleString('pt-BR', {
         day: '2-digit',
