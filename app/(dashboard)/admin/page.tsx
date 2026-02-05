@@ -13,7 +13,7 @@ import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 
 export const metadata = {
-  title: 'Todos os Leads | CRM Multi-Unidades',
+  title: 'Todos os Leads | Noxus - Lead Ops',
   description: 'Gestão de leads de todas as unidades',
 }
 

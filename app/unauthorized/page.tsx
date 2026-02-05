@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ShieldX, ArrowLeft } from 'lucide-react'
 
 export const metadata = {
-  title: 'Acesso Negado | CRM Multi-Unidades',
+  title: 'Acesso Negado | Noxus - Lead Ops',
 }
 
 export default function UnauthorizedPage() {

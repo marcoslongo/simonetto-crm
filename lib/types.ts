@@ -1,5 +1,5 @@
 // =====================================
-// TIPOS DO CRM MULTI-UNIDADES
+// TIPOS DO Noxus - Lead Ops
 // =====================================
 
 export type UserRole = 'administrator' | 'loja';

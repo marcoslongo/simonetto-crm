@@ -5,7 +5,7 @@ import { getDashboardStats, getLeads } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const metadata = {
-  title: 'Dashboard | CRM Multi-Unidades',
+  title: 'Dashboard | Noxus - Lead Ops',
   description: 'Dashboard da sua unidade',
 }
 

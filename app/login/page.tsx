@@ -2,7 +2,7 @@ import { LoginForm } from './login-form'
 import Image from 'next/image'
 
 export const metadata = {
-  title: 'Login | CRM Multi-Unidades',
+  title: 'Login | Noxus - Lead Ops',
   description: 'Acesse o CRM da sua unidade',
 }
 
@@ -20,7 +20,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            CRM Multi-Unidades
+            Noxus - Lead Ops
           </h1>
           <p className="text-muted-foreground mt-2">
             Acesse o sistema com suas credenciais

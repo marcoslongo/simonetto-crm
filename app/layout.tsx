@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'CRM Multi-Unidades',
+  title: 'Noxus - Lead Ops',
   description: 'Sistema de gestão de leads para múltiplas unidades',
   generator: 'v0.app',
   icons: {

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getLeads, getLojas } from '@/lib/leads-service'
 
 export const metadata = {
-  title: 'Todos os Leads | CRM Multi-Unidades',
+  title: 'Todos os Leads | Noxus - Lead Ops',
   description: 'Gestão de leads de todas as unidades',
 }
 
