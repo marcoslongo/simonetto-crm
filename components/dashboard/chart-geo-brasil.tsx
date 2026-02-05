@@ -17,18 +17,17 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
     ...data.map(item => [`BR-${item.estado}`, item.total]),
   ]
 
-  // Calcula estatísticas
   const totalLeads = data.reduce((sum, item) => sum + item.total, 0)
   const estadoMaisLeads = data.reduce((prev, current) => 
     (prev.total > current.total) ? prev : current
   )
 
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <Card className="border-0 shadow-lg bg-linear-to-br from-emerald-50 via-teal-50 to-cyan-50">
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-linear-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
               Leads por Estado
             </CardTitle>
             <CardDescription className="flex items-center gap-2 text-teal-700">
@@ -46,7 +45,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="h-[400px] bg-white/50 backdrop-blur-sm rounded-xl p-4 shadow-inner">
+        <div className="h-100 bg-white/50 backdrop-blur-sm rounded-xl p-4 shadow-inner">
           <Chart
             chartType="GeoChart"
             width="100%"
