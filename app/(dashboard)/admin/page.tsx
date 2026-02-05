@@ -1,14 +1,9 @@
 import { requireAdmin } from '@/lib/auth'
-import { LeadsTable } from '@/components/dashboard/leads-table'
-import { LeadsPagination } from '@/components/dashboard/leads-pagination'
-import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days, getEstadoStats } from '@/lib/leads-service'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
-import { ChartLeadsPorLoja } from '@/components/dashboard/chart-bar-loja'
 import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 
@@ -80,24 +75,19 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           Visão geral do desempenho de leads e lojas
         </p>
       </div>
-
       <StatsCards
         totalLeads={stats.total}
         leadsHoje={stats.today}
         ultimaCaptura={formatLastCapture(stats.ultimaCaptura)}
       />
-
       <div>
         <ChartLeads30Days data={leads30Days} />
       </div>
-
       <div className="grid grid-cols-2 gap-4">
         <ChartGeoBrasil data={estadoChartData} />
         <ChartBarInvest data={faturamentoChartData} />
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <ChartLeadsPorLoja data={lojaChartData} />
+      <div>
         <ChartPieInteresse data={interesseChartData} />
       </div>
     </div>
