@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { logoutAction } from '@/app/login/actions'
 import type { User as UserType } from '@/lib/types'
-import Image from 'next/image'
 
 interface DashboardHeaderProps {
   user: UserType
@@ -23,15 +22,13 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const isAdmin = user.role === 'administrator'
 
   return (
-    <header className="sticky top-0 z-50 bg-black w-full border-b backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-18 items-center justify-between px-4 lg:px-6 bg-black">
+    <header className="sticky bg-[#0e1627] top-0 z-50 w-full border-b backdrop-blur py-3">
+      <div className="flex h-16 items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-4">
-          <Image
-            width={200}
-            height={30}
-            alt='Simonetto'
-            src={'/simonetto-white.webp'}
-          />
+          <h1 className='flex flex-col items-center text-white'>
+            <span className="text-4xl font-semibold tracking-tight">Noxus</span>
+            <span className='text-sm font-medium'>Lead ops</span>
+          </h1>
           {!isAdmin && user.loja_nome && (
             <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
               <Store className="h-3 w-3" />
@@ -42,12 +39,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="gap-2 bg-white cursor-pointer hover:bg-[#B68B1B] text-black hover:text-white">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full">
+            <Button variant="ghost" className="gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                 {isAdmin ? (
-                  <Shield className="h-4 w-4" />
+                  <Shield className="h-4 w-4 text-primary" />
                 ) : (
-                  <User className="h-4 w-4" />
+                  <User className="h-4 w-4 text-primary" />
                 )}
               </div>
               <span className="hidden sm:inline-block text-sm">

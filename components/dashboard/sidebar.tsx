@@ -38,7 +38,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   ]
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col border-r bg-muted/30 min-h-[calc(100vh-4rem)]">
+    <aside className="hidden bg-[#0e1627] lg:flex w-64 flex-col border-r min-h-[calc(100vh-4rem)]">
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
@@ -49,10 +49,10 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-[#2463eb] text-primary-foreground'
+                  : 'text-[#ccc] hover:bg-[#182543] hover:text-white'
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -64,7 +64,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
       <div className="p-4 border-t">
         <div className="rounded-lg bg-muted p-3">
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-xs font-medium text-[#ccc]">
             {isAdmin ? 'Modo Administrador' : 'Sua Unidade'}
           </p>
           <p className="text-sm font-semibold mt-1 truncate">
