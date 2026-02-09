@@ -31,13 +31,11 @@ import {
   MessageSquare,
   User,
   Copy,
-  MessageCircle,
 } from "lucide-react";
 import { Lead } from "@/lib/types";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FaWhatsapp } from "react-icons/fa";
-
 
 import {
   Tooltip,
@@ -81,6 +79,23 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
 
   const cleanPhone = lead.telefone.replace(/\D/g, "");
 
+  const registrarContato = async (tipo: string) => {
+    try {
+      await fetch("/api/lead-contato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          tipo_contato: tipo,
+          usuario_id: 1, // depois pegar do auth
+          observacao: `Contato via ${tipo}`,
+        }),
+      });
+    } catch {
+      toast.error("Erro ao registrar contato");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
@@ -108,8 +123,6 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
 
                   <TooltipProvider>
                     <CardContent className="space-y-4">
-                      
-                      {/* EMAIL */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
@@ -122,6 +135,7 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                               <Link
                                 href={`mailto:${lead.email}`}
                                 className="px-2 py-1 border rounded hover:bg-muted"
+                                onClick={() => registrarContato("email")}
                               >
                                 <Mail size={16} />
                               </Link>
@@ -145,7 +159,6 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
 
                       <Separator />
 
-                      {/* TELEFONE */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
@@ -158,6 +171,9 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                               <Link
                                 href={`tel:${cleanPhone}`}
                                 className="px-2 py-1 border rounded hover:bg-muted"
+                                onClick={() =>
+                                  registrarContato("telefone")
+                                }
                               >
                                 <Phone size={16} />
                               </Link>
@@ -171,6 +187,9 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                                 href={`https://wa.me/${cleanPhone}`}
                                 target="_blank"
                                 className="px-2 py-1 border rounded hover:bg-muted"
+                                onClick={() =>
+                                  registrarContato("whatsapp")
+                                }
                               >
                                 <FaWhatsapp size={16} />
                               </Link>
@@ -181,13 +200,17 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
-                                onClick={() => copyToClipboard(lead.telefone)}
+                                onClick={() =>
+                                  copyToClipboard(lead.telefone)
+                                }
                                 className="px-2 py-1 border rounded hover:bg-muted"
                               >
                                 <Copy size={16} />
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent>Copiar telefone</TooltipContent>
+                            <TooltipContent>
+                              Copiar telefone
+                            </TooltipContent>
                           </Tooltip>
                         </div>
                       </div>
@@ -242,7 +265,10 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                   <CardContent>
                     <p>Criado em {formatDate(lead.data_criacao)}</p>
                     <Separator />
-                    <p>Atualizado em {formatDate(lead.data_atualizacao)}</p>
+                    <p>
+                      Atualizado em{" "}
+                      {formatDate(lead.data_atualizacao)}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -253,7 +279,8 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" /> Mensagem
+                      <MessageSquare className="h-5 w-5" />
+                      Mensagem
                     </CardTitle>
                     <CardDescription>
                       Mensagem enviada pelo lead
