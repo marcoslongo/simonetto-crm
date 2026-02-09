@@ -12,7 +12,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -24,8 +30,21 @@ import {
   DollarSign,
   MessageSquare,
   User,
+  Copy,
+  MessageCircle,
 } from "lucide-react";
 import { Lead } from "@/lib/types";
+import Link from "next/link";
+import { toast } from "sonner";
+import { FaWhatsapp } from "react-icons/fa";
+
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LeadDialogProps {
   lead: Lead;
@@ -51,6 +70,17 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
       minute: "2-digit",
     });
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copiado!");
+    } catch {
+      toast.error("Erro ao copiar");
+    }
+  };
+
+  const cleanPhone = lead.telefone.replace(/\D/g, "");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
@@ -61,8 +91,9 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
         <Tabs defaultValue="detalhes" className="h-full flex flex-col">
           <TabsList>
             <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-            {lead.mensagem && <TabsTrigger value="mensagem">Mensagem</TabsTrigger>}
-            <TabsTrigger value="acoes">Ações</TabsTrigger>
+            {lead.mensagem && (
+              <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
+            )}
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4 min-h-[60vh]">
@@ -74,13 +105,101 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                       <User className="h-5 w-5" /> Contato
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p><Mail className="inline h-4 w-4 mr-2" /> {lead.email}</p>
-                    <Separator />
-                    <p><Phone className="inline h-4 w-4 mr-2" /> {lead.telefone}</p>
-                    <Separator />
-                    <p><MapPin className="inline h-4 w-4 mr-2" /> {lead.cidade}/{lead.estado}</p>
-                  </CardContent>
+
+                  <TooltipProvider>
+                    <CardContent className="space-y-4">
+                      
+                      {/* EMAIL */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          {lead.email}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={`mailto:${lead.email}`}
+                                className="px-2 py-1 border rounded hover:bg-muted"
+                              >
+                                <Mail size={16} />
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>Enviar email</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => copyToClipboard(lead.email)}
+                                className="px-2 py-1 border rounded hover:bg-muted"
+                              >
+                                <Copy size={16} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar email</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* TELEFONE */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {lead.telefone}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={`tel:${cleanPhone}`}
+                                className="px-2 py-1 border rounded hover:bg-muted"
+                              >
+                                <Phone size={16} />
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>Ligar</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                className="px-2 py-1 border rounded hover:bg-muted"
+                              >
+                                <FaWhatsapp size={16} />
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>WhatsApp</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => copyToClipboard(lead.telefone)}
+                                className="px-2 py-1 border rounded hover:bg-muted"
+                              >
+                                <Copy size={16} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar telefone</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <p>
+                        <MapPin className="inline h-4 w-4 mr-2" />
+                        {lead.cidade}/{lead.estado}
+                      </p>
+                    </CardContent>
+                  </TooltipProvider>
                 </Card>
 
                 <Card>
@@ -136,10 +255,14 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
                     <CardTitle className="flex items-center gap-2">
                       <MessageSquare className="h-5 w-5" /> Mensagem
                     </CardTitle>
-                    <CardDescription>Mensagem enviada pelo lead</CardDescription>
+                    <CardDescription>
+                      Mensagem enviada pelo lead
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap">{lead.mensagem}</p>
+                    <p className="whitespace-pre-wrap">
+                      {lead.mensagem}
+                    </p>
                   </CardContent>
                 </Card>
               </TabsContent>
