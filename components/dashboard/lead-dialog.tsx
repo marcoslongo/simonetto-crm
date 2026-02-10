@@ -87,7 +87,6 @@ export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
         body: JSON.stringify({
           lead_id: lead.id,
           tipo_contato: tipo,
-          usuario_id: 1, // depois pegar do auth
           observacao: `Contato via ${tipo}`,
         }),
       });
