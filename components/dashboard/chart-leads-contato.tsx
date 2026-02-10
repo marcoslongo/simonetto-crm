@@ -3,11 +3,12 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock } from "lucide-react"
+import { formatMinutes } from "@/utils/formatMinutes"
 
 interface LeadsContatoChartProps {
   contatados: number
   naoContatados: number
-  tempoMedioAtendimentoHoras: number 
+  tempoMedioAtendimentoMinutos: number 
   percentContatados: number
   percentNaoContatados: number
 }
@@ -15,7 +16,7 @@ interface LeadsContatoChartProps {
 export default function ChartLeadsContato({
   contatados,
   naoContatados,
-  tempoMedioAtendimentoHoras,
+  tempoMedioAtendimentoMinutos,
   percentContatados,
   percentNaoContatados
 }: LeadsContatoChartProps) {
@@ -114,7 +115,7 @@ export default function ChartLeadsContato({
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Tempo Médio</p>
             </div>
             <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              {tempoMedioAtendimentoHoras}
+              {formatMinutes(tempoMedioAtendimentoMinutos)}
             </p>
             <p className="text-sm text-blue-600 dark:text-blue-500">para realizar o atendimento</p>
           </div>

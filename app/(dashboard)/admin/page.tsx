@@ -94,7 +94,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       <ChartLeadsContato
         contatados={contatoStats.leadsContatados}
         naoContatados={contatoStats.leadsNaoContatados}
-        tempoMedioAtendimentoHoras={contatoStats.tempoMedioHoras}
+        tempoMedioAtendimentoMinutos={contatoStats.tempoMedioMinutos}
         percentContatados={contatoStats.percContatados}
         percentNaoContatados={contatoStats.percNaoContatados}
       />
