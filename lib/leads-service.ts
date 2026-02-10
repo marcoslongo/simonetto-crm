@@ -188,3 +188,27 @@ export async function getEstadoStats(lojaId?: number) {
   const leads = await getAllLeads(lojaId)
   return groupLeadsByEstado(leads)
 }
+
+export async function getLeadsStatsService() {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  const res = await fetch(`${baseUrl}/api/leads/stats-service`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Erro ao buscar stats de contato: ${res.status}`);
+  }
+
+  const data = await res.json();
+
+  return data?.data || {
+    totalLeads: 0,
+    leadsContatados: 0,
+    leadsNaoContatados: 0,
+    percContatados: 0,
+    percNaoContatados: 0,
+    tempoMedioMinutos: 0,
+    tempoMedioHoras: 0,
+  };
+}

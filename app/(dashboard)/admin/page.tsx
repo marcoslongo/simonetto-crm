@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
-import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days, getEstadoStats } from '@/lib/leads-service'
+import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days, getEstadoStats, getLeadsStatsService } from '@/lib/leads-service'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
@@ -33,6 +33,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     lojasGroup,
     leads30Days,
     estadosGroup,
+    contatoStats,
   ] = await Promise.all([
     getLeads(page, 10, lojaId),
     getLojas().catch(() => ({ lojas: [] })),
@@ -42,23 +43,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getLojaStats(lojaId),
     getLeadsLast30Days(lojaId),
     getEstadoStats(lojaId),
+    getLeadsStatsService(),
   ])
-
-  const statsServiceRes = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/leads/stats-service`,
-    { cache: 'no-store' }
-  )
-
-  const statsServiceData = await statsServiceRes.json()
-  const contatoStats = statsServiceData?.data || {
-    totalLeads: 0,
-    leadsContatados: 0,
-    leadsNaoContatados: 0,
-    percContatados: 0,
-    percNaoContatados: 0,
-    tempoMedioMinutos: 0,
-    tempoMedioHoras: 0,
-  }
 
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
     ([faixa, total]) => ({ faixa, total })
