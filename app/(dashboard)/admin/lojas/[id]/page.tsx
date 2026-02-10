@@ -20,20 +20,17 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   const { id } = await params
   
-  // ✅ Não converte para número, mantém como string
   const lojasResponse = await getLojas()
   if (!lojasResponse.success) {
     throw new Error('Falha ao carregar lojas')
   }
 
-  // ✅ Compara string com string
   const loja = lojasResponse.lojas.find((l) => l.id === id)
   
   if (!loja) {
     return <p>Loja não encontrada</p>
   }
 
-  // ✅ Converte para número apenas para a função de stats
   const stats = await getLeadsStats(parseInt(loja.id, 10))
 
   return (

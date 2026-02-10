@@ -106,3 +106,18 @@ export interface ApiError {
   mensagem: string
   erro?: string
 }
+
+export interface StoreTimeRanking {
+  loja_id: string;
+  loja_nome: string;
+  total_leads: string;
+  tempo_medio_minutos: string;
+  tempo_medio_horas: string;
+  ranking: number;
+}
+
+export interface TimeStoreResponse {
+  success: boolean;
+  total_lojas: number;
+  data: StoreTimeRanking[];
+}

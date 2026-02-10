@@ -1,4 +1,4 @@
-import { Lead, LeadsResponse } from "./types";
+import { Lead, LeadsResponse, TimeStoreResponse } from "./types";
 
 export async function getLeads(
   page = 1,
@@ -210,5 +210,30 @@ export async function getLeadsStatsService() {
     percNaoContatados: 0,
     tempoMedioMinutos: 0,
     tempoMedioHoras: 0,
+  };
+}
+
+export async function gettimeStoreAtend(): Promise<TimeStoreResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  const res = await fetch(
+    `${baseUrl}/api/leads/tempo-atendimento`,
+    { cache: "no-store" }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Erro ao buscar tempo de atendimento: ${res.status}`);
+  }
+
+  const json = await res.json();
+
+  if (!json.success) {
+    throw new Error("API retornou success = false");
+  }
+
+  return {
+    success: true,
+    total_lojas: json.total_lojas ?? 0,
+    data: Array.isArray(json.data) ? json.data : [],
   };
 }
