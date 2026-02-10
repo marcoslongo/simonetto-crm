@@ -139,7 +139,6 @@ export async function getDashboardStats(lojaId?: number): Promise<{
   leadsHoje: number
   ultimoLead: Lead | null
 }> {
-  // Busca todos os leads para calcular estatísticas
   const filters: LeadsFilters = { per_page: 1000 }
   if (lojaId) filters.loja_id = lojaId
   

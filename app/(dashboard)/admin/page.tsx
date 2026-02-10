@@ -6,6 +6,7 @@ import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
+import ChartLeadsContato from '@/components/dashboard/chart-leads-contato'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -43,29 +44,32 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getEstadoStats(lojaId),
   ])
 
+  const statsServiceRes = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/leads/stats-service`,
+    { cache: 'no-store' }
+  )
+
+  const statsServiceData = await statsServiceRes.json()
+  const contatoStats = statsServiceData?.data || {
+    leadsContatados: 0,
+    leadsNaoContatados: 0,
+  }
+
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
-    ([faixa, total]) => ({
-      faixa,
-      total,
-    })
+    ([faixa, total]) => ({ faixa, total })
   )
 
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))
     .sort((a, b) => b.total - a.total)
 
-
   const lojaChartData = Object.entries(lojasGroup)
-    .map(([loja, total]) => ({
-      loja,
-      total,
-    }))
+    .map(([loja, total]) => ({ loja, total }))
     .sort((a, b) => b.total - a.total)
 
   const estadoChartData = Object.entries(estadosGroup)
     .map(([estado, total]) => ({ estado, total }))
     .sort((a, b) => b.total - a.total)
-
 
   return (
     <div className="space-y-6">
@@ -75,18 +79,27 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           Visão geral do desempenho de leads e lojas
         </p>
       </div>
+
       <StatsCards
         totalLeads={stats.total}
         leadsHoje={stats.today}
         ultimaCaptura={formatLastCapture(stats.ultimaCaptura)}
       />
+
+      <ChartLeadsContato
+        contatados={contatoStats.leadsContatados}
+        naoContatados={contatoStats.leadsNaoContatados}
+      />
+
       <div>
         <ChartLeads30Days data={leads30Days} />
       </div>
+
       <div className="grid grid-cols-2 gap-4">
         <ChartGeoBrasil data={estadoChartData} />
         <ChartBarInvest data={faturamentoChartData} />
       </div>
+
       <div>
         <ChartPieInteresse data={interesseChartData} />
       </div>
