@@ -21,13 +21,13 @@ export default function ChartLeadsContato({
       name: "Contatados",
       quantidade: contatados,
       percentual: Number(percContatados),
-      color: "hsl(142, 76%, 36%)", // Verde
+      color: "hsl(142, 76%, 36%)",
     },
     {
       name: "Não Contatados",
       quantidade: naoContatados,
       percentual: Number(percNaoContatados),
-      color: "hsl(0, 84%, 60%)", // Vermelho
+      color: "hsl(0, 84%, 60%)",
     },
   ]
 
@@ -83,7 +83,6 @@ export default function ChartLeadsContato({
           </BarChart>
         </ResponsiveContainer>
 
-        {/* Cards de resumo */}
         <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-4">
             <div className="flex items-center gap-2 mb-1">
