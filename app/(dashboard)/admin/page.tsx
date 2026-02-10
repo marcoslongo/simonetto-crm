@@ -45,7 +45,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   ])
 
   const statsServiceRes = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/leads/stats-service`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}/api/leads/stats-service`,
     { cache: 'no-store' }
   )
 

@@ -5,7 +5,7 @@ export async function getLeads(
   perPage = 10,
   lojaId?: number
 ): Promise<LeadsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
   let url = `${baseUrl}/api/leads?page=${page}&per_page=${perPage}`;
 
@@ -31,7 +31,7 @@ export async function getLeads(
 }
 
 export async function getLojas() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
   const res = await fetch(`${baseUrl}/api/lojas`, {
     cache: "no-store",
@@ -45,7 +45,7 @@ export async function getLojas() {
 }
 
 export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
   let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
   if (lojaId) {
