@@ -17,7 +17,7 @@ export async function GET() {
     }
 
     const data = await response.json();
-
+    
     if (!data.success) {
       throw new Error('Falha ao buscar estatísticas do WordPress');
     }
@@ -30,6 +30,8 @@ export async function GET() {
         leadsNaoContatados: parseInt(data.data.leads_nao_contatados) || 0,
         percContatados: parseFloat(data.data.perc_contatados) || 0,
         percNaoContatados: parseFloat(data.data.perc_nao_contatados) || 0,
+        tempoMedioMinutos: parseFloat(data.data.tempo_medio_minutos) || 0,
+        tempoMedioHoras: parseFloat(data.data.tempo_medio_horas) || 0,
       }
     }, { status: 200 });
 

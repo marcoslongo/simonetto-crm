@@ -2,31 +2,37 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Clock } from "lucide-react"
 
 interface LeadsContatoChartProps {
   contatados: number
   naoContatados: number
+  tempoMedioAtendimentoHoras: number 
+  percentContatados: number
+  percentNaoContatados: number
 }
 
 export default function ChartLeadsContato({
   contatados,
   naoContatados,
+  tempoMedioAtendimentoHoras,
+  percentContatados,
+  percentNaoContatados
 }: LeadsContatoChartProps) {
   const total = contatados + naoContatados
-  const percContatados = total > 0 ? ((contatados / total) * 100).toFixed(2) : 0
-  const percNaoContatados = total > 0 ? ((naoContatados / total) * 100).toFixed(2) : 0
+
 
   const data = [
     {
       name: "Contatados",
       quantidade: contatados,
-      percentual: Number(percContatados),
+      percentual: Number(percentContatados),
       color: "hsl(142, 76%, 36%)",
     },
     {
       name: "Não Contatados",
       quantidade: naoContatados,
-      percentual: Number(percNaoContatados),
+      percentual: Number(percentNaoContatados),
       color: "hsl(0, 84%, 60%)",
     },
   ]
@@ -83,14 +89,14 @@ export default function ChartLeadsContato({
           </BarChart>
         </ResponsiveContainer>
 
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-3 gap-4 mt-6">
           <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="h-3 w-3 rounded-full bg-green-600"></div>
               <p className="text-sm font-medium text-green-900 dark:text-green-100">Contatados</p>
             </div>
             <p className="text-2xl font-bold text-green-700 dark:text-green-400">{contatados}</p>
-            <p className="text-sm text-green-600 dark:text-green-500">{percContatados}% do total</p>
+            <p className="text-sm text-green-600 dark:text-green-500">{percentContatados}% do total</p>
           </div>
 
           <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 p-4">
@@ -99,7 +105,18 @@ export default function ChartLeadsContato({
               <p className="text-sm font-medium text-red-900 dark:text-red-100">Não Contatados</p>
             </div>
             <p className="text-2xl font-bold text-red-700 dark:text-red-400">{naoContatados}</p>
-            <p className="text-sm text-red-600 dark:text-red-500">{percNaoContatados}% do total</p>
+            <p className="text-sm text-red-600 dark:text-red-500">{percentNaoContatados}% do total</p>
+          </div>
+
+          <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-3 w-3 text-blue-600" />
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Tempo Médio</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+              {tempoMedioAtendimentoHoras}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-500">para realizar o atendimento</p>
           </div>
         </div>
       </CardContent>

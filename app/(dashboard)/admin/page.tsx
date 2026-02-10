@@ -51,8 +51,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
   const statsServiceData = await statsServiceRes.json()
   const contatoStats = statsServiceData?.data || {
+    totalLeads: 0,
     leadsContatados: 0,
     leadsNaoContatados: 0,
+    percContatados: 0,
+    percNaoContatados: 0,
+    tempoMedioMinutos: 0,
+    tempoMedioHoras: 0,
   }
 
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
@@ -89,6 +94,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       <ChartLeadsContato
         contatados={contatoStats.leadsContatados}
         naoContatados={contatoStats.leadsNaoContatados}
+        tempoMedioAtendimentoHoras={contatoStats.tempoMedioHoras}
+        percentContatados={contatoStats.percContatados}
+        percentNaoContatados={contatoStats.percNaoContatados}
       />
 
       <div>
