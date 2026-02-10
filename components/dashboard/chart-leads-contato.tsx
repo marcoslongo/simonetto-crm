@@ -2,8 +2,9 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock } from "lucide-react"
+import { Clock, MapPin } from "lucide-react"
 import { formatMinutes } from "@/utils/formatMinutes"
+import { MdOutlineContactPhone } from "react-icons/md";
 
 interface LeadsContatoChartProps {
   contatados: number
@@ -56,10 +57,12 @@ export default function ChartLeadsContato({
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
       <CardHeader>
-        <CardTitle>Status de Contato dos Leads</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-bold text-[#0e1627]">Status de Contato dos Leads</CardTitle>
+        
+        <CardDescription className="flex items-center gap-2 text-slate-600">
+          <MdOutlineContactPhone className="h-4 w-4" />
           Distribuição entre leads contatados e não contatados
         </CardDescription>
       </CardHeader>
@@ -91,33 +94,31 @@ export default function ChartLeadsContato({
         </ResponsiveContainer>
 
         <div className="grid grid-cols-3 gap-4 mt-6">
-          <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-4">
+          <div className="bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
             <div className="flex items-center gap-2 mb-1">
               <div className="h-3 w-3 rounded-full bg-green-600"></div>
-              <p className="text-sm font-medium text-green-900 dark:text-green-100">Contatados</p>
+              <p className="text-xs text-[#0e1627] font-semibold">Contatados</p>
             </div>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{contatados}</p>
-            <p className="text-sm text-green-600 dark:text-green-500">{percentContatados}% do total</p>
+            <p className="text-2xl font-bold text-[#0e1627]">{contatados}</p>
+            <p className="text-xs text-slate-500 font-medium">{percentContatados}% do total</p>
           </div>
 
-          <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 p-4">
+          <div className="bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
             <div className="flex items-center gap-2 mb-1">
               <div className="h-3 w-3 rounded-full bg-red-600"></div>
-              <p className="text-sm font-medium text-red-900 dark:text-red-100">Não Contatados</p>
+              <p className="text-xs text-[#0e1627] font-semibold">Não Contatados</p>
             </div>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{naoContatados}</p>
-            <p className="text-sm text-red-600 dark:text-red-500">{percentNaoContatados}% do total</p>
+            <p className="text-2xl font-bold text-[#0e1627]">{naoContatados}</p>
+            <p className="text-xs text-slate-500 font-medium">{percentNaoContatados}% do total</p>
           </div>
 
-          <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-4">
+          <div className="bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="h-3 w-3 text-blue-600" />
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Tempo Médio</p>
+              <Clock className="h-3 w-3 text-[#0e1627]" />
+              <p className="text-xs text-[#0e1627] font-semibold">Tempo Médio</p>
             </div>
-            <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              {formatMinutes(tempoMedioAtendimentoMinutos)}
-            </p>
-            <p className="text-sm text-blue-600 dark:text-blue-500">para realizar o atendimento</p>
+            <p className="text-2xl font-bold text-[#0e1627]">{formatMinutes(tempoMedioAtendimentoMinutos)}</p>
+            <p className="text-xs text-slate-500 font-medium">para realizar o atendimento</p>
           </div>
         </div>
       </CardContent>
