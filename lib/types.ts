@@ -34,7 +34,7 @@ export interface Session {
 
 // Loja
 export interface Loja {
-  id: number
+  id: string
   nome: string
   cidade: string | null
   estado: string | null
@@ -55,7 +55,7 @@ export interface Lead {
   loja_regiao: string;
   mensagem: string;
   pipefy_card_id: string | null;
-  loja_id: string;
+  loja_id: string | null;
   data_criacao: string;
   data_atualizacao: string;
   loja_nome: string;

@@ -24,6 +24,7 @@ import {
 
 import { Building2, Mail, MapPin } from 'lucide-react'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'Lojas | Admin CRM',
@@ -67,8 +68,7 @@ export default async function AdminLojasPage({
 
   const lojasWithStats: LojaWithStats[] = await Promise.all(
     lojasPaginadas.map(async (loja) => {
-      const stats = await getLeadsStats(loja.id)
-
+      const stats = await getLeadsStats(Number(loja.id))
       return {
         ...loja,
         totalLeads: stats.total,
@@ -106,6 +106,7 @@ export default async function AdminLojasPage({
                       <TableHead>Email</TableHead>
                       <TableHead className="text-center">Leads</TableHead>
                       <TableHead className="text-center">Hoje</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -148,19 +149,24 @@ export default async function AdminLojasPage({
                         </TableCell>
 
                         <TableCell className="text-center">
-                          <Badge variant="secondary">
-                            {loja.totalLeads}
-                          </Badge>
+                          <Badge variant="secondary">{loja.totalLeads}</Badge>
                         </TableCell>
 
                         <TableCell className="text-center">
                           {loja.leadsHoje > 0 ? (
-                            <Badge variant="default">
-                              +{loja.leadsHoje}
-                            </Badge>
+                            <Badge variant="default">+{loja.leadsHoje}</Badge>
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Link
+                            href={`/admin/lojas/${loja.id}`}
+                            className="inline-block rounded bg-primary px-3 py-1 text-sm font-medium text-white hover:bg-primary/80 transition"
+                          >
+                            Ver detalhes
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
