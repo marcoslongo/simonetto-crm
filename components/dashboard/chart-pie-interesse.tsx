@@ -65,7 +65,7 @@ export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-[#0e1627]">
+            <CardTitle className="text-2xl font-bold text-[#16255c]">
               Leads por Interesse
             </CardTitle>
             <CardDescription className="flex items-center gap-2 text-slate-600">
@@ -75,11 +75,11 @@ export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
           </div>
 
           <div className="text-right bg-white/70 backdrop-blur-sm px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-            <p className="text-xs text-[#0e1627] font-semibold flex items-center gap-1 justify-end">
+            <p className="text-xs text-[#16255c] font-semibold flex items-center gap-1 justify-end">
               <Sparkles className="h-3 w-3" />
               Mais Popular
             </p>
-            <p className="text-lg font-bold text-[#0e1627]">{interesseMaisPopular.interesse}</p>
+            <p className="text-lg font-bold text-[#16255c]">{interesseMaisPopular.interesse}</p>
             <p className="text-xs text-slate-500 font-medium">{percentualLider}% dos leads</p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
                 style={{ backgroundColor: item.color }}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#0e1627] truncate">
+                <p className="text-sm font-semibold text-[#16255c] truncate">
                   {item.interesse}
                 </p>
                 <p className="text-xs text-slate-500 font-medium">
@@ -159,9 +159,9 @@ export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
         </div>
 
         {/* Footer com total */}
-        <div className="flex items-center gap-2 text-sm bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
-          <TrendingUp className="h-4 w-4 text-[#0e1627]" />
-          <span className="font-semibold text-[#0e1627]">
+        <div className="flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
+          <TrendingUp className="h-4 w-4 text-[#16255c]" />
+          <span className="font-semibold text-[#16255c]">
             Total de <span className="font-bold">{totalLeads.toLocaleString()}</span> leads 
             distribuídos em {data.length} categorias
           </span>

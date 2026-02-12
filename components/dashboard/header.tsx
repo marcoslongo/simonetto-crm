@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { logoutAction } from '@/app/login/actions'
 import type { User as UserType } from '@/lib/types'
+import Image from 'next/image'
 
 interface DashboardHeaderProps {
   user: UserType
@@ -22,13 +23,17 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const isAdmin = user.role === 'administrator'
 
   return (
-    <header className="sticky bg-[#0e1627] top-0 z-50 w-full border-b backdrop-blur py-3">
+    <header className="sticky bg-[#16255c] top-0 z-50 w-full border-b backdrop-blur py-3">
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-4">
-          <h1 className='flex flex-col items-center text-white'>
-            <span className="text-4xl font-semibold tracking-tight">Noxus</span>
-            <span className='text-sm font-medium'>Lead ops</span>
-          </h1>
+          <div>
+            <Image
+              alt=''
+              width={100}
+              height={150}
+              src={'/noxus.webp'}
+            />
+          </div>
           {!isAdmin && user.loja_nome && (
             <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
               <Store className="h-3 w-3" />

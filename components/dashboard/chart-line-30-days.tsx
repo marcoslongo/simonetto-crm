@@ -26,7 +26,7 @@ interface ChartLeads30DaysProps {
 const chartConfig = {
   total: {
     label: "Leads",
-    color: "#0e1627",
+    color: "#16255c",
   },
 } satisfies ChartConfig
 
@@ -40,7 +40,7 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-[#0e1627]">
+            <CardTitle className="text-2xl font-bold text-[#16255c]">
               Leads últimos 30 dias
             </CardTitle>
             <CardDescription className="flex items-center gap-2 text-slate-600">
@@ -52,11 +52,11 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
           <div className="flex gap-4">
             <div className="text-right">
               <p className="text-xs text-slate-500 font-medium">Média diária</p>
-              <p className="text-2xl font-bold text-[#0e1627]">{avgLeads}</p>
+              <p className="text-2xl font-bold text-[#16255c]">{avgLeads}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500 font-medium">Pico</p>
-              <p className="text-2xl font-bold text-[#0e1627]">{maxLeads}</p>
+              <p className="text-2xl font-bold text-[#16255c]">{maxLeads}</p>
             </div>
           </div>
         </div>
@@ -74,8 +74,8 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
           >
             <defs>
               <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0e1627" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#0e1627" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#16255c" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#16255c" stopOpacity={0}/>
               </linearGradient>
             </defs>
 
@@ -127,7 +127,7 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
             <Area
               dataKey="total"
               type="monotone"
-              stroke="#0e1627"
+              stroke="#16255c"
               strokeWidth={3}
               fill="url(#colorTotal)"
               dot={false}
@@ -136,17 +136,17 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
             <Line
               dataKey="total"
               type="monotone"
-              stroke="#0e1627"
+              stroke="#16255c"
               strokeWidth={3}
               dot={{
-                fill: "#0e1627",
+                fill: "#16255c",
                 strokeWidth: 2,
                 r: 4,
                 stroke: "white"
               }}
               activeDot={{
                 r: 6,
-                fill: "#0e1627",
+                fill: "#16255c",
                 stroke: "white",
                 strokeWidth: 3
               }}
@@ -154,9 +154,9 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
           </AreaChart>
         </ChartContainer>
 
-        <div className="mt-6 flex items-center gap-2 text-sm bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
-          <TrendingUp className="h-4 w-4 text-[#0e1627]" />
-          <span className="font-semibold text-[#0e1627]">
+        <div className="mt-6 flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
+          <TrendingUp className="h-4 w-4 text-[#16255c]" />
+          <span className="font-semibold text-[#16255c]">
             Total de <span className="font-bold">{totalLeads}</span> leads 
             capturados nos últimos 30 dias
           </span>

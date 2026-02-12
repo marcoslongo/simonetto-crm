@@ -27,7 +27,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-[#0e1627]">
+            <CardTitle className="text-2xl font-bold text-[#16255c]">
               Leads por Estado
             </CardTitle>
             <CardDescription className="flex items-center gap-2 text-slate-600">
@@ -37,8 +37,8 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
           </div>
 
           <div className="text-right bg-white/70 backdrop-blur-sm px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-            <p className="text-xs text-[#0e1627] font-semibold">Estado líder</p>
-            <p className="text-2xl font-bold text-[#0e1627]">{estadoMaisLeads.estado}</p>
+            <p className="text-xs text-[#16255c] font-semibold">Estado líder</p>
+            <p className="text-2xl font-bold text-[#16255c]">{estadoMaisLeads.estado}</p>
             <p className="text-xs text-slate-500 font-medium">{estadoMaisLeads.total} leads</p>
           </div>
         </div>
@@ -55,7 +55,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
               region: "BR",
               resolution: "provinces",
               colorAxis: {
-                colors: ["#93c5fd", "#3b82f6", "#1e40af", "#0e1627"],
+                colors: ["#93c5fd", "#3b82f6", "#1e40af", "#16255c"],
                 minValue: 0,
               },
               backgroundColor: "transparent",
@@ -63,7 +63,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
               defaultColor: "#d1d5db",
               tooltip: {
                 textStyle: {
-                  color: "#0e1627",
+                  color: "#16255c",
                   fontSize: 13,
                   bold: true,
                 },
@@ -75,21 +75,21 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
+          <div className="bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-[#0e1627]" />
-              <p className="text-xs text-[#0e1627] font-semibold">Total Nacional</p>
+              <TrendingUp className="h-4 w-4 text-[#16255c]" />
+              <p className="text-xs text-[#16255c] font-semibold">Total Nacional</p>
             </div>
-            <p className="text-2xl font-bold text-[#0e1627]">{totalLeads}</p>
+            <p className="text-2xl font-bold text-[#16255c]">{totalLeads}</p>
             <p className="text-xs text-slate-500 font-medium">leads capturados</p>
           </div>
 
-          <div className="bg-[#0e1627]/5 p-3 rounded-lg border border-[#0e1627]/10">
+          <div className="bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
             <div className="flex items-center gap-2 mb-1">
-              <MapPin className="h-4 w-4 text-[#0e1627]" />
-              <p className="text-xs text-[#0e1627] font-semibold">Estados Ativos</p>
+              <MapPin className="h-4 w-4 text-[#16255c]" />
+              <p className="text-xs text-[#16255c] font-semibold">Estados Ativos</p>
             </div>
-            <p className="text-2xl font-bold text-[#0e1627]">{data.length}</p>
+            <p className="text-2xl font-bold text-[#16255c]">{data.length}</p>
             <p className="text-xs text-slate-500 font-medium">com captação</p>
           </div>
         </div>

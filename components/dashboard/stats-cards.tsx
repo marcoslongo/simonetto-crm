@@ -40,12 +40,12 @@ export function StatsCards({ totalLeads, leadsHoje, ultimaCaptura }: StatsCardsP
             <CardTitle className="text-sm font-semibold text-slate-600">
               {stat.title}
             </CardTitle>
-            <div className="bg-[#0e1627] p-2.5 rounded-xl shadow-md">
+            <div className="bg-[#16255c] p-2.5 rounded-xl shadow-md">
               <stat.icon className="h-5 w-5 text-white" strokeWidth={2.5} />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#0e1627] mb-1">
+            <div className="text-3xl font-bold text-[#16255c] mb-1">
               {stat.value}
             </div>
             <p className="text-xs text-slate-500 font-medium flex items-center gap-1">

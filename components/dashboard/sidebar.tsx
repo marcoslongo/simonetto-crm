@@ -38,7 +38,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   ]
 
   return (
-    <aside className="hidden bg-[#0e1627] lg:flex w-64 flex-col border-r min-h-[calc(100vh-4rem)]">
+    <aside className="hidden bg-[#16255c] lg:flex w-64 flex-col border-r min-h-[calc(100vh-4rem)]">
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
