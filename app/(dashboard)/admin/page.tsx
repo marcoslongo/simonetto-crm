@@ -1,5 +1,16 @@
 import { requireAdmin } from '@/lib/auth'
-import { getLeadsStats, getLeads, getLojas, getFaturamentoStats, getInteresseStats, getLojaStats, getLeadsLast30Days, getEstadoStats, getLeadsStatsService, gettimeStoreAtend } from '@/lib/leads-service'
+import {
+  getLeadsStatsGeral,
+  getLeads,
+  getLojas,
+  getLeadsPorInvestimento,
+  getLeadsPorInteresse,
+  getLeadsPorLoja,
+  getLeadsLast30Days,
+  getLeadsGeoStats,
+  getLeadsStatsService,
+  getTempoMedioPorLoja
+} from '@/lib/leads-service'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
@@ -28,7 +39,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const [
     leadsResponse,
     lojasData,
-    stats,
+    statsGeral,
     faturamentoPorFaixa,
     interessePorGrupo,
     lojasGroup,
@@ -39,16 +50,17 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   ] = await Promise.all([
     getLeads(page, 10, lojaId),
     getLojas().catch(() => ({ lojas: [] })),
-    getLeadsStats(lojaId),
-    getFaturamentoStats(lojaId),
-    getInteresseStats(lojaId),
-    getLojaStats(lojaId),
-    getLeadsLast30Days(lojaId),
-    getEstadoStats(lojaId),
+    getLeadsStatsGeral(),
+    getLeadsPorInvestimento(),
+    getLeadsPorInteresse(),
+    getLeadsPorLoja(),
+    getLeadsLast30Days(),
+    getLeadsGeoStats(),
     getLeadsStatsService(),
-    gettimeStoreAtend(),
+    getTempoMedioPorLoja(),
   ])
 
+  // Preparar dados para os gráficos
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
     ([faixa, total]) => ({ faixa, total })
   )
@@ -79,9 +91,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       </div>
 
       <StatsCards
-        totalLeads={stats.total}
-        leadsHoje={stats.today}
-        ultimaCaptura={formatLastCapture(stats.ultimaCaptura)}
+        totalLeads={statsGeral.total}
+        leadsHoje={statsGeral.today}
+        ultimaCaptura={formatLastCapture(statsGeral.ultimaCaptura)}
       />
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>

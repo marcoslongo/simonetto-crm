@@ -1,5 +1,40 @@
 import { Lead, LeadsResponse, TimeStoreResponse } from "./types";
 
+const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || process.env.NEXT_PUBLIC_API_URL?.replace('/wp-json/api/v1', '');
+
+async function fetchAPI(endpoint: string, errorMessage: string) {
+  const url = `${WP_API_BASE}/wp-json/api/v1/${endpoint}`;
+
+  const res = await fetch(url, { 
+    cache: "no-store",
+    headers: {
+      'Accept': 'application/json',
+    }
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`❌ ${errorMessage}:`, text.substring(0, 200));
+    throw new Error(`${errorMessage}: ${res.status}`);
+  }
+
+  const text = await res.text();
+  
+  const cleanText = text.trim();
+  
+  if (!cleanText.startsWith('{') && !cleanText.startsWith('[')) {
+    console.error('❌ Resposta inválida:', cleanText.substring(0, 500));
+    throw new Error(`API retornou conteúdo inválido. Endpoint: ${endpoint}`);
+  }
+
+  try {
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error('❌ Erro ao fazer parse do JSON:', cleanText.substring(0, 500));
+    throw new Error(`Erro ao processar resposta JSON. Endpoint: ${endpoint}`);
+  }
+}
+
 /* ============================
    LEADS BASE
 ============================ */
@@ -9,21 +44,13 @@ export async function getLeads(
   perPage = 10,
   lojaId?: number
 ): Promise<LeadsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  let url = `${baseUrl}/api/leads?page=${page}&per_page=${perPage}`;
+  let endpoint = `leads?page=${page}&per_page=${perPage}`;
 
   if (lojaId) {
-    url += `&loja_id=${lojaId}`;
+    endpoint += `&loja_id=${lojaId}`;
   }
 
-  const res = await fetch(url, { cache: "no-store" });
-
-  if (!res.ok) {
-    throw new Error(`Erro ao buscar leads: ${res.status}`);
-  }
-
-  const data: LeadsResponse = await res.json();
+  const data = await fetchAPI(endpoint, 'Erro ao buscar leads');
 
   if (!data.success) {
     throw new Error("Resposta da API indica falha");
@@ -33,68 +60,272 @@ export async function getLeads(
 }
 
 export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
+  let endpoint = `leads?page=1&per_page=10000`;
 
   if (lojaId) {
-    url += `&loja_id=${lojaId}`;
+    endpoint += `&loja_id=${lojaId}`;
   }
 
-  const res = await fetch(url, { cache: "no-store" });
-
-  if (!res.ok) {
-    throw new Error("Erro ao buscar todos os leads");
-  }
-
-  const data = await res.json();
+  const data = await fetchAPI(endpoint, 'Erro ao buscar todos os leads');
 
   return data.leads || [];
 }
 
-export async function getLojas() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  const res = await fetch(`${baseUrl}/api/lojas`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Erro ao buscar lojas: ${res.status}`);
+export async function getLeadById(id: number): Promise<Lead | null> {
+  try {
+    const data = await fetchAPI(`leads/${id}`, `Erro ao buscar lead ${id}`);
+    return data.success ? data.lead : null;
+  } catch (error) {
+    console.error('Erro ao buscar lead:', error);
+    return null;
   }
+}
 
-  return res.json();
+export async function getLojas() {
+  const data = await fetchAPI('lojas', 'Erro ao buscar lojas');
+  return data;
+}
+
+export async function getLojasWithStats() {
+  const data = await fetchAPI('lojas-with-stats', 'Erro ao buscar lojas com stats');
+  return data;
 }
 
 /* ============================
    STATS GERAIS
 ============================ */
 
-export async function getLeadsStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  const leadsHoje = leads.filter((lead) => {
-    const d = new Date(lead.data_criacao);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime() === hoje.getTime();
-  }).length;
-
-  return {
-    total: leads.length,
-    today: leadsHoje,
-    ultimaCaptura: getLastLeadDate(leads),
+export async function getLeadsStatsGeral() {
+  const json = await fetchAPI('leads-stats-geral', 'Erro ao buscar stats gerais');
+  
+  return json.data || {
+    total: 0,
+    today: 0,
+    ultimaCaptura: null,
   };
 }
+
+/* ============================
+   AGRUPAMENTOS
+============================ */
+
+export async function getLeadsPorInvestimento() {
+  const json = await fetchAPI('leads-por-investimento', 'Erro ao buscar leads por investimento');
+  
+  const grouped: Record<string, number> = {};
+  
+  if (json.data && Array.isArray(json.data)) {
+    json.data.forEach((item: any) => {
+      const faixa = item.expectativa_investimento?.trim() || "Não informado";
+      grouped[faixa] = parseInt(item.total) || 0;
+    });
+  }
+
+  return grouped;
+}
+
+export async function getLeadsPorInteresse() {
+  const json = await fetchAPI('leads-por-interesse', 'Erro ao buscar leads por interesse');
+  
+  const grouped: Record<string, number> = {};
+  
+  if (json.data && Array.isArray(json.data)) {
+    json.data.forEach((item: any) => {
+      const interesse = item.interesse?.trim() || "Não informado";
+      grouped[interesse] = parseInt(item.total) || 0;
+    });
+  }
+
+  return grouped;
+}
+
+export async function getLeadsPorLoja() {
+  const json = await fetchAPI('leads-por-loja', 'Erro ao buscar leads por loja');
+  
+  const grouped: Record<string, number> = {};
+  
+  if (json.data && Array.isArray(json.data)) {
+    json.data.forEach((item: any) => {
+      const loja = item.loja_regiao?.trim() || "Não informado";
+      grouped[loja] = parseInt(item.total) || 0;
+    });
+  }
+
+  return grouped;
+}
+
+/* ============================
+   LEADS ÚLTIMOS 30 DIAS
+============================ */
+
+export async function getLeadsLast30Days() {
+  const json = await fetchAPI('leads-30dias', 'Erro ao buscar leads 30 dias');
+
+  if (!json.data || !Array.isArray(json.data)) {
+    return [];
+  }
+
+  return json.data.map((item: any) => ({
+    date: item.data,
+    total: parseInt(item.total) || 0,
+  }));
+}
+
+/* ============================
+   STATS POR ESTADO
+============================ */
+
+export async function getLeadsGeoStats() {
+  const json = await fetchAPI('leads-geo-stats', 'Erro ao buscar stats geográficas');
+
+  if (!json.data || !Array.isArray(json.data)) {
+    return {};
+  }
+
+  const grouped: Record<string, any> = {};
+
+  json.data.forEach((item: any) => {
+    grouped[item.estado] = {
+      total: item.total,
+      lojas: item.lojas || [],
+    };
+  });
+
+  return grouped;
+}
+
+/* ============================
+   STATS DE ATENDIMENTO
+============================ */
+
+export async function getLeadsStatsService() {
+  const json = await fetchAPI('leads-stats-service', 'Erro ao buscar stats de atendimento');
+
+  const data = json.data || {};
+
+  return {
+    totalLeads: parseInt(data.total_leads) || 0,
+    leadsContatados: parseInt(data.leads_contatados) || 0,
+    leadsNaoContatados: parseInt(data.leads_nao_contatados) || 0,
+    percContatados: parseFloat(data.perc_contatados) || 0,
+    percNaoContatados: parseFloat(data.perc_nao_contatados) || 0,
+    tempoMedioMinutos: parseFloat(data.tempo_medio_minutos) || 0,
+    tempoMedioHoras: parseFloat(data.tempo_medio_horas) || 0,
+  };
+}
+
+/* ============================
+   TEMPO MÉDIO POR LOJA
+============================ */
+
+export async function getTempoMedioPorLoja(): Promise<TimeStoreResponse> {
+  const json = await fetchAPI('leads-tempo-por-loja', 'Erro ao buscar tempo por loja');
+
+  return {
+    success: json.success || true,
+    total_lojas: json.total_lojas || 0,
+    data: Array.isArray(json.data) ? json.data : [],
+  };
+}
+
+/* ============================
+   REGISTRAR CONTATO COM LEAD
+============================ */
+
+export async function registrarContatoLead(params: {
+  lead_id: number;
+  tipo_contato: string;
+  usuario_id?: number;
+  observacao?: string;
+}) {
+  const url = `${WP_API_BASE}/wp-json/api/v1/lead-contato`;
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('❌ Erro ao registrar contato:', text);
+    throw new Error(`Erro ao registrar contato: ${res.status}`);
+  }
+
+  const text = await res.text();
+  const cleanText = text.trim();
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error('❌ Erro ao fazer parse do JSON:', cleanText);
+    throw new Error('Erro ao processar resposta');
+  }
+}
+
+/* ============================
+   CRIAR NOVO LEAD
+============================ */
+
+export async function createLead(leadData: {
+  nome: string;
+  email: string;
+  telefone: string;
+  cidade?: string;
+  estado?: string;
+  interesse?: string;
+  expectativa_investimento?: string;
+  loja_regiao?: string;
+  mensagem?: string;
+  loja_id?: number;
+  pipefy_card_id?: string;
+}) {
+  const url = `${WP_API_BASE}/wp-json/api/v1/leads`;
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(leadData),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    const cleanText = text.trim();
+    
+    try {
+      const error = JSON.parse(cleanText);
+      throw new Error(error.mensagem || `Erro ao criar lead: ${res.status}`);
+    } catch {
+      throw new Error(`Erro ao criar lead: ${res.status}`);
+    }
+  }
+
+  const text = await res.text();
+  const cleanText = text.trim();
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error('❌ Erro ao fazer parse do JSON:', cleanText);
+    throw new Error('Erro ao processar resposta');
+  }
+}
+
+/* ============================
+   FUNÇÕES AUXILIARES
+============================ */
 
 export function getLastLeadDate(leads: Lead[]): string | null {
   if (!leads.length) return null;
 
   const lastLead = leads.reduce((latest, current) => {
-    return new Date(current.data_criacao) >
-      new Date(latest.data_criacao)
+    return new Date(current.data_criacao) > new Date(latest.data_criacao)
       ? current
       : latest;
   });
@@ -102,186 +333,10 @@ export function getLastLeadDate(leads: Lead[]): string | null {
   return lastLead.data_criacao;
 }
 
-/* ============================
-   AGRUPAMENTOS
-============================ */
-
-export function groupLeadsByFaturamento(leads: Lead[]) {
-  const grupos: Record<string, number> = {};
-
-  for (const lead of leads) {
-    const faixa = lead.expectativa_investimento?.trim() || "Não informado";
-    grupos[faixa] = (grupos[faixa] || 0) + 1;
-  }
-
-  return grupos;
-}
-
-export async function getFaturamentoStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-  return groupLeadsByFaturamento(leads);
-}
-
-export function groupLeadsByInteresse(leads: Lead[]) {
-  const grupos: Record<string, number> = {};
-
-  for (const lead of leads) {
-    const interesse = lead.interesse?.trim() || "Não informado";
-    grupos[interesse] = (grupos[interesse] || 0) + 1;
-  }
-
-  return grupos;
-}
-
-export async function getInteresseStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-  return groupLeadsByInteresse(leads);
-}
-
-export function groupLeadsByLoja(leads: Lead[]) {
-  const grupos: Record<string, number> = {};
-
-  for (const lead of leads) {
-    const loja = lead.loja_regiao?.trim() || "Não informado";
-    grupos[loja] = (grupos[loja] || 0) + 1;
-  }
-
-  return grupos;
-}
-
-export async function getLojaStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-  return groupLeadsByLoja(leads);
-}
-
-/* ============================
-   LEADS ÚLTIMOS 30 DIAS
-============================ */
-
-export async function getLeadsLast30Days(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const days: Record<string, number> = {};
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    days[key] = 0;
-  }
-
-  for (const lead of leads) {
-    const d = new Date(lead.data_criacao);
-    d.setHours(0, 0, 0, 0);
-    const key = d.toISOString().slice(0, 10);
-
-    if (key in days) {
-      days[key]++;
-    }
-  }
-
-  return Object.entries(days).map(([date, total]) => ({
-    date,
-    total,
-  }));
-}
-
-/* ============================
-   ⭐ NOVO: ESTADO + LOJAS
-============================ */
-
-function groupLeadsByEstado(leads: Lead[]) {
-  const grupos: Record<
-    string,
-    { total: number; lojas: Record<string, number> }
-  > = {};
-
-  for (const lead of leads) {
-    const estado = lead.estado?.trim().toUpperCase() || "N/I";
-    const loja = lead.loja_regiao?.trim() || "Não informado";
-
-    if (!grupos[estado]) {
-      grupos[estado] = {
-        total: 0,
-        lojas: {},
-      };
-    }
-
-    grupos[estado].total++;
-    grupos[estado].lojas[loja] =
-      (grupos[estado].lojas[loja] || 0) + 1;
-  }
-
-  return grupos;
-}
-
-export async function getEstadoStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId);
-  const grouped = groupLeadsByEstado(leads);
-
-  return Object.entries(grouped).reduce((acc, [estado, info]) => {
-    acc[estado] = {
-      total: info.total,
-      lojas: Object.entries(info.lojas).map(
-        ([nome, leads], index) => ({
-          id: index + 1,
-          nome,
-          leads,
-        })
-      ),
-    };
-
-    return acc;
-  }, {} as Record<string, any>);
-}
-
-/* ============================
-   CONTATO / TEMPO
-============================ */
-
-export async function getLeadsStatsService() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-  const res = await fetch(`${baseUrl}/api/leads/stats-service`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Erro ao buscar stats de contato`);
-  }
-
-  const data = await res.json();
-
-  return data?.data || {
-    totalLeads: 0,
-    leadsContatados: 0,
-    leadsNaoContatados: 0,
-    percContatados: 0,
-    percNaoContatados: 0,
-    tempoMedioMinutos: 0,
-  };
-}
-
-export async function gettimeStoreAtend(): Promise<TimeStoreResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-  const res = await fetch(
-    `${baseUrl}/api/leads/tempo-atendimento`,
-    { cache: "no-store" }
-  );
-
-  if (!res.ok) {
-    throw new Error(`Erro ao buscar tempo atendimento`);
-  }
-
-  const json = await res.json();
-
-  return {
-    success: true,
-    total_lojas: json.total_lojas ?? 0,
-    data: Array.isArray(json.data) ? json.data : [],
-  };
-}
+// Aliases para compatibilidade
+export const getFaturamentoStats = getLeadsPorInvestimento;
+export const getInteresseStats = getLeadsPorInteresse;
+export const getLojaStats = getLeadsPorLoja;
+export const getEstadoStats = getLeadsGeoStats;
+export const gettimeStoreAtend = getTempoMedioPorLoja;
+export const getLeadsStats = getLeadsStatsGeral;
