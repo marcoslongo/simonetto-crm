@@ -1,5 +1,9 @@
 import { Lead, LeadsResponse, TimeStoreResponse } from "./types";
 
+/* ============================
+   LEADS BASE
+============================ */
+
 export async function getLeads(
   page = 1,
   perPage = 10,
@@ -13,9 +17,7 @@ export async function getLeads(
     url += `&loja_id=${lojaId}`;
   }
 
-  const res = await fetch(url, {
-    cache: "no-store",
-  });
+  const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     throw new Error(`Erro ao buscar leads: ${res.status}`);
@@ -28,6 +30,26 @@ export async function getLeads(
   }
 
   return data;
+}
+
+export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
+
+  if (lojaId) {
+    url += `&loja_id=${lojaId}`;
+  }
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error("Erro ao buscar todos os leads");
+  }
+
+  const data = await res.json();
+
+  return data.leads || [];
 }
 
 export async function getLojas() {
@@ -44,20 +66,9 @@ export async function getLojas() {
   return res.json();
 }
 
-export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  let url = `${baseUrl}/api/leads?page=1&per_page=10000`;
-  if (lojaId) {
-    url += `&loja_id=${lojaId}`;
-  }
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("Erro ao buscar todos os leads");
-
-  const data = await res.json();
-  return data.leads || [];
-}
+/* ============================
+   STATS GERAIS
+============================ */
 
 export async function getLeadsStats(lojaId?: number) {
   const leads = await getAllLeads(lojaId);
@@ -65,7 +76,7 @@ export async function getLeadsStats(lojaId?: number) {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const leadsHoje = leads.filter(lead => {
+  const leadsHoje = leads.filter((lead) => {
     const d = new Date(lead.data_criacao);
     d.setHours(0, 0, 0, 0);
     return d.getTime() === hoje.getTime();
@@ -82,7 +93,8 @@ export function getLastLeadDate(leads: Lead[]): string | null {
   if (!leads.length) return null;
 
   const lastLead = leads.reduce((latest, current) => {
-    return new Date(current.data_criacao) > new Date(latest.data_criacao)
+    return new Date(current.data_criacao) >
+      new Date(latest.data_criacao)
       ? current
       : latest;
   });
@@ -90,12 +102,15 @@ export function getLastLeadDate(leads: Lead[]): string | null {
   return lastLead.data_criacao;
 }
 
+/* ============================
+   AGRUPAMENTOS
+============================ */
+
 export function groupLeadsByFaturamento(leads: Lead[]) {
   const grupos: Record<string, number> = {};
 
   for (const lead of leads) {
     const faixa = lead.expectativa_investimento?.trim() || "Não informado";
-
     grupos[faixa] = (grupos[faixa] || 0) + 1;
   }
 
@@ -108,86 +123,124 @@ export async function getFaturamentoStats(lojaId?: number) {
 }
 
 export function groupLeadsByInteresse(leads: Lead[]) {
-  const grupos: Record<string, number> = {}
+  const grupos: Record<string, number> = {};
 
   for (const lead of leads) {
-    const interesse = lead.interesse?.trim() || "Não informado"
-
-    grupos[interesse] = (grupos[interesse] || 0) + 1
+    const interesse = lead.interesse?.trim() || "Não informado";
+    grupos[interesse] = (grupos[interesse] || 0) + 1;
   }
 
-  return grupos
+  return grupos;
 }
 
 export async function getInteresseStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId)
-  return groupLeadsByInteresse(leads)
+  const leads = await getAllLeads(lojaId);
+  return groupLeadsByInteresse(leads);
 }
 
 export function groupLeadsByLoja(leads: Lead[]) {
-  const grupos: Record<string, number> = {}
+  const grupos: Record<string, number> = {};
 
   for (const lead of leads) {
-    const loja = lead.loja_regiao?.trim() || "Não informado"
-
-    grupos[loja] = (grupos[loja] || 0) + 1
+    const loja = lead.loja_regiao?.trim() || "Não informado";
+    grupos[loja] = (grupos[loja] || 0) + 1;
   }
 
-  return grupos
+  return grupos;
 }
-
 
 export async function getLojaStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId)
-  return groupLeadsByLoja(leads)
+  const leads = await getAllLeads(lojaId);
+  return groupLeadsByLoja(leads);
 }
 
+/* ============================
+   LEADS ÚLTIMOS 30 DIAS
+============================ */
+
 export async function getLeadsLast30Days(lojaId?: number) {
-  const leads = await getAllLeads(lojaId)
+  const leads = await getAllLeads(lojaId);
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const days: Record<string, number> = {}
+  const days: Record<string, number> = {};
 
   for (let i = 29; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
-    days[key] = 0
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    days[key] = 0;
   }
 
   for (const lead of leads) {
-    const d = new Date(lead.data_criacao)
-    d.setHours(0, 0, 0, 0)
-    const key = d.toISOString().slice(0, 10)
+    const d = new Date(lead.data_criacao);
+    d.setHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
 
     if (key in days) {
-      days[key]++
+      days[key]++;
     }
   }
 
   return Object.entries(days).map(([date, total]) => ({
     date,
     total,
-  }))
+  }));
 }
 
-export function groupLeadsByEstado(leads: Lead[]) {
-  const grupos: Record<string, number> = {}
+/* ============================
+   ⭐ NOVO: ESTADO + LOJAS
+============================ */
+
+function groupLeadsByEstado(leads: Lead[]) {
+  const grupos: Record<
+    string,
+    { total: number; lojas: Record<string, number> }
+  > = {};
 
   for (const lead of leads) {
-    const estado = lead.estado?.trim().toUpperCase() || "N/I"
-    grupos[estado] = (grupos[estado] || 0) + 1
+    const estado = lead.estado?.trim().toUpperCase() || "N/I";
+    const loja = lead.loja_regiao?.trim() || "Não informado";
+
+    if (!grupos[estado]) {
+      grupos[estado] = {
+        total: 0,
+        lojas: {},
+      };
+    }
+
+    grupos[estado].total++;
+    grupos[estado].lojas[loja] =
+      (grupos[estado].lojas[loja] || 0) + 1;
   }
 
-  return grupos
+  return grupos;
 }
 
 export async function getEstadoStats(lojaId?: number) {
-  const leads = await getAllLeads(lojaId)
-  return groupLeadsByEstado(leads)
+  const leads = await getAllLeads(lojaId);
+  const grouped = groupLeadsByEstado(leads);
+
+  return Object.entries(grouped).reduce((acc, [estado, info]) => {
+    acc[estado] = {
+      total: info.total,
+      lojas: Object.entries(info.lojas).map(
+        ([nome, leads], index) => ({
+          id: index + 1,
+          nome,
+          leads,
+        })
+      ),
+    };
+
+    return acc;
+  }, {} as Record<string, any>);
 }
+
+/* ============================
+   CONTATO / TEMPO
+============================ */
 
 export async function getLeadsStatsService() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -197,7 +250,7 @@ export async function getLeadsStatsService() {
   });
 
   if (!res.ok) {
-    throw new Error(`Erro ao buscar stats de contato: ${res.status}`);
+    throw new Error(`Erro ao buscar stats de contato`);
   }
 
   const data = await res.json();
@@ -209,7 +262,6 @@ export async function getLeadsStatsService() {
     percContatados: 0,
     percNaoContatados: 0,
     tempoMedioMinutos: 0,
-    tempoMedioHoras: 0,
   };
 }
 
@@ -222,14 +274,10 @@ export async function gettimeStoreAtend(): Promise<TimeStoreResponse> {
   );
 
   if (!res.ok) {
-    throw new Error(`Erro ao buscar tempo de atendimento: ${res.status}`);
+    throw new Error(`Erro ao buscar tempo atendimento`);
   }
 
   const json = await res.json();
-
-  if (!json.success) {
-    throw new Error("API retornou success = false");
-  }
 
   return {
     success: true,

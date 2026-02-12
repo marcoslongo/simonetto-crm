@@ -62,7 +62,11 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     .sort((a, b) => b.total - a.total)
 
   const estadoChartData = Object.entries(estadosGroup)
-    .map(([estado, total]) => ({ estado, total }))
+    .map(([estado, info]: any) => ({
+      estado,
+      total: info.total,
+      lojas: info.lojas || [],
+    }))
     .sort((a, b) => b.total - a.total)
 
   return (
@@ -79,7 +83,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         leadsHoje={stats.today}
         ultimaCaptura={formatLastCapture(stats.ultimaCaptura)}
       />
-      
+
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
         <ChartLeadsContato
           contatados={contatoStats.leadsContatados}
