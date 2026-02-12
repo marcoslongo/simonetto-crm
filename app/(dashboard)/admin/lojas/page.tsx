@@ -60,7 +60,7 @@ export default async function AdminLojasPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Unidades</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-[#0e1627]">Unidades</h2>
           <p className="text-muted-foreground mt-1">
             Gerencie todas as lojas do sistema
           </p>
@@ -87,7 +87,7 @@ export default async function AdminLojasPage({
             </div>
             <div className="flex gap-2">
               <Select name="sortBy" defaultValue={sortBy}>
-                <SelectTrigger className="w-[220px] h-11">
+                <SelectTrigger className="w-55 h-11">
                   <ArrowUpDown className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
@@ -101,7 +101,7 @@ export default async function AdminLojasPage({
                   <SelectItem value="localizacao">Localização (A-Z)</SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="submit" size="lg" className="h-11 px-6">
+              <Button type="submit" size="lg" className="h-11 px-6 bg-[#0e1627] cursor-pointer hover:bg-[#0e1627] hover:opacity-90">
                 <Search className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Buscar</span>
               </Button>
@@ -191,7 +191,7 @@ export default async function AdminLojasPage({
 
                   <Link
                     href={`/admin/lojas/${loja.id}`}
-                    className="block w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                    className="block w-full rounded-lg bg-[#0e1627] hover:bg-[#0e1627] hover:opacity-90 px-4 py-2.5 text-center text-sm font-medium text-white transition-all"
                   >
                     Ver detalhes
                   </Link>
