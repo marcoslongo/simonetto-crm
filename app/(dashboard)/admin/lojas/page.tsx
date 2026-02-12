@@ -1,30 +1,26 @@
 import { requireAdmin } from '@/lib/auth'
-import { getLojas } from '@/lib/api'
-import { getLeadsStats } from '@/lib/leads-service'
-import type { Loja } from '@/lib/types'
+import { buscarLojas, type SortBy } from '@/lib/lojas-service'
 
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 
 import { Badge } from '@/components/ui/badge'
-
+import { Button } from '@/components/ui/button'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-
-import { Building2, Mail, MapPin } from 'lucide-react'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Building2, Mail, MapPin, Search, TrendingUp, ArrowUpDown } from 'lucide-react'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import Link from 'next/link'
+import { Input } from '@/components/ui/input'
 
 export const metadata = {
   title: 'Lojas | Admin CRM',
@@ -32,15 +28,14 @@ export const metadata = {
 }
 
 interface AdminLojasPageProps {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ 
+    page?: string
+    search?: string
+    sortBy?: string 
+  }>
 }
 
-interface LojaWithStats extends Loja {
-  totalLeads: number
-  leadsHoje: number
-}
-
-const PER_PAGE = 10
+const PER_PAGE = 9
 
 export default async function AdminLojasPage({
   searchParams,
@@ -49,145 +44,186 @@ export default async function AdminLojasPage({
 
   const params = await searchParams
   const page = Number(params.page) || 1
+  const searchQuery = params.search || ''
+  const sortBy = (params.sortBy as SortBy) || 'nome'
 
-  const lojasResponse = await getLojas()
-  if (!lojasResponse.success) {
-    throw new Error('Falha ao carregar lojas')
-  }
+  const resultado = await buscarLojas({
+    search: searchQuery,
+    sortBy,
+    page,
+    perPage: PER_PAGE,
+  })
 
-  const lojasOrdenadas = [...lojasResponse.lojas].sort((a, b) =>
-    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
-  )
-
-  const total = lojasOrdenadas.length
-  const totalPages = Math.ceil(total / PER_PAGE)
-
-  const start = (page - 1) * PER_PAGE
-  const end = start + PER_PAGE
-  const lojasPaginadas = lojasOrdenadas.slice(start, end)
-
-  const lojasWithStats: LojaWithStats[] = await Promise.all(
-    lojasPaginadas.map(async (loja) => {
-      const stats = await getLeadsStats(Number(loja.id))
-      return {
-        ...loja,
-        totalLeads: stats.total,
-        leadsHoje: stats.today,
-      }
-    })
-  )
+  const { items: lojasPaginadas, total, totalPages } = resultado
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Unidades</h2>
-        <p className="text-muted-foreground">
-          Gerencie todas as lojas do sistema
-        </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Unidades</h2>
+          <p className="text-muted-foreground mt-1">
+            Gerencie todas as lojas do sistema
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            {total} {total === 1 ? 'unidade' : 'unidades'}
+          </Badge>
+        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Lojas</CardTitle>
-          <CardDescription>
-            Total de {total} unidades • Ordenadas alfabeticamente
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {lojasWithStats.length > 0 ? (
-            <>
-              <div className="rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Unidade</TableHead>
-                      <TableHead>Localização</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="text-center">Leads</TableHead>
-                      <TableHead className="text-center">Hoje</TableHead>
-                      <TableHead className="text-center">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {lojasWithStats.map((loja) => (
-                      <TableRow key={loja.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                              <Building2 className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{loja.nome}</p>
-                              <p className="text-xs text-muted-foreground">
-                                ID: {loja.id}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm">
-                            <MapPin className="h-3 w-3 text-muted-foreground" />
-                            {loja.localizacao}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          {loja.emails && loja.emails[0] ? (
-                            <a
-                              href={`mailto:${loja.emails[0].email}`}
-                              className="text-sm hover:underline"
-                            >
-                              <Mail className="h-3 w-3 inline mr-1 text-muted-foreground" />
-                              {loja.emails[0].email}
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Badge variant="secondary">{loja.totalLeads}</Badge>
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          {loja.leadsHoje > 0 ? (
-                            <Badge variant="default">+{loja.leadsHoje}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Link
-                            href={`/admin/lojas/${loja.id}`}
-                            className="inline-block rounded bg-primary px-3 py-1 text-sm font-medium text-white hover:bg-primary/80 transition"
-                          >
-                            Ver detalhes
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <LeadsPagination
-                currentPage={page}
-                totalPages={totalPages}
-                total={total}
-                perPage={PER_PAGE}
+        <CardContent className="pt-6">
+          <form className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                name="search"
+                placeholder="Buscar por nome, localização ou email..."
+                defaultValue={searchQuery}
+                className="pl-10 h-11"
               />
-            </>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhuma loja encontrada
             </div>
-          )}
+            <div className="flex gap-2">
+              <Select name="sortBy" defaultValue={sortBy}>
+                <SelectTrigger className="w-[220px] h-11">
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nome">Nome (A-Z)</SelectItem>
+                  <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
+                  <SelectItem value="leads-desc">Mais leads</SelectItem>
+                  <SelectItem value="leads-asc">Menos leads</SelectItem>
+                  <SelectItem value="hoje-desc">Mais leads hoje</SelectItem>
+                  <SelectItem value="hoje-asc">Menos leads hoje</SelectItem>
+                  <SelectItem value="localizacao">Localização (A-Z)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="submit" size="lg" className="h-11 px-6">
+                <Search className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Buscar</span>
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
+
+      {lojasPaginadas.length > 0 ? (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {lojasPaginadas.map((loja) => (
+              <Card
+                key={loja.id}
+                className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-all">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg leading-tight">
+                          {loja.nome}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ID: {loja.id}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span className="line-clamp-1">{loja.localizacao}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm">
+                    {loja.emails && loja.emails[0] ? (
+                      <a
+                        href={`mailto:${loja.emails[0].email}`}
+                        className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors line-clamp-1"
+                      >
+                        <Mail className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{loja.emails[0].email}</span>
+                      </a>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-4 w-4 shrink-0" />
+                        <span>Sem email</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Total de Leads
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-2xl font-bold">{loja.totalLeads}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Hoje
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {loja.leadsHoje > 0 ? (
+                          <>
+                            <p className="text-2xl font-bold text-green-600">
+                              +{loja.leadsHoje}
+                            </p>
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                          </>
+                        ) : (
+                          <p className="text-2xl font-bold text-muted-foreground">
+                            0
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/admin/lojas/${loja.id}`}
+                    className="block w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                  >
+                    Ver detalhes
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <LeadsPagination
+            currentPage={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={PER_PAGE}
+          />
+        </>
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="rounded-full bg-muted p-6 mb-4">
+              <Search className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              Nenhuma loja encontrada
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              {searchQuery
+                ? `Não encontramos lojas com "${searchQuery}". Tente buscar por outro termo.`
+                : 'Não há lojas cadastradas no sistema.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
