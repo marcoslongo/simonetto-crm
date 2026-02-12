@@ -23,7 +23,7 @@ export function LoginForm() {
   return (
     <Card className="border-border/50 shadow-lg">
       <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-2xl">Entrar</CardTitle>
+        <CardTitle className="text-2xl text-[#16255c]">Entrar</CardTitle>
         <CardDescription>
           Digite seu email e senha para acessar o sistema
         </CardDescription>
@@ -70,7 +70,7 @@ export function LoginForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button type="submit" className="w-full bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 cursor-pointer" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

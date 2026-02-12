@@ -8,26 +8,23 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+    <main className="min-h-screen flex items-center justify-center px-4 bg-[#16255c]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className='flex justify-center mb-6'>
+          <div className="flex justify-center mb-6">
             <Image
-              src={'simonetto.webp'}
-              width={225}
-              height={51}
-              alt=''
+              src="noxus.webp"
+              width={150}
+              height={120}
+              alt="Noxus"
+              priority
             />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Noxus - Lead Ops
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Acesse o sistema com suas credenciais
-          </p>
         </div>
 
-        <LoginForm />
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <LoginForm />
+        </div>
       </div>
     </main>
   )
