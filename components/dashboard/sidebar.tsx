@@ -5,7 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Users, Building2 } from 'lucide-react'
+import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
 import { Button } from '@/components/ui/button'
 import type { User } from '@/lib/types'
 
@@ -69,12 +70,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         onClick={() => setCollapsed(!collapsed)}
         variant="ghost"
         size="icon"
-        className="absolute -right-3 top-24 z-10 h-6 w-6 rounded-full border border-white/20 bg-[#16255c] text-white hover:bg-[#1e3a8a] hover:text-white shadow-lg"
+        className="absolute -right-3 top-24 z-10 h-9 w-9 rounded-full border border-white/20 bg-[#16255c] text-white hover:bg-[#1e3a8a] hover:text-white shadow-lg"
       >
         {collapsed ? (
-          <ChevronRight className="h-4 w-4" />
+          <GoSidebarCollapse className="h-8 w-8" />
         ) : (
-          <ChevronLeft className="h-4 w-4" />
+          <GoSidebarExpand className="h-8 w-8" />
         )}
       </Button>
 
