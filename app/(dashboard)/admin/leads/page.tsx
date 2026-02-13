@@ -17,17 +17,17 @@ interface AdminLeadsPageProps {
 export default async function AdminLeadsPage({ searchParams }: AdminLeadsPageProps) {
   await requireAdmin()
   const params = await searchParams
-  
+
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
-  
+
   const [
-      leadsResponse,
-      lojasData,
-    ] = await Promise.all([
-      getLeads(page, 10, lojaId),
-      getLojas().catch(() => ({ lojas: [] })),
-    ])
+    leadsResponse,
+    lojasData,
+  ] = await Promise.all([
+    getLeads(page, 10, lojaId),
+    getLojas().catch(() => ({ lojas: [] })),
+  ])
 
   const selectedLoja =
     lojaId && leadsResponse.leads.length > 0
@@ -37,8 +37,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Todos os Leads</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Todos os Leads</h2>
+        <p className="text-muted-foreground mt-1">
           Gerencie os leads de todas as unidades
         </p>
       </div>

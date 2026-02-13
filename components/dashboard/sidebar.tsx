@@ -49,7 +49,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         collapsed ? "w-20" : "w-64"
       )}
     >
-      <div className='my-5'>
+      <div className='my-5 border-b border-muted-foreground'>
         <div className="p-4">
           <div className={cn(
             "flex items-center justify-center transition-all duration-300",
