@@ -5,8 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Building2 } from 'lucide-react'
-import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
+import { LayoutDashboard, Users, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { User } from '@/lib/types'
 
@@ -15,7 +14,7 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const pathname = usePathname()
   const isAdmin = user.role === 'administrator'
   const basePath = isAdmin ? '/admin' : '/crm'
@@ -49,36 +48,37 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         collapsed ? "w-20" : "w-64"
       )}
     >
-      <div className='my-5'>
-        <div className="p-4">
-          <div className={cn(
-            "flex items-center justify-center transition-all duration-300",
-            collapsed ? "h-12" : "h-16"
-          )}>
-            <Image
-              alt='Logo'
-              width={collapsed ? 40 : 120}
-              height={collapsed ? 40 : 120}
-              src={'/noxus.webp'}
-              className="object-contain transition-all duration-300"
-            />
-          </div>
+      {/* Logo Section */}
+      <div className="p-4 border-b border-white/10">
+        <div className={cn(
+          "flex items-center justify-center transition-all duration-300",
+          collapsed ? "h-12" : "h-16"
+        )}>
+          <Image
+            alt='Logo'
+            width={collapsed ? 40 : 120}
+            height={collapsed ? 40 : 120}
+            src={'/noxus.webp'}
+            className="object-contain transition-all duration-300"
+          />
         </div>
       </div>
 
+      {/* Toggle Button */}
       <Button
         onClick={() => setCollapsed(!collapsed)}
         variant="ghost"
         size="icon"
-        className="absolute -right-3 top-24 z-10 h-9 w-9 rounded-full border border-white/20 bg-[#16255c] text-white hover:bg-[#1e3a8a] hover:text-white shadow-lg"
+        className="absolute -right-3 top-24 z-10 h-6 w-6 rounded-full border border-white/20 bg-[#16255c] text-white hover:bg-[#1e3a8a] hover:text-white shadow-lg"
       >
         {collapsed ? (
-          <GoSidebarCollapse className="h-8 w-8" />
+          <ChevronRight className="h-4 w-4" />
         ) : (
-          <GoSidebarExpand className="h-8 w-8" />
+          <ChevronLeft className="h-4 w-4" />
         )}
       </Button>
 
+      {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
@@ -104,6 +104,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         })}
       </nav>
 
+      {/* Footer Info */}
       {!collapsed && (
         <div className="p-4 border-t border-white/10">
           <div className="rounded-lg bg-white/5 p-3">
