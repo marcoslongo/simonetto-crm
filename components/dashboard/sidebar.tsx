@@ -15,7 +15,7 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const pathname = usePathname()
   const isAdmin = user.role === 'administrator'
   const basePath = isAdmin ? '/admin' : '/crm'
