@@ -4,7 +4,6 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
@@ -57,32 +56,6 @@ const interestColors: Record<string, string> = {
   escritorio: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
 };
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-const avatarColors = [
-  "bg-[hsl(199,89%,48%)] text-[hsl(0,0%,100%)]",
-  "bg-[hsl(224,56%,22%)] text-[hsl(0,0%,98%)]",
-  "bg-emerald-500 text-white",
-  "bg-amber-500 text-white",
-  "bg-rose-500 text-white",
-  "bg-teal-500 text-white",
-  "bg-indigo-500 text-white",
-];
-
-function getAvatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
 
 export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -148,15 +121,6 @@ export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
               >
                 <TableCell className="py-3">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarFallback
-                        className={`text-xs font-semibold ${getAvatarColor(
-                          lead.nome
-                        )}`}
-                      >
-                        {getInitials(lead.nome)}
-                      </AvatarFallback>
-                    </Avatar>
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-card-foreground truncate">
                         {lead.nome}
@@ -293,15 +257,6 @@ export function LeadsCardGrid({ leads, showLoja = false }: LeadsTableProps) {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <Avatar className="h-11 w-11">
-                  <AvatarFallback
-                    className={`text-sm font-semibold ${getAvatarColor(
-                      lead.nome
-                    )}`}
-                  >
-                    {getInitials(lead.nome)}
-                  </AvatarFallback>
-                </Avatar>
                 <div>
                   <h3 className="font-semibold text-card-foreground text-sm">
                     {lead.nome}
@@ -397,13 +352,7 @@ export function LeadsCompactList({ leads, showLoja = false }: LeadsTableProps) {
             onClick={() => handleRowClick(lead)}
             className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer group"
           >
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarFallback
-                className={`text-xs font-semibold ${getAvatarColor(lead.nome)}`}
-              >
-                {getInitials(lead.nome)}
-              </AvatarFallback>
-            </Avatar>
+            
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">

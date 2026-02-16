@@ -1,9 +1,9 @@
 import { requireAdmin } from '@/lib/auth'
-import { LeadsTable } from '@/components/leads/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getLeads, getLojas } from '@/lib/leads-service'
+import { LeadsViewSwitcher } from '@/components/leads/leads-view-switcher'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -64,10 +64,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <CardContent className="space-y-4">
           {leadsResponse.leads.length > 0 ? (
             <>
-              <LeadsTable
-                leads={leadsResponse.leads}
-                showLoja
-              />
+              <LeadsViewSwitcher leads={leadsResponse.leads} />
 
               <LeadsPagination
                 currentPage={leadsResponse.page}
