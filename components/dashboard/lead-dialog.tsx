@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface LeadDialogProps {
-  lead: Lead;
+  lead: Lead ;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -58,7 +58,7 @@ const interestLabels: Record<string, string> = {
   completo: "Completo",
 };
 
-export function LeadDialog({ lead, open, onOpenChange }: LeadDialogProps) {
+export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) {
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
       day: "2-digit",

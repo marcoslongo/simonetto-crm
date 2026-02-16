@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
-import { LeadsTable } from '@/components/dashboard/leads-table'
+import { LeadsTable } from '@/components/leads/leads-table'
 import { LeadsPagination } from '@/components/dashboard/leads-pagination'
 import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

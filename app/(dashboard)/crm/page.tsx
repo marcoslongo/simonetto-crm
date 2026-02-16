@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { StatsCards } from '@/components/dashboard/stats-cards'
-import { LeadsTable } from '@/components/dashboard/leads-table'
+import { LeadsTable } from '@/components/leads/leads-table'
 import { getDashboardStats, getLeads } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
