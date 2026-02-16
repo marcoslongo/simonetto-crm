@@ -27,23 +27,10 @@ import {
   Store,
   DollarSign,
   ChevronRight,
-  User,
-  Calendar,
 } from "lucide-react";
 import { LeadDetailsModal } from "../dashboard/lead-dialog";
+import { Lead } from "@/lib/types";
 
-export interface Lead {
-  id: string;
-  nome: string;
-  email: string;
-  telefone: string;
-  cidade: string;
-  estado: string;
-  interesse: string;
-  expectativa_investimento: string;
-  loja_nome?: string;
-  data_criacao: string;
-}
 
 interface LeadsTableProps {
   leads: Lead[];
