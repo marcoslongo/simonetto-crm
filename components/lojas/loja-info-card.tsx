@@ -20,7 +20,6 @@ export function LojaInfoCard({ loja }: LojaInfoCardProps) {
 
       <CardContent className="space-y-6 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         
-        {/* Nome */}
         <div className="flex items-start gap-3 p-4 bg-white rounded-lg shadow-sm">
           <div className="bg-[#16255c]/10 p-2 rounded-lg">
             <Building2 className="h-5 w-5 text-[#16255c]" />
@@ -35,7 +34,6 @@ export function LojaInfoCard({ loja }: LojaInfoCardProps) {
           </div>
         </div>
 
-        {/* Localização */}
         <div className="flex items-start gap-3 p-4 bg-white rounded-lg shadow-sm">
           <div className="bg-[#16255c]/10 p-2 rounded-lg">
             <MapPin className="h-5 w-5 text-[#16255c]" />
@@ -53,7 +51,6 @@ export function LojaInfoCard({ loja }: LojaInfoCardProps) {
           </div>
         </div>
 
-        {/* ID */}
         <div className="flex items-start gap-3 p-4 bg-white rounded-lg shadow-sm">
           <div className="bg-[#16255c]/10 p-2 rounded-lg">
             <Hash className="h-5 w-5 text-[#16255c]" />
@@ -68,7 +65,6 @@ export function LojaInfoCard({ loja }: LojaInfoCardProps) {
           </div>
         </div>
 
-        {/* Emails */}
         {loja.emails && loja.emails.length > 0 && (
           <div className="flex items-start gap-3 p-4 bg-white rounded-lg shadow-sm">
             <div className="bg-[#16255c]/10 p-2 rounded-lg">
