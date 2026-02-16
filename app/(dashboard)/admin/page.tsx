@@ -79,8 +79,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Dashboard</h2>
+        <p className="text-muted-foreground mt-1">
           Visão geral do desempenho de leads e lojas
         </p>
       </div>

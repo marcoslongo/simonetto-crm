@@ -1,9 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Building2, Settings } from 'lucide-react'
+import { LayoutDashboard, Users, Building2 } from 'lucide-react'
+import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
+import { Button } from '@/components/ui/button'
 import type { User } from '@/lib/types'
 
 interface DashboardSidebarProps {
@@ -11,6 +15,7 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
+  const [collapsed, setCollapsed] = useState(true)
   const pathname = usePathname()
   const isAdmin = user.role === 'administrator'
   const basePath = isAdmin ? '/admin' : '/crm'
@@ -38,7 +43,42 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   ]
 
   return (
-    <aside className="hidden bg-[#16255c] lg:flex w-64 flex-col border-r min-h-[calc(100vh-4rem)]">
+    <aside
+      className={cn(
+        "hidden lg:flex flex-col border-r min-h-screen bg-[#16255c] transition-all duration-300 relative",
+        collapsed ? "w-20" : "w-64"
+      )}
+    >
+      <div className='my-5 border-b border-muted-foreground'>
+        <div className="p-4">
+          <div className={cn(
+            "flex items-center justify-center transition-all duration-300",
+            collapsed ? "h-12" : "h-16"
+          )}>
+            <Image
+              alt='Logo'
+              width={collapsed ? 40 : 120}
+              height={collapsed ? 40 : 120}
+              src={'/noxus.webp'}
+              className="object-contain transition-all duration-300"
+            />
+          </div>
+        </div>
+      </div>
+
+      <Button
+        onClick={() => setCollapsed(!collapsed)}
+        variant="ghost"
+        size="icon"
+        className="absolute -right-3 top-24 z-10 h-9 w-9 rounded-full border border-white/20 bg-[#16255c] text-white hover:bg-[#1e3a8a] hover:text-white shadow-lg"
+      >
+        {collapsed ? (
+          <GoSidebarCollapse className="h-8 w-8" />
+        ) : (
+          <GoSidebarExpand className="h-8 w-8" />
+        )}
+      </Button>
+
       <nav className="flex-1 space-y-1 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href ||
@@ -51,27 +91,37 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white',
                 isActive
-                  ? 'bg-[#2463eb] text-primary-foreground'
-                  : 'text-[#ccc] hover:bg-[#182543] hover:text-white'
+                  ? 'bg-[#2463eb] text-white'
+                  : 'text-[#ccc] hover:bg-[#182543] hover:text-white',
+                collapsed && 'justify-center px-2'
               )}
+              title={collapsed ? item.name : undefined}
             >
-              <item.icon className="h-5 w-5" />
-              {item.name}
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>{item.name}</span>}
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t">
-        <div className="rounded-lg bg-muted p-3">
-          <p className="text-xs font-medium text-[#ccc]">
-            {isAdmin ? 'Modo Administrador' : 'Sua Unidade'}
-          </p>
-          <p className="text-sm font-semibold mt-1 truncate">
-            {isAdmin ? 'Acesso Total' : user.loja_nome || 'Loja'}
-          </p>
+      {!collapsed && (
+        <div className="p-4 border-t border-white/10">
+          <div className="rounded-lg bg-white/5 p-3">
+            <p className="text-xs font-medium text-[#ccc]">
+              {isAdmin ? 'Modo Administrador' : 'Sua Unidade'}
+            </p>
+            <p className="text-sm font-semibold mt-1 truncate text-white">
+              {isAdmin ? 'Acesso Total' : user.loja_nome || 'Loja'}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {collapsed && (
+        <div className="p-4 border-t border-white/10 flex justify-center">
+          <div className="h-2 w-2 rounded-full bg-[#2463eb]" title={isAdmin ? 'Administrador' : user.loja_nome || 'Loja'} />
+        </div>
+      )}
     </aside>
   )
 }

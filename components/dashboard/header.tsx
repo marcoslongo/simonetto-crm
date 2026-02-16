@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { logoutAction } from '@/app/login/actions'
 import type { User as UserType } from '@/lib/types'
-import Image from 'next/image'
 
 interface DashboardHeaderProps {
   user: UserType
@@ -23,17 +22,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const isAdmin = user.role === 'administrator'
 
   return (
-    <header className="sticky bg-[#16255c] top-0 z-50 w-full border-b backdrop-blur py-3">
+    <header className="z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-4">
-          <div>
-            <Image
-              alt=''
-              width={100}
-              height={150}
-              src={'/noxus.webp'}
-            />
-          </div>
           {!isAdmin && user.loja_nome && (
             <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
               <Store className="h-3 w-3" />
@@ -44,7 +35,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 border-gray-200 hover:bg-gray-50">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                 {isAdmin ? (
                   <Shield className="h-4 w-4 text-primary" />
@@ -52,7 +43,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   <User className="h-4 w-4 text-primary" />
                 )}
               </div>
-              <span className="hidden sm:inline-block text-sm">
+              <span className="hidden sm:inline-block text-sm text-gray-900">
                 {user.name}
               </span>
             </Button>
