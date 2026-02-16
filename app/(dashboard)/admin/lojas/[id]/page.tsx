@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { StatsCards } from '@/components/lojas/stats-cards'
+import { LojaInfoCard } from '@/components/lojas/loja-info-card'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>
@@ -22,7 +23,6 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   const { id } = await params
 
-  // Buscar dados da loja
   const lojasResponse = await getLojas()
   if (!lojasResponse.success) {
     throw new Error('Falha ao carregar lojas')
@@ -44,7 +44,6 @@ export default async function LojaPage({ params }: LojaPageProps) {
     )
   }
 
-  // Buscar estatísticas e dados de gráficos em paralelo
   const [stats, leads30Days, leads12Months] = await Promise.all([
     getLojaStats(id),
     getLojaLeads30Days(id),
@@ -53,27 +52,27 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{loja.nome}</h2>
-          <p className="text-muted-foreground">
-            {loja.localizacao} • ID: {loja.id}
+          <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">{loja.nome}</h2>
+          <p className="text-muted-foreground mt-1">
+            Visualização detalhada da loja
           </p>
         </div>
         <Link href="/admin/lojas">
-          <Button variant="outline">
+          <Button variant="outline" className="shadow-sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
         </Link>
       </div>
-
-      {/* Cards de Estatísticas */}
-      <StatsCards stats={stats} />
-
-      {/* Gráficos */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <LojaInfoCard loja={loja} />
+      </div>
+      <div>
+        <StatsCards stats={stats} />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
         <ChartLeads30Days data={leads30Days} />
         <ChartLeads12Months data={leads12Months} />
       </div>
