@@ -42,12 +42,17 @@ async function fetchAPI(endpoint: string, errorMessage: string) {
 export async function getLeads(
   page = 1,
   perPage = 10,
-  lojaId?: number
+  lojaId?: number,
+  search?: string
 ): Promise<LeadsResponse> {
   let endpoint = `leads?page=${page}&per_page=${perPage}`;
 
   if (lojaId) {
     endpoint += `&loja_id=${lojaId}`;
+  }
+
+  if (search) {
+    endpoint += `&search=${encodeURIComponent(search)}`;
   }
 
   const data = await fetchAPI(endpoint, 'Erro ao buscar leads');

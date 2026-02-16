@@ -4,6 +4,7 @@ import { LojaFilter } from '@/components/dashboard/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getLeads, getLojas } from '@/lib/leads-service'
 import { LeadsViewSwitcher } from '@/components/leads/leads-view-switcher'
+import { LeadsSearch } from '@/components/leads/leads-search'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -11,7 +12,7 @@ export const metadata = {
 }
 
 interface AdminLeadsPageProps {
-  searchParams: Promise<{ page?: string; loja?: string }>
+  searchParams: Promise<{ page?: string; loja?: string; search?: string }>
 }
 
 export default async function AdminLeadsPage({ searchParams }: AdminLeadsPageProps) {
@@ -20,12 +21,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
+  const search = params.search || undefined
 
   const [
     leadsResponse,
     lojasData,
   ] = await Promise.all([
-    getLeads(page, 10, lojaId),
+    getLeads(page, 10, lojaId, search),
     getLojas().catch(() => ({ lojas: [] })),
   ])
 
@@ -45,19 +47,25 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Leads</CardTitle>
-              <CardDescription>
-                {selectedLoja
-                  ? `Filtrando por: ${selectedLoja}`
-                  : `Total de ${leadsResponse.total} leads`}
-              </CardDescription>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>Leads</CardTitle>
+                <CardDescription>
+                  {selectedLoja
+                    ? `Filtrando por: ${selectedLoja}`
+                    : search
+                    ? `Resultados para: "${search}"`
+                    : `Total de ${leadsResponse.total} leads`}
+                </CardDescription>
+              </div>
+
+              {lojasData.lojas?.length > 0 && (
+                <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
+              )}
             </div>
 
-            {lojasData.lojas?.length > 0 && (
-              <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
-            )}
+            <LeadsSearch />
           </div>
         </CardHeader>
 
@@ -75,7 +83,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
             </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              Nenhum lead encontrado
+              {search ? `Nenhum lead encontrado para "${search}"` : 'Nenhum lead encontrado'}
             </div>
           )}
         </CardContent>
