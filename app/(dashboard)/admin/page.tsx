@@ -60,17 +60,12 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getTempoMedioPorLoja(),
   ])
 
-  // Preparar dados para os gráficos
   const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
     ([faixa, total]) => ({ faixa, total })
   )
 
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))
-    .sort((a, b) => b.total - a.total)
-
-  const lojaChartData = Object.entries(lojasGroup)
-    .map(([loja, total]) => ({ loja, total }))
     .sort((a, b) => b.total - a.total)
 
   const estadoChartData = Object.entries(estadosGroup)
