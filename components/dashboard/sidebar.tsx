@@ -8,6 +8,13 @@ import { cn } from '@/lib/utils'
 import { LayoutDashboard, Users, Building2 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 import type { User } from '@/lib/types'
 
 interface DashboardSidebarProps {
@@ -28,17 +35,17 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     },
     ...(isAdmin
       ? [
-        {
-          name: 'Lojas',
-          href: '/admin/lojas',
-          icon: Building2,
-        },
-        {
-          name: 'Leads',
-          href: `${basePath}/leads`,
-          icon: Users,
-        },
-      ]
+          {
+            name: 'Lojas',
+            href: '/admin/lojas',
+            icon: Building2,
+          },
+          {
+            name: 'Leads',
+            href: `${basePath}/leads`,
+            icon: Users,
+          },
+        ]
       : []),
   ]
 
@@ -51,10 +58,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     >
       <div className='my-5 border-b border-muted-foreground'>
         <div className="p-4">
-          <div className={cn(
-            "flex items-center justify-center transition-all duration-300",
-            collapsed ? "h-12" : "h-16"
-          )}>
+          <div
+            className={cn(
+              "flex items-center justify-center transition-all duration-300",
+              collapsed ? "h-12" : "h-16"
+            )}
+          >
             <Image
               alt='Logo'
               width={collapsed ? 40 : 120}
@@ -80,28 +89,44 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       </Button>
 
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href ||
-            (item.href !== basePath && pathname.startsWith(item.href))
+        <TooltipProvider delayDuration={100}>
+          {navigation.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== basePath && pathname.startsWith(item.href))
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white',
-                isActive
-                  ? 'bg-[#2463eb] text-white'
-                  : 'text-[#ccc] hover:bg-[#182543] hover:text-white',
-                collapsed && 'justify-center px-2'
-              )}
-              title={collapsed ? item.name : undefined}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
-          )
-        })}
+            const link = (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white',
+                  isActive
+                    ? 'bg-[#2463eb] text-white'
+                    : 'text-[#ccc] hover:bg-[#182543] hover:text-white',
+                  collapsed && 'justify-center px-2'
+                )}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!collapsed && <span>{item.name}</span>}
+              </Link>
+            )
+
+            if (!collapsed) return link
+
+            return (
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="bg-[#16255c] text-white border-white/10"
+                >
+                  {item.name}
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </TooltipProvider>
       </nav>
 
       {!collapsed && (
@@ -119,7 +144,14 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
       {collapsed && (
         <div className="p-4 border-t border-white/10 flex justify-center">
-          <div className="h-2 w-2 rounded-full bg-[#2463eb]" title={isAdmin ? 'Administrador' : user.loja_nome || 'Loja'} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="h-2 w-2 rounded-full bg-[#2463eb]" />
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isAdmin ? 'Administrador' : user.loja_nome || 'Loja'}
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
     </aside>
