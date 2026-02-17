@@ -49,7 +49,7 @@ export function LojaFilter({ lojas, selectedLojaId }: LojaFilterProps) {
         value={selectedLojaId ? String(selectedLojaId) : 'all'}
         onValueChange={handleLojaChange}
       >
-        <SelectTrigger className="w-[200px]">
+        <SelectTrigger className="w-50 bg-white">
           <SelectValue placeholder="Filtrar por loja" />
         </SelectTrigger>
         <SelectContent>
