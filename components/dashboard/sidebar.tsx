@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Users, Building2, Phone } from 'lucide-react'
-import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
+import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useSidebar } from './sidebar-context'
 
 import type { User } from '@/lib/types'
 
@@ -22,7 +23,7 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const [collapsed, setCollapsed] = useState(true)
+  const { collapsed, setCollapsed } = useSidebar()
   const pathname = usePathname()
   const isAdmin = user.role === 'administrator'
   const basePath = isAdmin ? '/admin' : '/crm'
@@ -36,33 +37,33 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     },
     ...(isStore
       ? [
-          {
-            name: 'Atendimentos',
-            href: '/crm/atendimentos',
-            icon: Phone,
-          }
-        ]
+        {
+          name: 'Atendimentos',
+          href: '/crm/atendimentos',
+          icon: Phone,
+        }
+      ]
       : []),
     ...(isAdmin
       ? [
-          {
-            name: 'Lojas',
-            href: '/admin/lojas',
-            icon: Building2,
-          },
-          {
-            name: 'Leads',
-            href: `${basePath}/leads`,
-            icon: Users,
-          },
-        ]
+        {
+          name: 'Lojas',
+          href: '/admin/lojas',
+          icon: Building2,
+        },
+        {
+          name: 'Leads',
+          href: `${basePath}/leads`,
+          icon: Users,
+        },
+      ]
       : []),
   ]
 
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col border-r min-h-screen bg-[#16255c] transition-all duration-300 relative",
+        "hidden lg:flex flex-col border-r min-h-screen bg-[#16255c] transition-all duration-300 fixed top-0 left-0 z-40",
         collapsed ? "w-20" : "w-64"
       )}
     >
