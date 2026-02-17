@@ -72,7 +72,7 @@ export default async function AdminLojasPage({
         </div>
       </div>
 
-      <Card>
+      <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
         <CardContent className="pt-6">
           <form className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -82,12 +82,12 @@ export default async function AdminLojasPage({
                 name="search"
                 placeholder="Buscar por nome, localização ou email..."
                 defaultValue={searchQuery}
-                className="pl-10 h-11"
+                className="pl-10 h-11 bg-white"
               />
             </div>
             <div className="flex gap-2">
               <Select name="sortBy" defaultValue={sortBy}>
-                <SelectTrigger className="w-55 h-11">
+                <SelectTrigger className="w-55 h-11 bg-white">
                   <ArrowUpDown className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
@@ -116,7 +116,7 @@ export default async function AdminLojasPage({
             {lojasPaginadas.map((loja) => (
               <Card
                 key={loja.id}
-                className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50"
+                className="group hover:shadow-lg transition-all duration-300 hover:border-primary/50 bg-linear-to-br from-slate-50 to-slate-100"
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
