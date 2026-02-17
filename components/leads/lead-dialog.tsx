@@ -36,7 +36,6 @@ import { Lead } from "@/lib/types";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FaWhatsapp } from "react-icons/fa";
-
 import {
   Tooltip,
   TooltipContent,
@@ -45,9 +44,11 @@ import {
 } from "@/components/ui/tooltip";
 
 interface LeadDialogProps {
-  lead: Lead ;
+  lead: Lead;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Chamado quando o lojista realiza uma interação real (copy, whatsapp, tel, email) */
+  onContatoRealizado?: () => void;
 }
 
 const interestLabels: Record<string, string> = {
@@ -58,7 +59,12 @@ const interestLabels: Record<string, string> = {
   completo: "Completo",
 };
 
-export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) {
+export function LeadDetailsModal({
+  lead,
+  open,
+  onOpenChange,
+  onContatoRealizado,
+}: LeadDialogProps) {
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
       day: "2-digit",
@@ -72,6 +78,7 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copiado!");
+      onContatoRealizado?.(); // ← interação real
     } catch {
       toast.error("Erro ao copiar");
     }
@@ -80,6 +87,7 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
   const cleanPhone = lead.telefone.replace(/\D/g, "");
 
   const registrarContato = async (tipo: string) => {
+    onContatoRealizado?.(); // ← interação real
     try {
       await fetch("/api/lead-contato", {
         method: "POST",
@@ -122,12 +130,12 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
 
                   <TooltipProvider>
                     <CardContent className="space-y-4">
+                      {/* Email */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
                           {lead.email}
                         </div>
-
                         <div className="flex gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -141,7 +149,6 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
                             </TooltipTrigger>
                             <TooltipContent>Enviar email</TooltipContent>
                           </Tooltip>
-
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
@@ -158,58 +165,48 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
 
                       <Separator />
 
+                      {/* Telefone */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           {lead.telefone}
                         </div>
-
                         <div className="flex gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Link
                                 href={`tel:${cleanPhone}`}
                                 className="px-2 py-1 border rounded hover:bg-muted"
-                                onClick={() =>
-                                  registrarContato("telefone")
-                                }
+                                onClick={() => registrarContato("telefone")}
                               >
                                 <Phone size={16} />
                               </Link>
                             </TooltipTrigger>
                             <TooltipContent>Ligar</TooltipContent>
                           </Tooltip>
-
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Link
                                 href={`https://wa.me/${cleanPhone}`}
                                 target="_blank"
                                 className="px-2 py-1 border rounded hover:bg-muted"
-                                onClick={() =>
-                                  registrarContato("whatsapp")
-                                }
+                                onClick={() => registrarContato("whatsapp")}
                               >
                                 <FaWhatsapp size={16} />
                               </Link>
                             </TooltipTrigger>
                             <TooltipContent>WhatsApp</TooltipContent>
                           </Tooltip>
-
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
-                                onClick={() =>
-                                  copyToClipboard(lead.telefone)
-                                }
+                                onClick={() => copyToClipboard(lead.telefone)}
                                 className="px-2 py-1 border rounded hover:bg-muted"
                               >
                                 <Copy size={16} />
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              Copiar telefone
-                            </TooltipContent>
+                            <TooltipContent>Copiar telefone</TooltipContent>
                           </Tooltip>
                         </div>
                       </div>
@@ -264,10 +261,7 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
                   <CardContent>
                     <p>Criado em {formatDate(lead.data_criacao)}</p>
                     <Separator />
-                    <p>
-                      Atualizado em{" "}
-                      {formatDate(lead.data_atualizacao)}
-                    </p>
+                    <p>Atualizado em {formatDate(lead.data_atualizacao)}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -286,9 +280,7 @@ export function LeadDetailsModal({ lead, open, onOpenChange }: LeadDialogProps) 
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap">
-                      {lead.mensagem}
-                    </p>
+                    <p className="whitespace-pre-wrap">{lead.mensagem}</p>
                   </CardContent>
                 </Card>
               </TabsContent>

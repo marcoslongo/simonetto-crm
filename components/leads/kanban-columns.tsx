@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   Card,
   CardContent,
@@ -38,25 +38,33 @@ async function registrarContato(leadId: string) {
 }
 
 export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [leads, setLeads]               = useState<Lead[]>(initialLeads)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [pendingId, setPendingId]       = useState<string | null>(null)
+
+  // Rastreia se houve interação real dentro do modal (copy, whatsapp, tel, email)
+  const contatoRealizadoRef = useRef(false)
 
   const naoAtendidos = leads.filter((l) => !l.atendido)
-  const atendidos = leads.filter((l) => l.atendido)
+  const atendidos    = leads.filter((l) => l.atendido)
+
+  const marcarAtendidoLocalmente = (id: string) => {
+    setLeads((prev) =>
+      prev.map((l) => String(l.id) === id ? { ...l, atendido: true } : l)
+    )
+  }
 
   const handleMarcarAtendido = async (lead: Lead) => {
     const id = String(lead.id)
 
-    setLeads((prev) =>
-      prev.map((l) => String(l.id) === id ? { ...l, atendido: true } : l)
-    )
+    marcarAtendidoLocalmente(id)
     setPendingId(id)
 
     try {
       await registrarContato(id)
       toast.success('Lead marcado como atendido.')
     } catch (err: any) {
+      // Reverte se der erro
       setLeads((prev) =>
         prev.map((l) => String(l.id) === id ? { ...l, atendido: false } : l)
       )
@@ -66,10 +74,17 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     }
   }
 
-  const handleModalClose = (leadId: string) => {
-    setLeads((prev) =>
-      prev.map((l) => String(l.id) === leadId ? { ...l, atendido: true } : l)
-    )
+  const handleOpenModal = (lead: Lead) => {
+    contatoRealizadoRef.current = false // reseta ao abrir
+    setSelectedLead(lead)
+  }
+
+  const handleModalClose = () => {
+    // Só move para atendido se houve interação real (copy, whatsapp, tel, email)
+    if (contatoRealizadoRef.current && selectedLead) {
+      marcarAtendidoLocalmente(String(selectedLead.id))
+    }
+    contatoRealizadoRef.current = false
     setSelectedLead(null)
   }
 
@@ -108,7 +123,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
                     key={lead.id}
                     lead={lead}
                     isPending={pendingId === String(lead.id)}
-                    onOpen={() => setSelectedLead(lead)}
+                    onOpen={() => handleOpenModal(lead)}
                     onMarcarAtendido={() => handleMarcarAtendido(lead)}
                   />
                 ))
@@ -147,7 +162,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
                     lead={lead}
                     attended
                     isPending={false}
-                    onOpen={() => setSelectedLead(lead)}
+                    onOpen={() => handleOpenModal(lead)}
                   />
                 ))
               )}
@@ -160,8 +175,11 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
         <LeadDetailsModal
           lead={selectedLead}
           open={!!selectedLead}
+          onContatoRealizado={() => {
+            contatoRealizadoRef.current = true
+          }}
           onOpenChange={(open) => {
-            if (!open) handleModalClose(String(selectedLead.id))
+            if (!open) handleModalClose()
           }}
         />
       )}
@@ -169,6 +187,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   )
 }
 
+// ─── Row ─────────────────────────────────────────────────────────────────────
 
 interface LeadKanbanRowProps {
   lead: Lead
