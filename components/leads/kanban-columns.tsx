@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, Clock, ChevronRight, CircleCheckBig } from 'lucide-react'
+import { CheckCircle2, Clock, ChevronRight } from 'lucide-react'
 import { Lead } from '@/lib/types'
 import { LeadDetailsModal } from '@/components/leads/lead-dialog'
 import { toast } from 'sonner'
@@ -77,7 +77,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     <>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -95,10 +95,10 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="divide-y flex justify-center">
+            <div className="divide-y">
               {naoAtendidos.length === 0 ? (
-                <p className="px-6 py-8 text-center text-lg text-muted-foreground flex items-center gap-2">
-                  Nenhum lead pendente <CircleCheckBig size={20} className='text-emerald-500' />
+                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  Nenhum lead pendente 🎉
                 </p>
               ) : (
                 naoAtendidos.map((lead) => (
@@ -115,7 +115,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           </CardContent>
         </Card>
 
-        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -167,6 +167,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   )
 }
 
+
 interface LeadKanbanRowProps {
   lead: Lead
   attended?: boolean
@@ -188,8 +189,7 @@ function LeadKanbanRow({
   })
 
   return (
-    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-linear-to-br from-slate-50 to-slate-100">
-
+    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40">
       <button
         onClick={onOpen}
         className="min-w-0 flex-1 text-left focus-visible:outline-none"
