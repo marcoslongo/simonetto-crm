@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Building2 } from 'lucide-react'
+import { LayoutDashboard, Users, Building2, Phone } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
 import { Button } from '@/components/ui/button'
 import {
@@ -26,6 +26,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname()
   const isAdmin = user.role === 'administrator'
   const basePath = isAdmin ? '/admin' : '/crm'
+  const isStore = user.role === 'loja'
 
   const navigation = [
     {
@@ -33,6 +34,15 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       href: basePath,
       icon: LayoutDashboard,
     },
+    ...(isStore
+      ? [
+          {
+            name: 'Atendimentos',
+            href: '/crm/atendimentos',
+            icon: Phone,
+          }
+        ]
+      : []),
     ...(isAdmin
       ? [
           {
