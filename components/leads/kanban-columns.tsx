@@ -221,22 +221,6 @@ function LeadKanbanRow({
       </button>
 
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        {!attended && onMarcarAtendido && (
-          <button
-            onClick={onMarcarAtendido}
-            disabled={isPending}
-            title="Marcar como atendido"
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
-          >
-            {isPending ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            )}
-            Atendido
-          </button>
-        )}
-
         <button
           onClick={onOpen}
           title="Ver detalhes"
