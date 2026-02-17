@@ -47,7 +47,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
-/* ALERT DIALOG */
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -84,7 +83,10 @@ export function LeadDetailsModal({
   isAdmin,
 }: LeadDialogProps) {
   const router = useRouter();
+
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [actions, setActions] = useState<any[]>([]);
+  const [loadingActions, setLoadingActions] = useState(false);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
@@ -141,7 +143,6 @@ export function LeadDetailsModal({
       }
 
       toast.success("Lead excluído com sucesso");
-
       onOpenChange(false);
       router.refresh();
     } catch {
@@ -151,18 +152,43 @@ export function LeadDetailsModal({
     }
   };
 
+  const fetchActions = async () => {
+    if (!isAdmin) return;
+
+    try {
+      setLoadingActions(true);
+
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+
+      const res = await fetch(`/api/leads/${lead.id}/actions`)
+
+      if (!res.ok) throw new Error("Erro API");
+
+      const data = await res.json();
+
+      setActions(data?.actions || data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao carregar histórico");
+    } finally {
+      setLoadingActions(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
         <DialogHeader className="flex flex-col items-start gap-3">
           <DialogTitle>{lead.nome}</DialogTitle>
+
           {isAdmin && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="gap-2 cursor-pointer"
+                  className="gap-2"
                 >
                   <Trash2 size={16} />
                   Excluir
@@ -190,7 +216,7 @@ export function LeadDetailsModal({
                   <AlertDialogAction
                     onClick={handleDeleteLead}
                     disabled={loadingDelete}
-                    className="bg-destructive text-white hover:bg-destructive/90"
+                    className="bg-destructive text-white"
                   >
                     {loadingDelete
                       ? "Excluindo..."
@@ -207,14 +233,25 @@ export function LeadDetailsModal({
             <TabsTrigger value="detalhes">
               Detalhes
             </TabsTrigger>
+
             {lead.mensagem && (
               <TabsTrigger value="mensagem">
                 Mensagem
               </TabsTrigger>
             )}
+
+            {isAdmin && (
+              <TabsTrigger
+                value="historico"
+                onClick={fetchActions}
+              >
+                Histórico
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4 min-h-[60vh]">
+            {/* DETALHES */}
             <TabsContent value="detalhes" className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
@@ -227,18 +264,13 @@ export function LeadDetailsModal({
 
                   <TooltipProvider>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {lead.email}
-                        </div>
-
+                      <div className="flex justify-between">
+                        <span>{lead.email}</span>
                         <div className="flex gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Link
                                 href={`mailto:${lead.email}`}
-                                className="px-2 py-1 border rounded hover:bg-muted"
                                 onClick={() =>
                                   registrarContato("email")
                                 }
@@ -257,7 +289,6 @@ export function LeadDetailsModal({
                                 onClick={() =>
                                   copyToClipboard(lead.email)
                                 }
-                                className="px-2 py-1 border rounded hover:bg-muted"
                               >
                                 <Copy size={16} />
                               </button>
@@ -271,70 +302,42 @@ export function LeadDetailsModal({
 
                       <Separator />
 
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          {lead.telefone}
-                        </div>
-
+                      <div className="flex justify-between">
+                        <span>{lead.telefone}</span>
                         <div className="flex gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link
-                                href={`tel:${cleanPhone}`}
-                                className="px-2 py-1 border rounded hover:bg-muted"
-                                onClick={() =>
-                                  registrarContato("telefone")
-                                }
-                              >
-                                <Phone size={16} />
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Ligar
-                            </TooltipContent>
-                          </Tooltip>
+                          <Link
+                            href={`tel:${cleanPhone}`}
+                            onClick={() =>
+                              registrarContato("telefone")
+                            }
+                          >
+                            <Phone size={16} />
+                          </Link>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link
-                                href={`https://wa.me/${cleanPhone}`}
-                                target="_blank"
-                                className="px-2 py-1 border rounded hover:bg-muted"
-                                onClick={() =>
-                                  registrarContato("whatsapp")
-                                }
-                              >
-                                <FaWhatsapp size={16} />
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              WhatsApp
-                            </TooltipContent>
-                          </Tooltip>
+                          <Link
+                            href={`https://wa.me/${cleanPhone}`}
+                            target="_blank"
+                            onClick={() =>
+                              registrarContato("whatsapp")
+                            }
+                          >
+                            <FaWhatsapp size={16} />
+                          </Link>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() =>
-                                  copyToClipboard(lead.telefone)
-                                }
-                                className="px-2 py-1 border rounded hover:bg-muted"
-                              >
-                                <Copy size={16} />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Copiar telefone
-                            </TooltipContent>
-                          </Tooltip>
+                          <button
+                            onClick={() =>
+                              copyToClipboard(lead.telefone)
+                            }
+                          >
+                            <Copy size={16} />
+                          </button>
                         </div>
                       </div>
 
                       <Separator />
 
                       <p>
-                        <MapPin className="inline h-4 w-4 mr-2" />
+                        <MapPin className="inline mr-2 h-4 w-4" />
                         {lead.cidade}/{lead.estado}
                       </p>
                     </CardContent>
@@ -343,67 +346,51 @@ export function LeadDetailsModal({
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
+                    <CardTitle>
+                      <DollarSign className="h-5 w-5 inline mr-2" />
                       Interesse
                     </CardTitle>
                   </CardHeader>
 
                   <CardContent>
-                    <div className="flex flex-wrap gap-1">
-                      {lead.interesse
-                        ?.split(",")
-                        .map((item) => {
-                          const key =
-                            item.trim().toLowerCase();
-                          return (
-                            <Badge
-                              key={key}
-                              variant="secondary"
-                            >
-                              {interestLabels[key] ||
-                                key}
-                            </Badge>
-                          );
-                        })}
-                    </div>
+                    {lead.interesse
+                      ?.split(",")
+                      .map((item) => {
+                        const key =
+                          item.trim().toLowerCase();
+                        return (
+                          <Badge key={key}>
+                            {interestLabels[key] || key}
+                          </Badge>
+                        );
+                      })}
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="h-5 w-5" />
+                    <CardTitle>
+                      <Store className="h-5 w-5 inline mr-2" />
                       Loja
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="font-medium">
-                      {lead.loja_nome}
-                    </p>
+                    {lead.loja_nome}
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
+                    <CardTitle>
+                      <Calendar className="h-5 w-5 inline mr-2" />
                       Datas
                     </CardTitle>
                   </CardHeader>
-
                   <CardContent>
-                    <p>
-                      Criado em{" "}
-                      {formatDate(lead.data_criacao)}
-                    </p>
+                    Criado: {formatDate(lead.data_criacao)}
                     <Separator />
-                    <p>
-                      Atualizado em{" "}
-                      {formatDate(
-                        lead.data_atualizacao
-                      )}
-                    </p>
+                    Atualizado:{" "}
+                    {formatDate(lead.data_atualizacao)}
                   </CardContent>
                 </Card>
               </div>
@@ -413,19 +400,58 @@ export function LeadDetailsModal({
               <TabsContent value="mensagem">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" />
-                      Mensagem
-                    </CardTitle>
+                    <CardTitle>Mensagem</CardTitle>
                     <CardDescription>
                       Mensagem enviada pelo lead
                     </CardDescription>
                   </CardHeader>
 
                   <CardContent>
-                    <p className="whitespace-pre-wrap">
-                      {lead.mensagem}
-                    </p>
+                    {lead.mensagem}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {isAdmin && (
+              <TabsContent value="historico">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      Histórico de ações
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent>
+                    {loadingActions && (
+                      <p>Carregando...</p>
+                    )}
+
+                    {!loadingActions &&
+                      actions.length === 0 && (
+                        <p>Nenhuma ação registrada.</p>
+                      )}
+
+                    {actions.map((action, i) => (
+                      <div
+                        key={i}
+                        className="border rounded p-3 mb-3"
+                      >
+                        <p className="font-medium">
+                          {action.tipo_contato}
+                        </p>
+
+                        {action.observacao && (
+                          <p className="text-sm text-muted-foreground">
+                            {action.observacao}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(action.criado_em)}
+                        </p>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               </TabsContent>
