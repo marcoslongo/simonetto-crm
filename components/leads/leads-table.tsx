@@ -27,7 +27,7 @@ import {
   DollarSign,
   ChevronRight,
 } from "lucide-react";
-import { LeadDetailsModal } from "../dashboard/lead-dialog";
+import { LeadDetailsModal } from "./lead-dialog";
 import { Lead } from "@/lib/types";
 
 

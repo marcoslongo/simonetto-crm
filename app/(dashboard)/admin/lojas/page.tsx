@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Building2, Mail, MapPin, Search, TrendingUp, ArrowUpDown } from 'lucide-react'
-import { LeadsPagination } from '@/components/dashboard/leads-pagination'
+import { LeadsPagination } from '@/components/leads/leads-pagination'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 

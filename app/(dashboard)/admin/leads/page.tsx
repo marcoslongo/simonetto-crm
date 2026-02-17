@@ -1,6 +1,6 @@
 import { requireAdmin } from '@/lib/auth'
-import { LeadsPagination } from '@/components/dashboard/leads-pagination'
-import { LojaFilter } from '@/components/dashboard/loja-filter'
+import { LeadsPagination } from '@/components/leads/leads-pagination'
+import { LojaFilter } from '@/components/lojas/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getLeads, getLojas } from '@/lib/leads-service'
 import { LeadsViewSwitcher } from '@/components/leads/leads-view-switcher'
