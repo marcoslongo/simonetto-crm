@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
-import { MapPin, TrendingUp } from "lucide-react"
+import { MapPin, TrendingUp, Store, ChevronRight } from "lucide-react"
 import Link from "next/link"
 
 interface Loja {
@@ -163,38 +163,62 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
         </CardContent>
       </Card>
 
-      {/* Dialog lojas */}
       <Dialog
         open={!!estadoSelecionado}
         onOpenChange={() => setEstadoSelecionado(null)}
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              Lojas — {estadoSelecionado?.estado}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            {estadoSelecionado?.lojas.map(loja => (
-              <div
-                key={loja.id}
-                className="flex justify-between items-center border rounded-lg p-3"
-              >
+        <DialogContent className="flex flex-col h-[70vh] overflow-hidden max-w-2xl p-0">
+          <div className="px-6 pt-6">
+            <DialogHeader className="border-b border-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <MapPin className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <p className="font-semibold">{loja.nome}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {loja.leads} leads
+                  <DialogTitle className="text-xl font-semibold text-card-foreground">
+                    Lojas — {estadoSelecionado?.estado}
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {estadoSelecionado?.lojas.length} {estadoSelecionado?.lojas.length === 1 ? 'loja' : 'lojas'} com captação neste estado
                   </p>
                 </div>
-
-                <Link href={`/admin/lojas/${loja.id}`}>
-                  <Button size="sm">
-                    Ver resultados
-                  </Button>
-                </Link>
               </div>
-            ))}
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="space-y-3">
+              {estadoSelecionado?.lojas.map(loja => (
+                <div
+                  key={loja.id}
+                  className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:shadow-md hover:border-accent/40"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-semibold text-card-foreground">
+                        {loja.nome}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          <span>{loja.leads} leads capturados</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link href={`/admin/lojas/${loja.id}`}>
+                    <Button 
+                      size="sm" 
+                      className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      Ver resultados
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
