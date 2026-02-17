@@ -71,7 +71,7 @@ export function LeadsTable({ leads, showLoja = false, isAdmin }: LeadsTableProps
   return (
     <TooltipProvider>
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-        <Table>
+        <Table className="bg-linear-to-br from-slate-50 to-slate-100">
           <TableHeader>
             <TableRow className="border-b border-border hover:bg-transparent">
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -250,7 +250,7 @@ export function LeadsCardGrid({ leads, showLoja = false, isAdmin }: LeadsTablePr
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 bg-linear-to-br from-slate-50 to-slate-100">
         {leads.map((lead) => (
           <div
             key={lead.id}
@@ -348,7 +348,7 @@ export function LeadsCompactList({ leads, showLoja = false, isAdmin }: LeadsTabl
 
   return (
     <>
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border bg-linear-to-br from-slate-50 to-slate-100">
         {leads.map((lead) => (
           <div
             key={lead.id}

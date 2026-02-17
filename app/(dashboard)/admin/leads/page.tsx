@@ -45,7 +45,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         </p>
       </div>
 
-      <Card>
+      <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

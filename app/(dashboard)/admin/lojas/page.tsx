@@ -4,6 +4,7 @@ import { buscarLojas, type SortBy } from '@/lib/lojas-service'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -28,10 +29,10 @@ export const metadata = {
 }
 
 interface AdminLojasPageProps {
-  searchParams: Promise<{ 
+  searchParams: Promise<{
     page?: string
     search?: string
-    sortBy?: string 
+    sortBy?: string
   }>
 }
 
@@ -65,48 +66,51 @@ export default async function AdminLojasPage({
             Gerencie todas as lojas do sistema
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-sm">
-            {total} {total === 1 ? 'unidade' : 'unidades'}
-          </Badge>
-        </div>
       </div>
 
       <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
-        <CardContent className="pt-6">
-          <form className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                name="search"
-                placeholder="Buscar por nome, localização ou email..."
-                defaultValue={searchQuery}
-                className="pl-10 h-11 bg-white"
-              />
+        <CardContent>
+          <div className='flex flex-col gap-4'>
+            <div>
+              <CardTitle>Lojas</CardTitle>
+              <CardDescription>
+                {total} {total === 1 ? 'unidade' : 'unidades'}
+              </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Select name="sortBy" defaultValue={sortBy}>
-                <SelectTrigger className="w-55 h-11 bg-white">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nome">Nome (A-Z)</SelectItem>
-                  <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
-                  <SelectItem value="leads-desc">Mais leads</SelectItem>
-                  <SelectItem value="leads-asc">Menos leads</SelectItem>
-                  <SelectItem value="hoje-desc">Mais leads hoje</SelectItem>
-                  <SelectItem value="hoje-asc">Menos leads hoje</SelectItem>
-                  <SelectItem value="localizacao">Localização (A-Z)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="submit" size="lg" className="h-11 px-6 bg-[#16255c] cursor-pointer hover:bg-[#16255c] hover:opacity-90">
-                <Search className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Buscar</span>
-              </Button>
-            </div>
-          </form>
+            <form className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  name="search"
+                  placeholder="Buscar por nome, localização ou email..."
+                  defaultValue={searchQuery}
+                  className="pl-10 h-11 bg-white"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select name="sortBy" defaultValue={sortBy}>
+                  <SelectTrigger className="w-55 h-11 bg-white">
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nome">Nome (A-Z)</SelectItem>
+                    <SelectItem value="nome-desc">Nome (Z-A)</SelectItem>
+                    <SelectItem value="leads-desc">Mais leads</SelectItem>
+                    <SelectItem value="leads-asc">Menos leads</SelectItem>
+                    <SelectItem value="hoje-desc">Mais leads hoje</SelectItem>
+                    <SelectItem value="hoje-asc">Menos leads hoje</SelectItem>
+                    <SelectItem value="localizacao">Localização (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button type="submit" size="lg" className="h-11 px-6 bg-[#16255c] cursor-pointer hover:bg-[#16255c] hover:opacity-90">
+                  <Search className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Buscar</span>
+                </Button>
+              </div>
+            </form>
+          </div>
         </CardContent>
       </Card>
 
