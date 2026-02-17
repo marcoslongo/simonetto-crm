@@ -42,7 +42,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [pendingId, setPendingId]       = useState<string | null>(null)
 
-  // Rastreia se houve interação real dentro do modal (copy, whatsapp, tel, email)
   const contatoRealizadoRef = useRef(false)
 
   const naoAtendidos = leads.filter((l) => !l.atendido)
@@ -64,7 +63,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
       await registrarContato(id)
       toast.success('Lead marcado como atendido.')
     } catch (err: any) {
-      // Reverte se der erro
       setLeads((prev) =>
         prev.map((l) => String(l.id) === id ? { ...l, atendido: false } : l)
       )
@@ -75,12 +73,11 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   }
 
   const handleOpenModal = (lead: Lead) => {
-    contatoRealizadoRef.current = false // reseta ao abrir
+    contatoRealizadoRef.current = false
     setSelectedLead(lead)
   }
 
   const handleModalClose = () => {
-    // Só move para atendido se houve interação real (copy, whatsapp, tel, email)
     if (contatoRealizadoRef.current && selectedLead) {
       marcarAtendidoLocalmente(String(selectedLead.id))
     }
@@ -92,7 +89,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     <>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-        <Card>
+        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -132,7 +129,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -186,8 +183,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     </>
   )
 }
-
-// ─── Row ─────────────────────────────────────────────────────────────────────
 
 interface LeadKanbanRowProps {
   lead: Lead

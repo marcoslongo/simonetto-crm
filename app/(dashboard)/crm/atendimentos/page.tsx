@@ -17,8 +17,8 @@ export default async function CrmAtendimentoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Atendimentos</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Atendimentos</h2>
+        <p className="text-muted-foreground mt-1">
           Gerencie os leads da sua unidade: {user.loja_nome || user.name}
         </p>
       </div>

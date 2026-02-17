@@ -30,8 +30,8 @@ export default async function CrmDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Dashboard</h2>
+        <p className="text-muted-foreground mt-1">
           {isLoja
             ? `Visão geral da sua unidade: ${user.loja_nome || user.name}`
             : 'Visão geral de todas as unidades (Administrador)'}
