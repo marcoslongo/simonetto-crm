@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, Clock, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Clock, ChevronRight, CircleCheckBig } from 'lucide-react'
 import { Lead } from '@/lib/types'
 import { LeadDetailsModal } from '@/components/leads/lead-dialog'
 import { toast } from 'sonner'
@@ -38,12 +38,12 @@ async function registrarContato(leadId: string) {
 }
 
 export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
-  const [leads, setLeads]           = useState<Lead[]>(initialLeads)
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [pendingId, setPendingId]   = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<string | null>(null)
 
   const naoAtendidos = leads.filter((l) => !l.atendido)
-  const atendidos    = leads.filter((l) => l.atendido)
+  const atendidos = leads.filter((l) => l.atendido)
 
   const handleMarcarAtendido = async (lead: Lead) => {
     const id = String(lead.id)
@@ -97,9 +97,11 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           <CardContent className="p-0">
             <div className="divide-y">
               {naoAtendidos.length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  Nenhum lead pendente 🎉
-                </p>
+                <div className='flex justify-center'>
+                  <p className="px-6 py-8 text-center text-lg text-muted-foreground flex items-center gap-2">
+                    Nenhum lead pendente <CircleCheckBig size={20} className='text-emerald-500' />
+                  </p>
+                </div>
               ) : (
                 naoAtendidos.map((lead) => (
                   <LeadKanbanRow
