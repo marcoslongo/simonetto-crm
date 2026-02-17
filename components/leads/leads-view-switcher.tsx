@@ -11,9 +11,10 @@ import { LeadsCardGrid, LeadsCompactList, LeadsTable } from "./leads-table";
 interface Props {
   leads: Lead[];
   showLoja?: boolean;
+  isAdmin?: boolean;
 }
 
-export function LeadsViewSwitcher({ leads, showLoja }: Props) {
+export function LeadsViewSwitcher({ leads, showLoja, isAdmin }: Props) {
   const [view, setView] = useState<"table" | "card" | "compact">("table");
 
   return (
@@ -51,15 +52,15 @@ export function LeadsViewSwitcher({ leads, showLoja }: Props) {
       </div>
 
       {view === "table" && (
-        <LeadsTable leads={leads} showLoja={showLoja} />
+        <LeadsTable leads={leads} showLoja={showLoja} isAdmin={isAdmin} />
       )}
 
       {view === "card" && (
-        <LeadsCardGrid leads={leads} showLoja={showLoja} />
+        <LeadsCardGrid leads={leads} showLoja={showLoja} isAdmin={isAdmin} />
       )}
 
       {view === "compact" && (
-        <LeadsCompactList leads={leads} showLoja={showLoja} />
+        <LeadsCompactList leads={leads} showLoja={showLoja} isAdmin={isAdmin} />
       )}
     </div>
   );

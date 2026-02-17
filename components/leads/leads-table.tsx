@@ -34,6 +34,7 @@ import { Lead } from "@/lib/types";
 interface LeadsTableProps {
   leads: Lead[];
   showLoja?: boolean;
+  isAdmin?: boolean;
 }
 
 const interestLabels: Record<string, string> = {
@@ -57,7 +58,7 @@ const interestColors: Record<string, string> = {
 };
 
 
-export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
+export function LeadsTable({ leads, showLoja = false, isAdmin }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [view, setView] = useState<"table" | "card" | "compact">("table");
@@ -230,6 +231,7 @@ export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
           lead={selectedLead}
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
+          isAdmin={isAdmin}
         />
       )}
     </TooltipProvider>
@@ -237,7 +239,7 @@ export function LeadsTable({ leads, showLoja = false }: LeadsTableProps) {
 }
 
 
-export function LeadsCardGrid({ leads, showLoja = false }: LeadsTableProps) {
+export function LeadsCardGrid({ leads, showLoja = false, isAdmin }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -327,6 +329,7 @@ export function LeadsCardGrid({ leads, showLoja = false }: LeadsTableProps) {
           lead={selectedLead}
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
+          isAdmin={isAdmin}
         />
       )}
     </>
@@ -334,7 +337,7 @@ export function LeadsCardGrid({ leads, showLoja = false }: LeadsTableProps) {
 }
 
 
-export function LeadsCompactList({ leads, showLoja = false }: LeadsTableProps) {
+export function LeadsCompactList({ leads, showLoja = false, isAdmin }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -352,7 +355,7 @@ export function LeadsCompactList({ leads, showLoja = false }: LeadsTableProps) {
             onClick={() => handleRowClick(lead)}
             className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer group"
           >
-            
+
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
@@ -431,6 +434,7 @@ export function LeadsCompactList({ leads, showLoja = false }: LeadsTableProps) {
           lead={selectedLead}
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
+          isAdmin={isAdmin}
         />
       )}
     </>

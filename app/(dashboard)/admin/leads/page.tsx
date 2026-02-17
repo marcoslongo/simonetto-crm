@@ -72,7 +72,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <CardContent className="space-y-4">
           {leadsResponse.leads.length > 0 ? (
             <>
-              <LeadsViewSwitcher leads={leadsResponse.leads} />
+              <LeadsViewSwitcher leads={leadsResponse.leads} showLoja isAdmin />
 
               <LeadsPagination
                 currentPage={leadsResponse.page}
