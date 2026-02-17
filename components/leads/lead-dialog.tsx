@@ -256,9 +256,7 @@ export function LeadDetailsModal({
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
-            {/* DETALHES */}
             <TabsContent value="detalhes" className="mt-0 space-y-6">
-              {/* Informações de Contato */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -309,7 +307,6 @@ export function LeadDetailsModal({
                       </div>
                     </div>
 
-                    {/* Telefone */}
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
@@ -365,7 +362,6 @@ export function LeadDetailsModal({
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
-                {/* Interesses */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -393,7 +389,6 @@ export function LeadDetailsModal({
                   </div>
                 </div>
 
-                {/* Investimento */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
@@ -410,7 +405,6 @@ export function LeadDetailsModal({
                   </div>
                 </div>
 
-                {/* Loja */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -425,7 +419,6 @@ export function LeadDetailsModal({
                   </p>
                 </div>
 
-                {/* Datas */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -453,7 +446,6 @@ export function LeadDetailsModal({
               </div>
             </TabsContent>
 
-            {/* MENSAGEM */}
             {lead.mensagem && (
               <TabsContent value="mensagem" className="mt-0">
                 <div className="rounded-xl border border-border bg-card p-5">
@@ -474,7 +466,6 @@ export function LeadDetailsModal({
               </TabsContent>
             )}
 
-            {/* HISTÓRICO */}
             {isAdmin && (
               <TabsContent value="historico" className="mt-0">
                 <div className="rounded-xl border border-border bg-card p-5">
