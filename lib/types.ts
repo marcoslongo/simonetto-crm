@@ -44,6 +44,7 @@ export interface Loja {
 
 // Lead
 export interface Lead {
+  atendido: boolean;
   id: string;
   nome: string;
   email: string;

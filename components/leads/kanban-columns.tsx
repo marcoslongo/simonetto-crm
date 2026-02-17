@@ -1,0 +1,258 @@
+"use client"
+
+import { useState } from 'react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { CheckCircle2, Clock, ChevronRight } from 'lucide-react'
+import { Lead } from '@/lib/types'
+import { LeadDetailsModal } from '@/components/leads/lead-dialog'
+import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
+interface KanbanColumnsProps {
+  leads: Lead[]
+}
+
+async function registrarContato(leadId: string) {
+  const res = await fetch('/api/lead-contato', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      lead_id: leadId,
+      tipo_contato: 'manual',
+      observacao: 'Marcado como atendido pelo lojista',
+    }),
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data?.mensagem ?? 'Erro ao registrar contato.')
+  }
+}
+
+export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
+  const [leads, setLeads]           = useState<Lead[]>(initialLeads)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [pendingId, setPendingId]   = useState<string | null>(null)
+
+  const naoAtendidos = leads.filter((l) => !l.atendido)
+  const atendidos    = leads.filter((l) => l.atendido)
+
+  const handleMarcarAtendido = async (lead: Lead) => {
+    const id = String(lead.id)
+
+    // Atualiza imediatamente na tela
+    setLeads((prev) =>
+      prev.map((l) => String(l.id) === id ? { ...l, atendido: true } : l)
+    )
+    setPendingId(id)
+
+    try {
+      await registrarContato(id)
+      toast.success('Lead marcado como atendido.')
+    } catch (err: any) {
+      // Reverte se der erro
+      setLeads((prev) =>
+        prev.map((l) => String(l.id) === id ? { ...l, atendido: false } : l)
+      )
+      toast.error(err?.message ?? 'Erro ao atualizar lead.')
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  // Ao fechar o modal, sincroniza o lead atualizado localmente
+  // (caso o lojista tenha clicado em whatsapp/email/telefone dentro do modal)
+  const handleModalClose = (leadId: string) => {
+    setLeads((prev) =>
+      prev.map((l) => String(l.id) === leadId ? { ...l, atendido: true } : l)
+    )
+    setSelectedLead(null)
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+        {/* ── Não Atendidos ─────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-base">Não Atendidos</CardTitle>
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-amber-100 text-amber-700 hover:bg-amber-100"
+              >
+                {naoAtendidos.length}
+              </Badge>
+            </div>
+            <CardDescription>Leads aguardando primeiro contato</CardDescription>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {naoAtendidos.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  Nenhum lead pendente 🎉
+                </p>
+              ) : (
+                naoAtendidos.map((lead) => (
+                  <LeadKanbanRow
+                    key={lead.id}
+                    lead={lead}
+                    isPending={pendingId === String(lead.id)}
+                    onOpen={() => setSelectedLead(lead)}
+                    onMarcarAtendido={() => handleMarcarAtendido(lead)}
+                  />
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Atendidos ──────────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <CardTitle className="text-base">Atendidos</CardTitle>
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+              >
+                {atendidos.length}
+              </Badge>
+            </div>
+            <CardDescription>Leads que já foram contactados</CardDescription>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {atendidos.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  Nenhum lead atendido ainda
+                </p>
+              ) : (
+                atendidos.map((lead) => (
+                  <LeadKanbanRow
+                    key={lead.id}
+                    lead={lead}
+                    attended
+                    isPending={false}
+                    onOpen={() => setSelectedLead(lead)}
+                  />
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {selectedLead && (
+        <LeadDetailsModal
+          lead={selectedLead}
+          open={!!selectedLead}
+          onOpenChange={(open) => {
+            if (!open) handleModalClose(String(selectedLead.id))
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+// ─── Row ─────────────────────────────────────────────────────────────────────
+
+interface LeadKanbanRowProps {
+  lead: Lead
+  attended?: boolean
+  isPending: boolean
+  onOpen: () => void
+  onMarcarAtendido?: () => void
+}
+
+function LeadKanbanRow({
+  lead,
+  attended = false,
+  isPending,
+  onOpen,
+  onMarcarAtendido,
+}: LeadKanbanRowProps) {
+  const criado = formatDistanceToNow(new Date(lead.data_criacao), {
+    addSuffix: true,
+    locale: ptBR,
+  })
+
+  return (
+    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40">
+
+      {/* Área clicável — abre modal */}
+      <button
+        onClick={onOpen}
+        className="min-w-0 flex-1 text-left focus-visible:outline-none"
+      >
+        <p className={`truncate text-sm font-medium ${attended ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+          {lead.nome}
+        </p>
+
+        {lead.email && (
+          <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
+        )}
+
+        {lead.cidade && (
+          <p className="text-xs text-muted-foreground">
+            {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
+          </p>
+        )}
+
+        <div className="mt-1.5 flex items-center gap-2">
+          {lead.expectativa_investimento && (
+            <span className="text-xs font-medium text-emerald-600">
+              {lead.expectativa_investimento}
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground">{criado}</span>
+        </div>
+      </button>
+
+      {/* Ações — visíveis no hover */}
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {!attended && onMarcarAtendido && (
+          <button
+            onClick={onMarcarAtendido}
+            disabled={isPending}
+            title="Marcar como atendido"
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+          >
+            {isPending ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            )}
+            Atendido
+          </button>
+        )}
+
+        <button
+          onClick={onOpen}
+          title="Ver detalhes"
+          className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
