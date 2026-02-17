@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, Clock, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Clock, ChevronRight, CircleCheckBig } from 'lucide-react'
 import { Lead } from '@/lib/types'
 import { LeadDetailsModal } from '@/components/leads/lead-dialog'
 import { toast } from 'sonner'
@@ -48,7 +48,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   const handleMarcarAtendido = async (lead: Lead) => {
     const id = String(lead.id)
 
-    // Atualiza imediatamente na tela
     setLeads((prev) =>
       prev.map((l) => String(l.id) === id ? { ...l, atendido: true } : l)
     )
@@ -58,7 +57,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
       await registrarContato(id)
       toast.success('Lead marcado como atendido.')
     } catch (err: any) {
-      // Reverte se der erro
       setLeads((prev) =>
         prev.map((l) => String(l.id) === id ? { ...l, atendido: false } : l)
       )
@@ -68,8 +66,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     }
   }
 
-  // Ao fechar o modal, sincroniza o lead atualizado localmente
-  // (caso o lojista tenha clicado em whatsapp/email/telefone dentro do modal)
   const handleModalClose = (leadId: string) => {
     setLeads((prev) =>
       prev.map((l) => String(l.id) === leadId ? { ...l, atendido: true } : l)
@@ -81,8 +77,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
     <>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-        {/* ── Não Atendidos ─────────────────────────────────────── */}
-        <Card>
+        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -100,10 +95,10 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="divide-y">
+            <div className="divide-y flex justify-center">
               {naoAtendidos.length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  Nenhum lead pendente 🎉
+                <p className="px-6 py-8 text-center text-lg text-muted-foreground flex items-center gap-2">
+                  Nenhum lead pendente <CircleCheckBig size={20} className='text-emerald-500' />
                 </p>
               ) : (
                 naoAtendidos.map((lead) => (
@@ -120,8 +115,7 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
           </CardContent>
         </Card>
 
-        {/* ── Atendidos ──────────────────────────────────────────── */}
-        <Card>
+        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -173,8 +167,6 @@ export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
   )
 }
 
-// ─── Row ─────────────────────────────────────────────────────────────────────
-
 interface LeadKanbanRowProps {
   lead: Lead
   attended?: boolean
@@ -196,9 +188,8 @@ function LeadKanbanRow({
   })
 
   return (
-    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40">
+    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-linear-to-br from-slate-50 to-slate-100">
 
-      {/* Área clicável — abre modal */}
       <button
         onClick={onOpen}
         className="min-w-0 flex-1 text-left focus-visible:outline-none"
@@ -227,7 +218,6 @@ function LeadKanbanRow({
         </div>
       </button>
 
-      {/* Ações — visíveis no hover */}
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         {!attended && onMarcarAtendido && (
           <button
