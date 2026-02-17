@@ -13,13 +13,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -29,10 +22,11 @@ import {
   Store,
   Calendar,
   DollarSign,
-  MessageSquare,
   User,
   Copy,
   Trash2,
+  Clock,
+  MessageSquare,
 } from "lucide-react";
 import { Lead } from "@/lib/types";
 import Link from "next/link";
@@ -46,7 +40,6 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -73,6 +66,18 @@ const interestLabels: Record<string, string> = {
   dormitorio: "Dormitório",
   closet: "Closet",
   completo: "Completo",
+  banheiro: "Banheiro",
+  escritorio: "Escritório",
+};
+
+const interestColors: Record<string, string> = {
+  cozinha: "bg-[hsl(199,89%,48%)]/10 text-[hsl(199,89%,48%)] border-[hsl(199,89%,48%)]/20",
+  lavanderia: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  dormitorio: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  closet: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+  completo: "bg-[hsl(224,56%,22%)]/10 text-[hsl(224,56%,22%)] border-[hsl(224,56%,22%)]/20",
+  banheiro: "bg-teal-500/10 text-teal-600 border-teal-500/20",
+  escritorio: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
 };
 
 export function LeadDetailsModal({
@@ -158,10 +163,7 @@ export function LeadDetailsModal({
     try {
       setLoadingActions(true);
 
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-
-      const res = await fetch(`/api/leads/${lead.id}/actions`)
+      const res = await fetch(`/api/leads/${lead.id}/actions`);
 
       if (!res.ok) throw new Error("Erro API");
 
@@ -178,282 +180,352 @@ export function LeadDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
-        <DialogHeader className="flex flex-col items-start gap-3">
-          <DialogTitle>{lead.nome}</DialogTitle>
+      <DialogContent className="flex flex-col h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
+        <div className="px-6 pt-6">
+          <DialogHeader className="border-b border-border pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-4">
+                <div className="space-y-2">
+                  <DialogTitle className="text-2xl font-semibold text-card-foreground">
+                    {lead.nome}
+                  </DialogTitle>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4" />
+                      <span>{lead.cidade}, {lead.estado}</span>
+                    </div>
+                    <Separator orientation="vertical" className="h-4" />
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      <span>Criado em {formatDate(lead.data_criacao)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex">
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="gap-2 mt-1 cursor-pointer">
+                          <Trash2 size={16} />
+                          Excluir
+                        </Button>
+                      </AlertDialogTrigger>
 
-          {isAdmin && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Trash2 size={16} />
-                  Excluir
-                </Button>
-              </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Essa ação não pode ser desfeita.
+                            <br />
+                            Lead: <strong>{lead.nome}</strong>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
 
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Excluir lead?
-                  </AlertDialogTitle>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteLead}
+                            disabled={loadingDelete}
+                            className="bg-destructive text-white"
+                          >
+                            {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
-                  <AlertDialogDescription>
-                    Essa ação não pode ser desfeita.
-                    <br />
-                    Lead: <strong>{lead.nome}</strong>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
+        <Tabs defaultValue="detalhes" className="flex flex-col flex-1 overflow-hidden">
+          <div className="px-6 border-b border-border">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+              {lead.mensagem && (
+                <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
+              )}
+              {isAdmin && (
+                <TabsTrigger value="historico" onClick={fetchActions}>
+                  Histórico
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    Cancelar
-                  </AlertDialogCancel>
-
-                  <AlertDialogAction
-                    onClick={handleDeleteLead}
-                    disabled={loadingDelete}
-                    className="bg-destructive text-white"
-                  >
-                    {loadingDelete
-                      ? "Excluindo..."
-                      : "Confirmar exclusão"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </DialogHeader>
-
-        <Tabs defaultValue="detalhes" className="h-full flex flex-col">
-          <TabsList>
-            <TabsTrigger value="detalhes">
-              Detalhes
-            </TabsTrigger>
-
-            {lead.mensagem && (
-              <TabsTrigger value="mensagem">
-                Mensagem
-              </TabsTrigger>
-            )}
-
-            {isAdmin && (
-              <TabsTrigger
-                value="historico"
-                onClick={fetchActions}
-              >
-                Histórico
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          <div className="flex-1 overflow-y-auto mt-4 min-h-[60vh]">
+          <div className="flex-1 overflow-y-auto px-6 py-6">
             {/* DETALHES */}
-            <TabsContent value="detalhes" className="space-y-6">
+            <TabsContent value="detalhes" className="mt-0 space-y-6">
+              {/* Informações de Contato */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Informações de Contato
+                  </h3>
+                </div>
+
+                <TooltipProvider>
+                  <div className="space-y-4">
+                    {/* Email */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm text-card-foreground truncate">
+                          {lead.email}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 ml-3">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href={`mailto:${lead.email}`}
+                              onClick={() => registrarContato("email")}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
+                            >
+                              <Mail className="h-4 w-4 text-muted-foreground hover:text-card-foreground" />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent>Enviar email</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => copyToClipboard(lead.email)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
+                            >
+                              <Copy className="h-4 w-4 text-muted-foreground hover:text-card-foreground" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copiar email</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+
+                    {/* Telefone */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm text-card-foreground">
+                          {lead.telefone}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 ml-3">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href={`tel:${cleanPhone}`}
+                              onClick={() => registrarContato("telefone")}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
+                            >
+                              <Phone className="h-4 w-4 text-muted-foreground hover:text-card-foreground" />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent>Ligar</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link
+                              href={`https://wa.me/${cleanPhone}`}
+                              target="_blank"
+                              onClick={() => registrarContato("whatsapp")}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
+                            >
+                              <FaWhatsapp className="h-4 w-4 text-emerald-500 hover:text-emerald-600" />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent>WhatsApp</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => copyToClipboard(lead.telefone)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
+                            >
+                              <Copy className="h-4 w-4 text-muted-foreground hover:text-card-foreground" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copiar telefone</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipProvider>
+              </div>
+
               <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Contato
-                    </CardTitle>
-                  </CardHeader>
+                {/* Interesses */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Áreas de Interesse
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {lead.interesse?.split(",").map((item) => {
+                      const key = item.trim().toLowerCase();
+                      return (
+                        <Badge
+                          key={key}
+                          variant="outline"
+                          className={`text-xs font-medium px-3 py-1 ${interestColors[key] ||
+                            "bg-secondary text-secondary-foreground border-border"
+                            }`}
+                        >
+                          {interestLabels[key] || key}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                  <TooltipProvider>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between">
-                        <span>{lead.email}</span>
-                        <div className="flex gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link
-                                href={`mailto:${lead.email}`}
-                                onClick={() =>
-                                  registrarContato("email")
-                                }
-                              >
-                                <Mail size={16} />
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Enviar email
-                            </TooltipContent>
-                          </Tooltip>
+                {/* Investimento */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                      <DollarSign className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Expectativa de Investimento
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-card-foreground">
+                      {lead.expectativa_investimento}
+                    </span>
+                  </div>
+                </div>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() =>
-                                  copyToClipboard(lead.email)
-                                }
-                              >
-                                <Copy size={16} />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Copiar email
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex justify-between">
-                        <span>{lead.telefone}</span>
-                        <div className="flex gap-2">
-                          <Link
-                            href={`tel:${cleanPhone}`}
-                            onClick={() =>
-                              registrarContato("telefone")
-                            }
-                          >
-                            <Phone size={16} />
-                          </Link>
-
-                          <Link
-                            href={`https://wa.me/${cleanPhone}`}
-                            target="_blank"
-                            onClick={() =>
-                              registrarContato("whatsapp")
-                            }
-                          >
-                            <FaWhatsapp size={16} />
-                          </Link>
-
-                          <button
-                            onClick={() =>
-                              copyToClipboard(lead.telefone)
-                            }
-                          >
-                            <Copy size={16} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <p>
-                        <MapPin className="inline mr-2 h-4 w-4" />
-                        {lead.cidade}/{lead.estado}
-                      </p>
-                    </CardContent>
-                  </TooltipProvider>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      <DollarSign className="h-5 w-5 inline mr-2" />
-                      Interesse
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent>
-                    {lead.interesse
-                      ?.split(",")
-                      .map((item) => {
-                        const key =
-                          item.trim().toLowerCase();
-                        return (
-                          <Badge key={key}>
-                            {interestLabels[key] || key}
-                          </Badge>
-                        );
-                      })}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      <Store className="h-5 w-5 inline mr-2" />
-                      Loja
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                {/* Loja */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Store className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Loja de Origem
+                    </h3>
+                  </div>
+                  <p className="text-base font-medium text-card-foreground">
                     {lead.loja_nome}
-                  </CardContent>
-                </Card>
+                  </p>
+                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      <Calendar className="h-5 w-5 inline mr-2" />
-                      Datas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    Criado: {formatDate(lead.data_criacao)}
-                    <Separator />
-                    Atualizado:{" "}
-                    {formatDate(lead.data_atualizacao)}
-                  </CardContent>
-                </Card>
+                {/* Datas */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Calendar className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Registro
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Criado:</span>
+                      <span className="text-card-foreground font-medium">
+                        {formatDate(lead.data_criacao)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Atualizado:</span>
+                      <span className="text-card-foreground font-medium">
+                        {formatDate(lead.data_atualizacao)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
+            {/* MENSAGEM */}
             {lead.mensagem && (
-              <TabsContent value="mensagem">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Mensagem</CardTitle>
-                    <CardDescription>
-                      Mensagem enviada pelo lead
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent>
-                    {lead.mensagem}
-                  </CardContent>
-                </Card>
+              <TabsContent value="mensagem" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Mensagem do Lead
+                    </h3>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/40">
+                    <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+                      {lead.mensagem}
+                    </p>
+                  </div>
+                </div>
               </TabsContent>
             )}
 
+            {/* HISTÓRICO */}
             {isAdmin && (
-              <TabsContent value="historico">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>
-                      Histórico de ações
-                    </CardTitle>
-                  </CardHeader>
+              <TabsContent value="historico" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Clock className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Histórico de Ações
+                    </h3>
+                  </div>
 
-                  <CardContent>
-                    {loadingActions && (
-                      <p>Carregando...</p>
-                    )}
+                  {loadingActions && (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  )}
 
-                    {!loadingActions &&
-                      actions.length === 0 && (
-                        <p>Nenhuma ação registrada.</p>
-                      )}
+                  {!loadingActions && actions.length === 0 && (
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma ação registrada ainda.
+                      </p>
+                    </div>
+                  )}
 
-                    {actions.map((action, i) => (
-                      <div
-                        key={i}
-                        className="border rounded p-3 mb-3"
-                      >
-                        <p className="font-medium">
-                          {action.tipo_contato}
-                        </p>
-
-                        {action.observacao && (
-                          <p className="text-sm text-muted-foreground">
-                            {action.observacao}
-                          </p>
-                        )}
-
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(action.criado_em)}
-                        </p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                  {!loadingActions && actions.length > 0 && (
+                    <div className="space-y-3">
+                      {actions.map((action, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <Badge variant="outline" className="font-medium">
+                              {action.tipo_contato}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(action.criado_em)}
+                            </span>
+                          </div>
+                          {action.observacao && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {action.observacao}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             )}
           </div>
