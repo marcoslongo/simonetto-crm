@@ -1,6 +1,18 @@
 "use client"
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis, Area, AreaChart } from "recharts"
+import { useState } from "react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { CalendarIcon, TrendingUp } from "lucide-react"
+import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
+
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Card,
   CardContent,
@@ -14,13 +26,12 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { TrendingUp, Calendar } from "lucide-react"
 
-interface ChartLeads30DaysProps {
-  data: {
-    date: string
-    total: number
-  }[]
+import { getLeadsStatsFilterDate } from "@/lib/leads-service"
+
+interface LeadChart {
+  date: string
+  total: number
 }
 
 const chartConfig = {
@@ -30,33 +41,143 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
-  const totalLeads = data.reduce((sum, item) => sum + item.total, 0)
-  const avgLeads = Math.round(totalLeads / data.length)
-  const maxLeads = Math.max(...data.map(item => item.total))
+function normalizeLeads(data: any[], from: string, to: string) {
+  const start = new Date(from)
+  const end = new Date(to)
+
+  const map = new Map(
+    data.map((i) => [i.data, parseInt(i.total) || 0])
+  )
+
+  const result = []
+
+  for (
+    let d = new Date(start);
+    d <= end;
+    d.setDate(d.getDate() + 1)
+  ) {
+    const dateStr = d.toISOString().split("T")[0]
+
+    result.push({
+      date: dateStr,
+      total: map.get(dateStr) || 0,
+    })
+  }
+
+  return result
+}
+
+
+export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
+  const [data, setData] = useState(initialData)
+  const [from, setFrom] = useState<Date | undefined>()
+  const [to, setTo] = useState<Date | undefined>()
+  const [loading, setLoading] = useState(false)
+
+  async function handleBuscar() {
+    if (!from || !to) return
+
+    setLoading(true)
+
+    try {
+      const res = await getLeadsStatsFilterDate(
+        format(from, "yyyy-MM-dd"),
+        format(to, "yyyy-MM-dd")
+      )
+
+      const normalized = normalizeLeads(
+        res.data,
+        format(from, "yyyy-MM-dd"),
+        format(to, "yyyy-MM-dd")
+      )
+
+      setData(normalized)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const totalLeads = data.reduce((s, i) => s + i.total, 0)
+  const avgLeads = data.length ? Math.round(totalLeads / data.length) : 0
+  const maxLeads = data.length ? Math.max(...data.map(i => i.total)) : 0
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
-      <CardHeader className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+      <CardHeader>
+        <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+
+          <div>
             <CardTitle className="text-2xl font-bold text-[#16255c]">
-              Leads últimos 30 dias
+              Leads por período
             </CardTitle>
-            <CardDescription className="flex items-center gap-2 text-slate-600">
-              <Calendar className="h-4 w-4" />
-              Captação diária de leads
+            <CardDescription>
+              {loading ? "Buscando dados..." : "Captação diária"}
             </CardDescription>
           </div>
-          
+
+          {/* FILTROS */}
+          <div className="flex flex-wrap items-center gap-2">
+
+            {/* DATA INICIAL */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[160px] justify-start">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {from
+                    ? format(from, "dd/MM/yyyy", { locale: ptBR })
+                    : "Data inicial"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={from}
+                  onSelect={setFrom}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* DATA FINAL */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[160px] justify-start">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {to
+                    ? format(to, "dd/MM/yyyy", { locale: ptBR })
+                    : "Data final"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={to}
+                  onSelect={setTo}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* BOTÃO BUSCAR */}
+            <Button
+              onClick={handleBuscar}
+              className="bg-[#16255c] hover:bg-[#0f1a45]"
+            >
+              Buscar
+            </Button>
+          </div>
+
+          {/* MÉTRICAS */}
           <div className="flex gap-4">
             <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium">Média diária</p>
-              <p className="text-2xl font-bold text-[#16255c]">{avgLeads}</p>
+              <p className="text-xs text-slate-500">Média</p>
+              <p className="text-xl font-bold text-[#16255c]">{avgLeads}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium">Pico</p>
-              <p className="text-2xl font-bold text-[#16255c]">{maxLeads}</p>
+              <p className="text-xs text-slate-500">Pico</p>
+              <p className="text-xl font-bold text-[#16255c]">{maxLeads}</p>
             </div>
           </div>
         </div>
@@ -67,51 +188,24 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
           config={chartConfig}
           className="aspect-auto h-[350px] w-full"
         >
-          <AreaChart
-            accessibilityLayer
-            data={data}
-            margin={{ left: 12, right: 12, top: 12 }}
-          >
-            <defs>
-              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#16255c" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#16255c" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              vertical={false}
-              stroke="#e5e7eb"
-              opacity={0.5}
-            />
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
             <XAxis
               dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={12}
-              minTickGap={32}
-              tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
-              tickFormatter={(value) =>
-                new Date(value).toLocaleDateString("pt-BR", {
+              tickFormatter={(v) =>
+                new Date(v).toLocaleDateString("pt-BR", {
                   day: "2-digit",
                   month: "short",
                 })
               }
             />
 
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
-            />
+            <YAxis />
 
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  className="bg-white/95 backdrop-blur-sm border-slate-200 shadow-xl"
                   labelFormatter={(value) =>
                     new Date(value).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -119,47 +213,29 @@ export function ChartLeads30Days({ data }: ChartLeads30DaysProps) {
                       year: "numeric",
                     })
                   }
-                  indicator="dot"
                 />
               }
             />
 
             <Area
               dataKey="total"
-              type="monotone"
               stroke="#16255c"
+              fill="#16255c33"
               strokeWidth={3}
-              fill="url(#colorTotal)"
-              dot={false}
             />
 
             <Line
               dataKey="total"
-              type="monotone"
               stroke="#16255c"
-              strokeWidth={3}
-              dot={{
-                fill: "#16255c",
-                strokeWidth: 2,
-                r: 4,
-                stroke: "white"
-              }}
-              activeDot={{
-                r: 6,
-                fill: "#16255c",
-                stroke: "white",
-                strokeWidth: 3
-              }}
+              strokeWidth={2}
+              dot={false}
             />
           </AreaChart>
         </ChartContainer>
 
-        <div className="mt-6 flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
+        <div className="mt-6 flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg">
           <TrendingUp className="h-4 w-4 text-[#16255c]" />
-          <span className="font-semibold text-[#16255c]">
-            Total de <span className="font-bold">{totalLeads}</span> leads 
-            capturados nos últimos 30 dias
-          </span>
+          Total de <strong>{totalLeads}</strong> leads no período
         </div>
       </CardContent>
     </Card>

@@ -44,8 +44,8 @@ export async function getLeads(
   perPage = 10,
   lojaId?: number,
   search?: string,
-  from?: string,  // yyyy-MM-dd
-  to?: string     // yyyy-MM-dd
+  from?: string,
+  to?: string
 ): Promise<LeadsResponse> {
   let endpoint = `leads?page=${page}&per_page=${perPage}`;
 
@@ -173,8 +173,13 @@ export async function getLeadsPorLoja() {
    LEADS ÚLTIMOS 30 DIAS
 ============================ */
 
-export async function getLeadsLast30Days() {
-  const json = await fetchAPI('leads-30dias', 'Erro ao buscar leads 30 dias');
+export async function getLeadsLast30Days(from?: string, to?: string) {
+  let endpoint = `leads-30dias`;
+
+  if (from) endpoint += `?from=${from}`;
+  if (to) endpoint += `${from ? "&" : "?"}to=${to}`;
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar leads período');
 
   if (!json.data || !Array.isArray(json.data)) {
     return [];
@@ -185,6 +190,19 @@ export async function getLeadsLast30Days() {
     total: parseInt(item.total) || 0,
   }));
 }
+
+export async function getLeadsStatsFilterDate(from: string, to: string) {
+  const res = await fetch(`/api/leads/leads-stats?from=${from}&to=${to}`, {
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    throw new Error("Erro ao buscar leads")
+  }
+
+  return res.json()
+}
+
 
 /* ============================
    STATS POR ESTADO
