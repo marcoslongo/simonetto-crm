@@ -1,6 +1,8 @@
 import { isAdmin, requireAuth } from '@/lib/auth'
-import { StatsCards } from '@/components/dashboard/stats-cards'
-import { getDashboardStats, getLeads } from '@/lib/api'
+import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months } from '@/lib/api-loja'
+import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
+import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
+import { StatsCards } from '@/components/lojas/stats-cards'
 
 export const metadata = {
   title: 'Dashboard | Noxus - Lead Ops',
@@ -13,19 +15,11 @@ export default async function CrmDashboardPage() {
   const isLoja = user.role === 'loja'
   const lojaId = isLoja ? (user.loja_id ?? undefined) : undefined
 
-  const [stats, recentLeadsResponse] = await Promise.all([
-    getDashboardStats(lojaId),
-    getLeads({ page: 1, per_page: 50, loja_id: lojaId }),
+  const [stats, leads30Days, leads12Months] = await Promise.all([
+    getLojaStats(String(lojaId)),
+    getLojaLeads30Days(String(lojaId)),
+    getLojaLeads12Months(String(lojaId)),
   ])
-
-  const ultimaCaptura = stats.ultimoLead
-    ? new Date(stats.ultimoLead.data_criacao).toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : undefined
 
   return (
     <div className="space-y-6">
@@ -37,12 +31,13 @@ export default async function CrmDashboardPage() {
             : 'Visão geral de todas as unidades (Administrador)'}
         </p>
       </div>
-
-      <StatsCards
-        totalLeads={stats.totalLeads}
-        leadsHoje={stats.leadsHoje}
-        ultimaCaptura={ultimaCaptura}
-      />
+      <div>
+        <StatsCards stats={stats} />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <ChartLeads30Days data={leads30Days} />
+        <ChartLeads12Months data={leads12Months} />
+      </div>
     </div>
   )
 }

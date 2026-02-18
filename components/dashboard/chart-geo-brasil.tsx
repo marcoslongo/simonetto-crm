@@ -210,7 +210,7 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
                   <Link href={`/admin/lojas/${loja.id}`}>
                     <Button 
                       size="sm" 
-                      className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
                     >
                       Ver resultados
                       <ChevronRight className="h-4 w-4" />
