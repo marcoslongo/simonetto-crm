@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, X } from "lucide-react"
+import { CalendarIcon, Eraser, X } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { DateRange } from "react-day-picker"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
@@ -21,36 +20,31 @@ export function DateRangeFilter() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [open, setOpen] = React.useState(false)
-
-  // Inicializa o range a partir dos searchParams
-  const [date, setDate] = React.useState<DateRange | undefined>(() => {
-    const from = searchParams.get("from")
-    const to = searchParams.get("to")
-    return from || to
-      ? {
-          from: from ? new Date(from) : undefined,
-          to: to ? new Date(to) : undefined,
-        }
-      : undefined
+  const [from, setFrom] = React.useState<Date | undefined>(() => {
+    const param = searchParams.get("from")
+    return param ? new Date(param) : undefined
   })
 
-  const hasFilter = !!date?.from || !!date?.to
+  const [to, setTo] = React.useState<Date | undefined>(() => {
+    const param = searchParams.get("to")
+    return param ? new Date(param) : undefined
+  })
 
-  function applyFilter(range: DateRange | undefined) {
+  const hasFilter = !!from || !!to
+
+  function applyFilter() {
     const params = new URLSearchParams(searchParams.toString())
 
-    // Reseta para a página 1 ao filtrar
     params.delete("page")
 
-    if (range?.from) {
-      params.set("from", format(range.from, "yyyy-MM-dd"))
+    if (from) {
+      params.set("from", format(from, "yyyy-MM-dd"))
     } else {
       params.delete("from")
     }
 
-    if (range?.to) {
-      params.set("to", format(range.to, "yyyy-MM-dd"))
+    if (to) {
+      params.set("to", format(to, "yyyy-MM-dd"))
     } else {
       params.delete("to")
     }
@@ -59,88 +53,91 @@ export function DateRangeFilter() {
   }
 
   function clearFilter() {
-    setDate(undefined)
-    applyFilter(undefined)
-    setOpen(false)
-  }
+    setFrom(undefined)
+    setTo(undefined)
 
-  function handleSelect(range: DateRange | undefined) {
-    setDate(range)
-    // Aplica assim que tiver from e to selecionados
-    if (range?.from && range?.to) {
-      applyFilter(range)
-      setOpen(false)
-    }
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("from")
+    params.delete("to")
+    params.delete("page")
+
+    router.push(`${pathname}?${params.toString()}`)
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
+    <div className="flex flex-wrap items-center gap-2">
+
+      <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              "min-w-[240px] justify-start text-left font-normal",
-              !hasFilter && "text-muted-foreground"
+              "w-[160px] justify-start text-left font-normal",
+              !from && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, "dd/MM/yyyy", { locale: ptBR })} →{" "}
-                  {format(date.to, "dd/MM/yyyy", { locale: ptBR })}
-                </>
-              ) : (
-                format(date.from, "dd/MM/yyyy", { locale: ptBR })
-              )
-            ) : (
-              <span>Filtrar por período</span>
-            )}
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {from
+              ? format(from, "dd/MM/yyyy", { locale: ptBR })
+              : "Data inicial"}
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0">
           <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={handleSelect}
-            numberOfMonths={2}
+            mode="single"
+            selected={from}
+            onSelect={setFrom}
             locale={ptBR}
           />
-          <div className="flex items-center justify-between border-t px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {date?.from && !date?.to
-                ? "Selecione a data final"
-                : "Selecione o período desejado"}
-            </p>
-            {hasFilter && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilter}
-                className="h-7 px-2 text-xs"
-              >
-                Limpar
-              </Button>
-            )}
-          </div>
         </PopoverContent>
       </Popover>
 
-      {hasFilter && (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-[160px] justify-start text-left font-normal",
+              !to && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {to
+              ? format(to, "dd/MM/yyyy", { locale: ptBR })
+              : "Data final"}
+          </Button>
+        </PopoverTrigger>
+
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={to}
+            onSelect={setTo}
+            locale={ptBR}
+          />
+        </PopoverContent>
+      </Popover>
+      <div className="flex gap-4">
         <Button
-          variant="ghost"
-          size="icon"
-          onClick={clearFilter}
-          className="h-9 w-9 text-muted-foreground hover:text-foreground"
-          title="Remover filtro de data"
+          onClick={applyFilter}
+          className="bg-[#16255c] hover:bg-[#0f1a45] cursor-pointer"
         >
-          <X className="h-4 w-4" />
+          Buscar
         </Button>
-      )}
+
+        {hasFilter && (
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={clearFilter}
+            className="w-34 hover:text-white flex gap-2 items-center text-white cursor-pointer"
+          >
+            Limpar datas
+            <Eraser size={24} />
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
