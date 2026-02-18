@@ -91,6 +91,9 @@ export interface LeadsFilters {
   per_page?: number
   email?: string
   loja_id?: number
+  search?: string
+  from?: string
+  to?: string
 }
 
 // Estatísticas do dashboard

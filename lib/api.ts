@@ -107,10 +107,13 @@ export async function validateToken(token: string): Promise<boolean> {
 export async function getLeads(filters: LeadsFilters = {}): Promise<LeadsResponse> {
   const params = new URLSearchParams()
   
-  if (filters.page) params.set('page', String(filters.page))
+  if (filters.page)     params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
-  if (filters.email) params.set('email', filters.email)
-  
+  if (filters.email)    params.set('email', filters.email)
+  if (filters.search)   params.set('search', filters.search)
+  if (filters.from)     params.set('from', filters.from)
+  if (filters.to)       params.set('to', filters.to)
+
   // Só adiciona o filtro de loja_id se ele for fornecido
   if (filters.loja_id !== undefined && filters.loja_id !== null) {
     params.set('loja_id', String(filters.loja_id))

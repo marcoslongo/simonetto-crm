@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getLeads, getLojas } from '@/lib/leads-service'
 import { LeadsViewSwitcher } from '@/components/leads/leads-view-switcher'
 import { LeadsSearch } from '@/components/leads/leads-search'
+import { DateRangeFilter } from '@/components/leads/date-range-filter'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -12,7 +13,13 @@ export const metadata = {
 }
 
 interface AdminLeadsPageProps {
-  searchParams: Promise<{ page?: string; loja?: string; search?: string }>
+  searchParams: Promise<{
+    page?: string
+    loja?: string
+    search?: string
+    from?: string
+    to?: string
+  }>
 }
 
 export default async function AdminLeadsPage({ searchParams }: AdminLeadsPageProps) {
@@ -22,12 +29,11 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const page = Number(params.page) || 1
   const lojaId = params.loja ? Number(params.loja) : undefined
   const search = params.search || undefined
+  const from = params.from || undefined
+  const to = params.to || undefined
 
-  const [
-    leadsResponse,
-    lojasData,
-  ] = await Promise.all([
-    getLeads(page, 10, lojaId, search),
+  const [leadsResponse, lojasData] = await Promise.all([
+    getLeads(page, 10, lojaId, search, from, to),
     getLojas().catch(() => ({ lojas: [] })),
   ])
 
@@ -35,6 +41,16 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     lojaId && leadsResponse.leads.length > 0
       ? leadsResponse.leads[0].loja_nome
       : undefined
+
+  const hasDateFilter = from || to
+  const dateFilterLabel =
+    from && to
+      ? `${from} até ${to}`
+      : from
+      ? `A partir de ${from}`
+      : to
+      ? `Até ${to}`
+      : null
 
   return (
     <div className="space-y-6">
@@ -45,7 +61,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         </p>
       </div>
 
-      <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
+      <Card className="bg-linear-to-br from-slate-50 to-slate-100">
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -56,6 +72,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                     ? `Filtrando por: ${selectedLoja}`
                     : search
                     ? `Resultados para: "${search}"`
+                    : hasDateFilter
+                    ? `Período: ${dateFilterLabel}`
                     : `Total de ${leadsResponse.total} leads`}
                 </CardDescription>
               </div>
@@ -65,7 +83,11 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               )}
             </div>
 
-            <LeadsSearch />
+            {/* Barra de filtros */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <LeadsSearch />
+              <DateRangeFilter />
+            </div>
           </div>
         </CardHeader>
 
@@ -83,7 +105,11 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
             </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              {search ? `Nenhum lead encontrado para "${search}"` : 'Nenhum lead encontrado'}
+              {search
+                ? `Nenhum lead encontrado para "${search}"`
+                : hasDateFilter
+                ? `Nenhum lead encontrado no período selecionado`
+                : 'Nenhum lead encontrado'}
             </div>
           )}
         </CardContent>
