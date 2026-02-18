@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, Eraser, X } from "lucide-react"
+import { CalendarIcon, Eraser, Search, X } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
@@ -66,13 +66,12 @@ export function DateRangeFilter() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              "w-[160px] justify-start text-left font-normal",
+              "w-40 h-12 justify-start text-left font-normal",
               !from && "text-muted-foreground"
             )}
           >
@@ -98,7 +97,7 @@ export function DateRangeFilter() {
           <Button
             variant="outline"
             className={cn(
-              "w-[160px] justify-start text-left font-normal",
+              "w-40 h-12 justify-start text-left font-normal",
               !to && "text-muted-foreground"
             )}
           >
@@ -119,11 +118,9 @@ export function DateRangeFilter() {
         </PopoverContent>
       </Popover>
       <div className="flex gap-4">
-        <Button
-          onClick={applyFilter}
-          className="bg-[#16255c] hover:bg-[#0f1a45] cursor-pointer"
-        >
-          Buscar
+        <Button onClick={applyFilter} size="lg" className='h-11 px-6 bg-[#16255c] cursor-pointer hover:bg-[#16255c] hover:opacity-90'>
+          <Search className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Buscar</span>
         </Button>
 
         {hasFilter && (
@@ -131,7 +128,7 @@ export function DateRangeFilter() {
             variant="destructive"
             size="icon"
             onClick={clearFilter}
-            className="w-34 hover:text-white flex gap-2 items-center text-white cursor-pointer"
+            className="w-34 h-11 hover:text-white flex gap-2 items-center text-white cursor-pointer"
           >
             Limpar datas
             <Eraser size={24} />
