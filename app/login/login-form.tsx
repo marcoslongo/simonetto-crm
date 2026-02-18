@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +12,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card'
-import { AlertCircle, Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, Mail, Lock } from 'lucide-react'
 import { loginAction, type LoginState } from './actions'
 
 export function LoginForm() {
@@ -19,6 +20,21 @@ export function LoginForm() {
     loginAction,
     {}
   )
+
+  useEffect(() => {
+    if (state?.error) toast.error(state.error)
+  }, [state])
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    const formData = new FormData(e.currentTarget)
+    const password = formData.get('password')
+
+    if (!password) {
+      e.preventDefault()
+      toast.error('Informe a senha')
+      return
+    }
+  }
 
   return (
     <Card className="border-border/50 shadow-lg">
@@ -30,14 +46,12 @@ export function LoginForm() {
       </CardHeader>
 
       <CardContent>
-        <form action={formAction} className="space-y-4">
-          {state.error && (
-            <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{state.error}</span>
-            </div>
-          )}
-
+        <form
+          action={formAction}
+          onSubmit={handleSubmit}
+          noValidate
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -47,7 +61,6 @@ export function LoginForm() {
                 name="email"
                 type="email"
                 placeholder="seu@email.com"
-                required
                 className="pl-10"
                 disabled={isPending}
               />
@@ -63,14 +76,17 @@ export function LoginForm() {
                 name="password"
                 type="password"
                 placeholder="••••••••"
-                required
                 className="pl-10"
                 disabled={isPending}
               />
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 cursor-pointer" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-[#16255c] hover:opacity-90"
+            disabled={isPending}
+          >
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
