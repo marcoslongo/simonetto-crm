@@ -83,7 +83,6 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               )}
             </div>
 
-            {/* Barra de filtros */}
             <div className="flex flex-col sm:flex-row gap-3">
               <LeadsSearch />
               <DateRangeFilter />
