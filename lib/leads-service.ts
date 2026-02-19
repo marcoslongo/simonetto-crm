@@ -139,6 +139,24 @@ export async function getLeadsPorInvestimento() {
   return grouped;
 }
 
+
+export async function getLeadsByDate(date: string) {
+  const data = await getLeads(
+    1,
+    100,      
+    undefined,
+    undefined,
+    date,
+    date
+  )
+
+  return {
+    success: true,
+    data: data.leads || [],
+  }
+}
+
+
 export async function getLeadsPorInteresse() {
   const json = await fetchAPI('leads-por-interesse', 'Erro ao buscar leads por interesse');
   
