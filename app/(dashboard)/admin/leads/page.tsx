@@ -3,9 +3,9 @@ import { LeadsPagination } from '@/components/leads/leads-pagination'
 import { LojaFilter } from '@/components/lojas/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getLeads, getLojas } from '@/lib/leads-service'
-import { LeadsViewSwitcher } from '@/components/leads/leads-view-switcher'
 import { LeadsSearch } from '@/components/leads/leads-search'
 import { DateRangeFilter } from '@/components/leads/date-range-filter'
+import { LeadsTable } from '@/components/leads/leads-table'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -93,7 +93,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <CardContent className="space-y-4">
           {leadsResponse.leads.length > 0 ? (
             <>
-              <LeadsViewSwitcher leads={leadsResponse.leads} showLoja isAdmin />
+              <LeadsTable leads={leadsResponse.leads} showLoja isAdmin />
 
               <LeadsPagination
                 currentPage={leadsResponse.page}
