@@ -16,7 +16,6 @@ import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 
-// ─── Stats cards (total, hoje, última captura) ───────────────────────────────
 export async function StatsSection() {
   const statsGeral = await getLeadsStatsGeral()
 
@@ -29,7 +28,6 @@ export async function StatsSection() {
   )
 }
 
-// ─── Contato + Ranking (carregam juntos, são da mesma "fila") ────────────────
 export async function ContatoRankingSection() {
   const [contatoStats, tempoPorLoja] = await Promise.all([
     getLeadsStatsService(),
@@ -50,14 +48,12 @@ export async function ContatoRankingSection() {
   )
 }
 
-// ─── Linha 30 dias ────────────────────────────────────────────────────────────
 export async function Leads30DaysSection() {
   const leads30Days = await getLeadsLast30Days()
 
   return <ChartLeads30Days data={leads30Days} />
 }
 
-// ─── Geo + Investimento ───────────────────────────────────────────────────────
 export async function GeoInvestSection() {
   const [estadosGroup, faturamentoPorFaixa] = await Promise.all([
     getLeadsGeoStats(),
@@ -84,9 +80,8 @@ export async function GeoInvestSection() {
   )
 }
 
-// ─── Interesse ────────────────────────────────────────────────────────────────
 export async function InteresseSection() {
-  const interessePorGrupo = await getLeadsPorInteresse()
+  const interessePorGrupo = await getLeadsPorInteresse();
 
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))

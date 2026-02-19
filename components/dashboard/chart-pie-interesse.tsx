@@ -1,170 +1,196 @@
 "use client"
 
-import { Pie, PieChart, Cell } from "recharts"
+import { useState, useMemo } from "react"
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+} from "recharts"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { Target, TrendingUp, Sparkles } from "lucide-react"
 
-interface ChartPieInteresseProps {
-  data: {
-    interesse: string
-    total: number
-  }[]
+interface RawInteresseItem {
+  interesse: string
+  total: number
 }
 
-const chartConfig = {
-  total: {
-    label: "Leads",
-  },
-} satisfies ChartConfig
+interface ChartPieInteresseProps {
+  data: RawInteresseItem[]
+}
 
-// Paleta de cores vibrantes e variadas
-const COLORS = [
-  "#3b82f6", // blue-500
-  "#10b981", // emerald-500
-  "#f59e0b", // amber-500
-  "#8b5cf6", // violet-500
-  "#ec4899", // pink-500
-  "#14b8a6", // teal-500
-  "#f97316", // orange-500
-  "#6366f1", // indigo-500
-  "#84cc16", // lime-500
-  "#06b6d4", // cyan-500
-  "#f43f5e", // rose-500
-  "#a855f7", // purple-500
+const PALETTE = [
+  "#16255c",
+  "#2563eb",
+  "#3b82f6",
+  "#60a5fa",
+  "#93c5fd",
+  "#1e40af",
+  "#1d4ed8",
+  "#0ea5e9",
+  "#38bdf8",
 ]
 
-export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
-  // Estatísticas
-  const totalLeads = data.reduce((sum, item) => sum + item.total, 0)
-  const interesseMaisPopular = data.reduce((prev, current) => 
-    (prev.total > current.total) ? prev : current
-  )
-  const percentualLider = ((interesseMaisPopular.total / totalLeads) * 100).toFixed(1)
+function normalizeData(raw: RawInteresseItem[]): { interesse: string; total: number }[] {
+  const map: Record<string, number> = {}
 
-  // Prepara dados com percentuais
-  const dataWithPercentage = data.map((item, index) => ({
-    ...item,
-    percentage: ((item.total / totalLeads) * 100).toFixed(1),
-    color: COLORS[index % COLORS.length],
-  }))
+  for (const item of raw) {
+    const ambientes = item.interesse
+      .split(",")
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+
+    for (const ambiente of ambientes) {
+      map[ambiente] = (map[ambiente] ?? 0) + item.total
+    }
+  }
+
+  return Object.entries(map)
+    .map(([interesse, total]) => ({ interesse, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null
+  const { interesse, total } = payload[0].payload
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg px-4 py-2 text-sm">
+      <p className="font-semibold text-[#16255c] capitalize">{interesse}</p>
+      <p className="text-slate-600">
+        <span className="font-bold text-[#16255c]">{total}</span> leads
+      </p>
+    </div>
+  )
+}
+
+function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) {
+  if (percent < 0.04) return null
+  const RADIAN = Math.PI / 180
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  return (
+    <text
+      x={x} y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={11}
+      fontWeight={600}
+    >
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  )
+}
+
+export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
+  const normalized = useMemo(() => normalizeData(data), [data])
+  const total = useMemo(() => normalized.reduce((s, i) => s + i.total, 0), [normalized])
+
+  const [highlighted, setHighlighted] = useState<string | null>(null)
+
+  if (normalized.length === 0) {
+    return (
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-[#16255c]">
+            Interesse por Ambiente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-75 flex items-center justify-center">
+            <p className="text-slate-400 text-sm">Sem dados disponíveis</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
-      <CardHeader className="space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-[#16255c]">
-              Leads por Interesse
-            </CardTitle>
-            <CardDescription className="flex items-center gap-2 text-slate-600">
-              <Target className="h-4 w-4" />
-              Distribuição por categoria de interesse
-            </CardDescription>
-          </div>
-
-          <div className="text-right bg-white/70 backdrop-blur-sm px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-            <p className="text-xs text-[#16255c] font-semibold flex items-center gap-1 justify-end">
-              <Sparkles className="h-3 w-3" />
-              Mais Popular
-            </p>
-            <p className="text-lg font-bold text-[#16255c]">{interesseMaisPopular.interesse}</p>
-            <p className="text-xs text-slate-500 font-medium">{percentualLider}% dos leads</p>
-          </div>
-        </div>
+      <CardHeader className="space-y-2">
+        <CardTitle className="text-2xl font-bold text-[#16255c]">
+          Interesse por Ambiente
+        </CardTitle>
+        <CardDescription className="text-slate-500">
+          Passe o mouse sobre um ambiente para destacar
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Gráfico */}
-        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 shadow-inner">
-          <ChartContainer
-            config={chartConfig}
-            className="mx-auto aspect-square max-h-[300px]"
-          >
-            <PieChart>
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent 
-                    className="bg-white/95 backdrop-blur-sm border-slate-200 shadow-xl"
-                    formatter={(value, name, props) => (
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: props.payload.color }}
-                        />
-                        <span className="font-semibold">{value} leads ({props.payload.percentage}%)</span>
-                      </div>
-                    )}
-                  />
-                }
-              />
+      <CardContent>
+        <div className="flex flex-col lg:flex-row items-center gap-6">
 
-              <Pie
-                data={dataWithPercentage}
-                dataKey="total"
-                nameKey="interesse"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                strokeWidth={3}
-                stroke="white"
-                label={({ percentage }) => `${percentage}%`}
-                labelLine={false}
-              >
-                {dataWithPercentage.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color}
-                    className="hover:opacity-80 transition-opacity cursor-pointer"
-                  />
-                ))}
-              </Pie>
-            </PieChart>
-          </ChartContainer>
-        </div>
+          <div className="h-75 w-full lg:w-[55%]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={normalized}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={120}
+                  paddingAngle={2}
+                  dataKey="total"
+                  nameKey="interesse"
+                  labelLine={false}
+                  label={PieLabel}
+                >
+                  {normalized.map((entry, i) => (
+                    <Cell
+                      key={entry.interesse}
+                      fill={PALETTE[i % PALETTE.length]}
+                      opacity={
+                        highlighted === null || highlighted === entry.interesse
+                          ? 1
+                          : 0.3
+                      }
+                      stroke="white"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
 
-        {/* Legenda customizada */}
-        <div className="grid grid-cols-2 gap-3">
-          {dataWithPercentage.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-3 bg-white/60 backdrop-blur-sm p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all"
-            >
+          <div className="w-full lg:w-[45%] space-y-1.5">
+            {normalized.map((item, i) => (
               <div
-                className="w-4 h-4 rounded-full shadow-sm flex-shrink-0"
-                style={{ backgroundColor: item.color }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#16255c] truncate">
-                  {item.interesse}
-                </p>
-                <p className="text-xs text-slate-500 font-medium">
-                  {item.total.toLocaleString()} leads ({item.percentage}%)
-                </p>
+                key={item.interesse}
+                onMouseEnter={() => setHighlighted(item.interesse)}
+                onMouseLeave={() => setHighlighted(null)}
+                className={`
+                  flex items-center justify-between px-3 py-2 rounded-lg
+                  border text-sm transition-all duration-150 cursor-default
+                  ${highlighted === item.interesse
+                    ? "border-[#16255c]/30 bg-white shadow-sm"
+                    : "border-transparent"
+                  }
+                `}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="w-3 h-3 rounded-sm flex-shrink-0"
+                    style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
+                  />
+                  <span className="capitalize text-slate-700 font-medium">
+                    {item.interesse}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 text-xs">
+                    {((item.total / total) * 100).toFixed(1)}%
+                  </span>
+                  <span className="font-bold text-[#16255c] min-w-[2rem] text-right">
+                    {item.total}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer com total */}
-        <div className="flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
-          <TrendingUp className="h-4 w-4 text-[#16255c]" />
-          <span className="font-semibold text-[#16255c]">
-            Total de <span className="font-bold">{totalLeads.toLocaleString()}</span> leads 
-            distribuídos em {data.length} categorias
-          </span>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>
