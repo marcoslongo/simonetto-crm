@@ -181,11 +181,8 @@ export function ChartPieInteresse({ data }: ChartPieInteresseProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-xs">
+                  <span className="font-bold text-[#16255c] min-w-8 text-right">
                     {((item.total / total) * 100).toFixed(1)}%
-                  </span>
-                  <span className="font-bold text-[#16255c] min-w-[2rem] text-right">
-                    {item.total}
                   </span>
                 </div>
               </div>
