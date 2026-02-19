@@ -1,0 +1,96 @@
+import {
+  getLeadsStatsGeral,
+  getLeadsStatsService,
+  getTempoMedioPorLoja,
+  getLeadsLast30Days,
+  getLeadsGeoStats,
+  getLeadsPorInvestimento,
+  getLeadsPorInteresse,
+} from '@/lib/leads-service'
+import { StatsCards } from '@/components/dashboard/stats-cards'
+import { formatLastCapture } from '@/lib/utils'
+import ChartLeadsContato from '@/components/dashboard/chart-leads-contato'
+import { ChartRankingLojas } from '@/components/dashboard/chart-ranking-lojas'
+import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
+import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
+import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
+import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
+
+// ─── Stats cards (total, hoje, última captura) ───────────────────────────────
+export async function StatsSection() {
+  const statsGeral = await getLeadsStatsGeral()
+
+  return (
+    <StatsCards
+      totalLeads={statsGeral.total}
+      leadsHoje={statsGeral.today}
+      ultimaCaptura={formatLastCapture(statsGeral.ultimaCaptura)}
+    />
+  )
+}
+
+// ─── Contato + Ranking (carregam juntos, são da mesma "fila") ────────────────
+export async function ContatoRankingSection() {
+  const [contatoStats, tempoPorLoja] = await Promise.all([
+    getLeadsStatsService(),
+    getTempoMedioPorLoja(),
+  ])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartLeadsContato
+        contatados={contatoStats.leadsContatados}
+        naoContatados={contatoStats.leadsNaoContatados}
+        tempoMedioAtendimentoMinutos={contatoStats.tempoMedioMinutos}
+        percentContatados={contatoStats.percContatados}
+        percentNaoContatados={contatoStats.percNaoContatados}
+      />
+      <ChartRankingLojas data={tempoPorLoja.data} />
+    </div>
+  )
+}
+
+// ─── Linha 30 dias ────────────────────────────────────────────────────────────
+export async function Leads30DaysSection() {
+  const leads30Days = await getLeadsLast30Days()
+
+  return <ChartLeads30Days data={leads30Days} />
+}
+
+// ─── Geo + Investimento ───────────────────────────────────────────────────────
+export async function GeoInvestSection() {
+  const [estadosGroup, faturamentoPorFaixa] = await Promise.all([
+    getLeadsGeoStats(),
+    getLeadsPorInvestimento(),
+  ])
+
+  const estadoChartData = Object.entries(estadosGroup)
+    .map(([estado, info]: any) => ({
+      estado,
+      total: info.total,
+      lojas: info.lojas || [],
+    }))
+    .sort((a, b) => b.total - a.total)
+
+  const faturamentoChartData = Object.entries(faturamentoPorFaixa).map(
+    ([faixa, total]) => ({ faixa, total })
+  )
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartGeoBrasil data={estadoChartData} />
+      <ChartBarInvest data={faturamentoChartData} />
+    </div>
+  )
+}
+
+// ─── Interesse ────────────────────────────────────────────────────────────────
+export async function InteresseSection() {
+  const interessePorGrupo = await getLeadsPorInteresse()
+
+  const interesseChartData = Object.entries(interessePorGrupo)
+    .map(([interesse, total]) => ({ interesse, total }))
+    .sort((a, b) => b.total - a.total)
+
+  return <ChartPieInteresse data={interesseChartData} />
+}

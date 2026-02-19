@@ -203,28 +203,84 @@ export async function getLeadsStatsFilterDate(from: string, to: string) {
   return res.json()
 }
 
-
 /* ============================
    STATS POR ESTADO
 ============================ */
 
-export async function getLeadsGeoStats() {
-  const json = await fetchAPI('leads-geo-stats', 'Erro ao buscar stats geográficas');
+export interface LojaGeo {
+  id: number
+  nome: string
+  leads: number
+}
+
+export interface EstadoGeoStat {
+  estado: string
+  total: number
+  lojas: LojaGeo[]
+}
+
+/**
+ * Busca estatísticas geográficas de leads agrupadas por estado.
+ *
+ * @param estado  - Sigla do estado para filtrar (ex: "SP"). Omitir para todos.
+ * @param from    - Data início no formato yyyy-MM-dd (opcional)
+ * @param to      - Data fim no formato yyyy-MM-dd (opcional)
+ *
+ * @returns Record<sigla, { total, lojas }> — compatível com ChartGeoBrasil
+ */
+export async function getLeadsGeoStats(
+  estado?: string,
+  from?: string,
+  to?: string
+): Promise<Record<string, { total: number; lojas: LojaGeo[] }>> {
+  let endpoint = 'leads-por-estado';
+  const params: string[] = [];
+
+  if (estado) params.push(`estado=${encodeURIComponent(estado.toUpperCase())}`);
+  if (from)   params.push(`from=${encodeURIComponent(from)}`);
+  if (to)     params.push(`to=${encodeURIComponent(to)}`);
+
+  if (params.length) endpoint += `?${params.join('&')}`;
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar stats geográficas');
 
   if (!json.data || !Array.isArray(json.data)) {
     return {};
   }
 
-  const grouped: Record<string, any> = {};
+  const grouped: Record<string, { total: number; lojas: LojaGeo[] }> = {};
 
-  json.data.forEach((item: any) => {
+  json.data.forEach((item: EstadoGeoStat) => {
     grouped[item.estado] = {
       total: item.total,
-      lojas: item.lojas || [],
+      lojas: item.lojas ?? [],
     };
   });
 
   return grouped;
+}
+
+/**
+ * Busca estatísticas detalhadas de um único estado.
+ *
+ * @param estado  - Sigla obrigatória (ex: "SP")
+ * @param from    - Data início no formato yyyy-MM-dd (opcional)
+ * @param to      - Data fim no formato yyyy-MM-dd (opcional)
+ */
+export async function getLeadsGeoStatsByEstado(
+  estado: string,
+  from?: string,
+  to?: string
+): Promise<EstadoGeoStat | null> {
+  const grouped = await getLeadsGeoStats(estado, from, to);
+  const estadoData = grouped[estado.toUpperCase()];
+
+  if (!estadoData) return null;
+
+  return {
+    estado: estado.toUpperCase(),
+    ...estadoData,
+  };
 }
 
 /* ============================
