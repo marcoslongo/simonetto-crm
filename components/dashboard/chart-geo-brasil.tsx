@@ -129,8 +129,8 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
+          <div className="flex">
+            <div className="w-1/3 bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-[#16255c]" />
                 <p className="text-xs text-[#16255c] font-semibold">
@@ -142,21 +142,6 @@ export function ChartGeoBrasil({ data }: ChartGeoBrasilProps) {
               </p>
               <p className="text-xs text-slate-500">
                 leads capturados
-              </p>
-            </div>
-
-            <div className="bg-[#16255c]/5 p-3 rounded-lg border border-[#16255c]/10">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin className="h-4 w-4 text-[#16255c]" />
-                <p className="text-xs text-[#16255c] font-semibold">
-                  Estados Ativos
-                </p>
-              </div>
-              <p className="text-2xl font-bold text-[#16255c]">
-                {data.length}
-              </p>
-              <p className="text-xs text-slate-500">
-                com captação
               </p>
             </div>
           </div>
