@@ -1,13 +1,13 @@
 import { requireAdmin } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
 import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months } from '@/lib/api-loja'
-import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { LojaInfoCard } from '@/components/lojas/loja-info-card'
+import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>

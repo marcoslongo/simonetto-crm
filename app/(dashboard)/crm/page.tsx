@@ -1,8 +1,8 @@
-import { isAdmin, requireAuth } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months } from '@/lib/api-loja'
-import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { StatsCards } from '@/components/lojas/stats-cards'
+import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 
 export const metadata = {
   title: 'Dashboard | Noxus - Lead Ops',
