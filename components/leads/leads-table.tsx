@@ -30,11 +30,16 @@ import {
 import { LeadDetailsModal } from "./lead-dialog";
 import { Lead } from "@/lib/types";
 
+interface LojaOption {
+  id: number;
+  nome: string;
+}
 
 interface LeadsTableProps {
   leads: Lead[];
   showLoja?: boolean;
   isAdmin?: boolean;
+  lojas?: LojaOption[];
 }
 
 const interestLabels: Record<string, string> = {
@@ -57,8 +62,7 @@ const interestColors: Record<string, string> = {
   escritorio: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
 };
 
-
-export function LeadsTable({ leads, showLoja = false, isAdmin }: LeadsTableProps) {
+export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -175,8 +179,9 @@ export function LeadsTable({ leads, showLoja = false, isAdmin }: LeadsTableProps
                         <Badge
                           key={key}
                           variant="outline"
-                          className={`text-[11px] font-medium px-2 py-0.5 ${interestColors[key] || "bg-secondary text-secondary-foreground border-border"
-                            }`}
+                          className={`text-[11px] font-medium px-2 py-0.5 ${
+                            interestColors[key] || "bg-secondary text-secondary-foreground border-border"
+                          }`}
                         >
                           {interestLabels[key] || key}
                         </Badge>
@@ -231,6 +236,7 @@ export function LeadsTable({ leads, showLoja = false, isAdmin }: LeadsTableProps
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           isAdmin={isAdmin}
+          lojas={lojas}
         />
       )}
     </TooltipProvider>

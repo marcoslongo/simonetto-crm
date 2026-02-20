@@ -27,6 +27,9 @@ import {
   Trash2,
   Clock,
   MessageSquare,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Lead } from "@/lib/types";
 import Link from "next/link";
@@ -51,6 +54,18 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface LojaOption {
+  id: number;
+  nome: string;
+}
 
 interface LeadDialogProps {
   lead: Lead;
@@ -58,6 +73,7 @@ interface LeadDialogProps {
   onOpenChange: (open: boolean) => void;
   onContatoRealizado?: () => void;
   isAdmin?: boolean;
+  lojas?: LojaOption[];
 }
 
 const interestLabels: Record<string, string> = {
@@ -86,12 +102,18 @@ export function LeadDetailsModal({
   onOpenChange,
   onContatoRealizado,
   isAdmin,
+  lojas = [],
 }: LeadDialogProps) {
   const router = useRouter();
 
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [actions, setActions] = useState<any[]>([]);
   const [loadingActions, setLoadingActions] = useState(false);
+
+  const [editingLoja, setEditingLoja] = useState(false);
+  const [selectedLojaId, setSelectedLojaId] = useState<string>(lead.loja_id ?? "");
+  const [currentLojaNome, setCurrentLojaNome] = useState(lead.loja_nome ?? "");
+  const [savingLoja, setSavingLoja] = useState(false);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
@@ -116,7 +138,6 @@ export function LeadDetailsModal({
 
   const registrarContato = async (tipo: string) => {
     onContatoRealizado?.();
-
     try {
       await fetch("/api/lead-contato", {
         method: "POST",
@@ -135,18 +156,12 @@ export function LeadDetailsModal({
   const handleDeleteLead = async () => {
     try {
       setLoadingDelete(true);
-
-      const res = await fetch(`/api/leads/${lead.id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/leads/${lead.id}`, { method: "DELETE" });
       const data = await res.json();
-
       if (!res.ok) {
         toast.error(data?.mensagem || "Erro ao excluir lead");
         return;
       }
-
       toast.success("Lead excluído com sucesso");
       onOpenChange(false);
       router.refresh();
@@ -157,18 +172,45 @@ export function LeadDetailsModal({
     }
   };
 
+  const handleSaveLoja = async () => {
+    try {
+      setSavingLoja(true);
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          loja_id: selectedLojaId ? Number(selectedLojaId) : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.mensagem || "Erro ao atualizar loja");
+        return;
+      }
+      const novaLoja = lojas.find((l) => String(l.id) === selectedLojaId);
+      setCurrentLojaNome(novaLoja?.nome ?? "—");
+      setEditingLoja(false);
+      toast.success("Loja atualizada com sucesso");
+      router.refresh();
+    } catch {
+      toast.error("Erro ao atualizar loja");
+    } finally {
+      setSavingLoja(false);
+    }
+  };
+
+  const handleCancelEditLoja = () => {
+    setSelectedLojaId(lead.loja_id ?? "");
+    setEditingLoja(false);
+  };
+
   const fetchActions = async () => {
     if (!isAdmin) return;
-
     try {
       setLoadingActions(true);
-
       const res = await fetch(`/api/leads/${lead.id}/actions`);
-
       if (!res.ok) throw new Error("Erro API");
-
       const data = await res.json();
-
       setActions(data?.actions || data || []);
     } catch (err) {
       console.error(err);
@@ -179,95 +221,97 @@ export function LeadDetailsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
-        <div className="px-6 pt-6">
-          <DialogHeader className="border-b border-border pb-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex flex-col gap-4">
-                <div className="space-y-2">
-                  <DialogTitle className="text-2xl font-semibold text-card-foreground">
-                    {lead.nome}
-                  </DialogTitle>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4" />
-                      <span>{lead.cidade}, {lead.estado}</span>
-                    </div>
-                    <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      <span>Criado em {formatDate(lead.data_criacao)}</span>
+    <TooltipProvider>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex flex-col h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
+          <div className="px-6 pt-6">
+            <DialogHeader className="border-b border-border pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4">
+                  <div className="space-y-2">
+                    <DialogTitle className="text-2xl font-semibold text-card-foreground">
+                      {lead.nome}
+                    </DialogTitle>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4" />
+                        <span>{lead.cidade}, {lead.estado}</span>
+                      </div>
+                      <Separator orientation="vertical" className="h-4" />
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4" />
+                        <span>Criado em {formatDate(lead.data_criacao)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex">
                   {isAdmin && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" className="gap-2 mt-1 cursor-pointer">
-                          <Trash2 size={16} />
-                          Excluir
-                        </Button>
-                      </AlertDialogTrigger>
-
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Essa ação não pode ser desfeita.
-                            <br />
-                            Lead: <strong>{lead.nome}</strong>
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeleteLead}
-                            disabled={loadingDelete}
-                            className="bg-destructive text-white"
+                    <div className="flex">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-2 mt-1 cursor-pointer"
                           >
-                            {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 size={16} />
+                            Excluir
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Essa ação não pode ser desfeita.
+                              <br />
+                              Lead: <strong>{lead.nome}</strong>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeleteLead}
+                              disabled={loadingDelete}
+                              className="bg-destructive text-white"
+                            >
+                              {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          </DialogHeader>
-        </div>
-
-        <Tabs defaultValue="detalhes" className="flex flex-col flex-1 overflow-hidden">
-          <div className="px-6 border-b border-border">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-              {lead.mensagem && (
-                <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
-              )}
-              {isAdmin && (
-                <TabsTrigger value="historico" onClick={fetchActions}>
-                  Histórico
-                </TabsTrigger>
-              )}
-            </TabsList>
+            </DialogHeader>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <TabsContent value="detalhes" className="mt-0 space-y-6">
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <User className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    Informações de Contato
-                  </h3>
-                </div>
+          <Tabs defaultValue="detalhes" className="flex flex-col flex-1 overflow-hidden">
+            <div className="px-6 border-b border-border">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+                {lead.mensagem && (
+                  <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
+                )}
+                {isAdmin && (
+                  <TabsTrigger value="historico" onClick={fetchActions}>
+                    Histórico
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </div>
 
-                <TooltipProvider>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <TabsContent value="detalhes" className="mt-0 space-y-6">
+                {/* Informações de Contato */}
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Informações de Contato
+                    </h3>
+                  </div>
                   <div className="space-y-4">
                     {/* Email */}
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
@@ -292,7 +336,6 @@ export function LeadDetailsModal({
                           </TooltipTrigger>
                           <TooltipContent>Enviar email</TooltipContent>
                         </Tooltip>
-
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -306,7 +349,7 @@ export function LeadDetailsModal({
                         </Tooltip>
                       </div>
                     </div>
-
+                    {/* Telefone */}
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
@@ -329,7 +372,6 @@ export function LeadDetailsModal({
                           </TooltipTrigger>
                           <TooltipContent>Ligar</TooltipContent>
                         </Tooltip>
-
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Link
@@ -343,7 +385,6 @@ export function LeadDetailsModal({
                           </TooltipTrigger>
                           <TooltipContent>WhatsApp</TooltipContent>
                         </Tooltip>
-
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -358,170 +399,229 @@ export function LeadDetailsModal({
                       </div>
                     </div>
                   </div>
-                </TooltipProvider>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Áreas de Interesse
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {lead.interesse?.split(",").map((item) => {
-                      const key = item.trim().toLowerCase();
-                      return (
-                        <Badge
-                          key={key}
-                          variant="outline"
-                          className={`text-xs font-medium px-3 py-1 ${interestColors[key] ||
-                            "bg-secondary text-secondary-foreground border-border"
-                            }`}
-                        >
-                          {interestLabels[key] || key}
-                        </Badge>
-                      );
-                    })}
-                  </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <DollarSign className="h-4 w-4 text-emerald-500" />
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Áreas de Interesse */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Áreas de Interesse
+                      </h3>
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Expectativa de Investimento
-                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {lead.interesse?.split(",").map((item) => {
+                        const key = item.trim().toLowerCase();
+                        return (
+                          <Badge
+                            key={key}
+                            variant="outline"
+                            className={`text-xs font-medium px-3 py-1 ${
+                              interestColors[key] ||
+                              "bg-secondary text-secondary-foreground border-border"
+                            }`}
+                          >
+                            {interestLabels[key] || key}
+                          </Badge>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  {/* Expectativa de Investimento */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                        <DollarSign className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Expectativa de Investimento
+                      </h3>
+                    </div>
                     <span className="text-2xl font-bold text-card-foreground">
                       {lead.expectativa_investimento}
                     </span>
                   </div>
-                </div>
 
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <Store className="h-4 w-4 text-primary" />
+                  {/* Loja de Origem — editável para admin */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                          <Store className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                          Loja de Origem
+                        </h3>
+                      </div>
+                      {isAdmin && !editingLoja && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => setEditingLoja(true)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Alterar loja</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Loja de Origem
-                    </h3>
-                  </div>
-                  <p className="text-base font-medium text-card-foreground">
-                    {lead.loja_nome}
-                  </p>
-                </div>
 
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <Calendar className="h-4 w-4 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Registro
-                    </h3>
+                    {editingLoja ? (
+                      <div className="space-y-3">
+                        <Select
+                          value={selectedLojaId}
+                          onValueChange={setSelectedLojaId}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione uma loja..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {lojas.map((loja) => (
+                              <SelectItem key={loja.id} value={String(loja.id)}>
+                                {loja.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSaveLoja}
+                            disabled={savingLoja}
+                            className="gap-1.5 flex-1"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            {savingLoja ? "Salvando..." : "Confirmar"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelEditLoja}
+                            disabled={savingLoja}
+                            className="gap-1.5"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-base font-medium text-card-foreground">
+                        {currentLojaNome || "—"}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Criado:</span>
-                      <span className="text-card-foreground font-medium">
-                        {formatDate(lead.data_criacao)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Atualizado:</span>
-                      <span className="text-card-foreground font-medium">
-                        {formatDate(lead.data_atualizacao)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
 
-            {lead.mensagem && (
-              <TabsContent value="mensagem" className="mt-0">
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <MessageSquare className="h-4 w-4 text-primary" />
+                  {/* Registro */}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <Calendar className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Registro
+                      </h3>
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Mensagem do Lead
-                    </h3>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted/40">
-                    <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
-                      {lead.mensagem}
-                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Criado:</span>
+                        <span className="text-card-foreground font-medium">
+                          {formatDate(lead.data_criacao)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Atualizado:</span>
+                        <span className="text-card-foreground font-medium">
+                          {formatDate(lead.data_atualizacao)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
-            )}
 
-            {isAdmin && (
-              <TabsContent value="historico" className="mt-0">
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <Clock className="h-4 w-4 text-primary" />
+              {/* Mensagem */}
+              {lead.mensagem && (
+                <TabsContent value="mensagem" className="mt-0">
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <MessageSquare className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Mensagem do Lead
+                      </h3>
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Histórico de Ações
-                    </h3>
-                  </div>
-
-                  {loadingActions && (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  )}
-
-                  {!loadingActions && actions.length === 0 && (
-                    <div className="py-8 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma ação registrada ainda.
+                    <div className="p-4 rounded-lg bg-muted/40">
+                      <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+                        {lead.mensagem}
                       </p>
                     </div>
-                  )}
+                  </div>
+                </TabsContent>
+              )}
 
-                  {!loadingActions && actions.length > 0 && (
-                    <div className="space-y-3">
-                      {actions.map((action, i) => (
-                        <div
-                          key={i}
-                          className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <Badge variant="outline" className="font-medium">
-                              {action.tipo_contato}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(action.criado_em)}
-                            </span>
-                          </div>
-                          {action.observacao && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              {action.observacao}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+              {/* Histórico */}
+              {isAdmin && (
+                <TabsContent value="historico" className="mt-0">
+                  <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <Clock className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Histórico de Ações
+                      </h3>
                     </div>
-                  )}
-                </div>
-              </TabsContent>
-            )}
-          </div>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                    {loadingActions && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    )}
+                    {!loadingActions && actions.length === 0 && (
+                      <div className="py-8 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          Nenhuma ação registrada ainda.
+                        </p>
+                      </div>
+                    )}
+                    {!loadingActions && actions.length > 0 && (
+                      <div className="space-y-3">
+                        {actions.map((action, i) => (
+                          <div
+                            key={i}
+                            className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <Badge variant="outline" className="font-medium">
+                                {action.tipo_contato}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(action.criado_em)}
+                              </span>
+                            </div>
+                            {action.observacao && (
+                              <p className="text-sm text-muted-foreground mt-2">
+                                {action.observacao}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
+            </div>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }

@@ -52,6 +52,12 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       ? `Até ${to}`
       : null
 
+  // Normaliza lojas para o formato { id, nome } esperado pelo LeadsTable/LeadDetailsModal
+  const lojas = (lojasData.lojas ?? []).map((l: any) => ({
+    id: Number(l.id),
+    nome: l.nome ?? l.post_title ?? '',
+  }))
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,7 +99,12 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
         <CardContent className="space-y-4">
           {leadsResponse.leads.length > 0 ? (
             <>
-              <LeadsTable leads={leadsResponse.leads} showLoja isAdmin />
+              <LeadsTable
+                leads={leadsResponse.leads}
+                showLoja
+                isAdmin
+                lojas={lojas}
+              />
 
               <LeadsPagination
                 currentPage={leadsResponse.page}

@@ -42,3 +42,46 @@ export async function DELETE(
     )
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await requireAdmin()
+
+    const { id } = await params
+
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth_token')?.value
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, mensagem: 'Token não encontrado.' },
+        { status: 401 }
+      )
+    }
+
+    const body = await req.json()
+
+    const res = await fetch(`${WP_API_BASE}/wp-json/api/v1/leads/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    const data = await res.json()
+
+    return NextResponse.json(data, { status: res.status })
+  } catch (error) {
+    console.error('Erro ao atualizar lead:', error)
+    return NextResponse.json(
+      { success: false, mensagem: 'Erro interno.' },
+      { status: 500 }
+    )
+  }
+}
