@@ -87,5 +87,10 @@ export async function InteresseSection() {
     .map(([interesse, total]) => ({ interesse, total }))
     .sort((a, b) => b.total - a.total)
 
-  return <ChartPieInteresse data={interesseChartData} />
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartPieInteresse data={interesseChartData} />
+      <ChartPieInteresse data={interesseChartData} />
+    </div>
+  );
 }
