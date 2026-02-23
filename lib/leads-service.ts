@@ -425,6 +425,35 @@ export async function createLead(leadData: {
 }
 
 /* ============================
+   ORIGEM DE LEADS (UTM)
+============================ */
+
+export interface OrigemItem {
+  utm_source: string
+  utm_medium: string
+  total: number
+  pct: number
+}
+
+export async function getLeadsPorOrigem(from?: string, to?: string): Promise<OrigemItem[]> {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+
+  let url = `${base}/api/leads/origem`
+  if (from) url += `?from=${from}`
+  if (to)   url += `${from ? "&" : "?"}to=${to}`
+
+  const res = await fetch(url, { cache: "no-store" })
+
+  if (!res.ok) throw new Error("Erro ao buscar origens de leads")
+
+  const json = await res.json()
+
+  if (!json.data || !Array.isArray(json.data)) return []
+
+  return json.data as OrigemItem[]
+}
+
+/* ============================
    FUNÇÕES AUXILIARES
 ============================ */
 

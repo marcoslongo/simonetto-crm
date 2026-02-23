@@ -6,6 +6,7 @@ import {
   getLeadsGeoStats,
   getLeadsPorInvestimento,
   getLeadsPorInteresse,
+  getLeadsPorOrigem
 } from '@/lib/leads-service'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
@@ -15,6 +16,7 @@ import { ChartLeads30Days } from '@/components/dashboard/chart-line-30-days'
 import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
+import { ChartPieOrigem } from './chart-pie-origem'
 
 export async function StatsSection() {
   const statsGeral = await getLeadsStatsGeral()
@@ -81,7 +83,10 @@ export async function GeoInvestSection() {
 }
 
 export async function InteresseSection() {
-  const interessePorGrupo = await getLeadsPorInteresse();
+  const [interessePorGrupo, origemData] = await Promise.all([
+    getLeadsPorInteresse(),
+    getLeadsPorOrigem(),
+  ])
 
   const interesseChartData = Object.entries(interessePorGrupo)
     .map(([interesse, total]) => ({ interesse, total }))
@@ -90,7 +95,7 @@ export async function InteresseSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <ChartPieInteresse data={interesseChartData} />
-      <ChartPieInteresse data={interesseChartData} />
+      <ChartPieOrigem data={origemData} />
     </div>
-  );
+  )
 }
