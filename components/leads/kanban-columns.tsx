@@ -30,7 +30,6 @@ async function registrarContato(leadId: string) {
       observacao: 'Marcado como atendido pelo lojista',
     }),
   })
-  console.log('chegou aqui');
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data?.mensagem ?? 'Erro ao registrar contato.')
