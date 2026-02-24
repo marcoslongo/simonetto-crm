@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { LeadsPagination } from '@/components/leads/leads-pagination'
 import { LojaFilter } from '@/components/lojas/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getLeads, getLojas } from '@/lib/leads-service'
+import { getLeadsServer, getLojasServer } from '@/lib/server-leads-service'
 import { LeadsSearch } from '@/components/leads/leads-search'
 import { DateRangeFilter } from '@/components/leads/date-range-filter'
 import { LeadsTable } from '@/components/leads/leads-table'
@@ -33,8 +33,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const to = params.to || undefined
 
   const [leadsResponse, lojasData] = await Promise.all([
-    getLeads(page, 10, lojaId, search, from, to),
-    getLojas().catch(() => ({ lojas: [] })),
+    getLeadsServer(page, 10, lojaId, search, from, to),
+    getLojasServer().catch(() => ({ lojas: [] })),
   ])
 
   const selectedLoja =
