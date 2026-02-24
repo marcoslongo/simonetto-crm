@@ -403,18 +403,16 @@ export interface OrigemItem {
   pct: number
 }
 
-export async function getLeadsPorOrigem(from?: string, to?: string): Promise<OrigemItem[]> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL;
+export async function getLeadsPorOrigem(from?: string, to?: string, token?: string): Promise<OrigemItem[]> {
+  let endpoint = 'leads-por-origem';
+  const params: string[] = [];
 
-  let url = `${base}/api/leads/origem`;
-  if (from) url += `?from=${from}`;
-  if (to)   url += `${from ? "&" : "?"}to=${to}`;
+  if (from) params.push(`from=${encodeURIComponent(from)}`);
+  if (to)   params.push(`to=${encodeURIComponent(to)}`);
 
-  const res = await fetch(url, { cache: "no-store" });
+  if (params.length) endpoint += `?${params.join('&')}`;
 
-  if (!res.ok) throw new Error("Erro ao buscar origens de leads");
-
-  const json = await res.json();
+  const json = await fetchAPI(endpoint, 'Erro ao buscar origens de leads', token);
 
   if (!json.data || !Array.isArray(json.data)) return [];
 

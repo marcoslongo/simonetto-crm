@@ -79,7 +79,6 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
   const [to, setTo] = useState<Date | undefined>()
   const [loading, setLoading] = useState(false)
 
-  // dialog states
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [leadsDay, setLeadsDay] = useState<any[]>([])
@@ -264,7 +263,6 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
         </CardContent>
       </Card>
 
-      {/* Dialog Leads do Dia */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
