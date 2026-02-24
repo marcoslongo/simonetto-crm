@@ -1,13 +1,13 @@
 import {
-  getLeadsStatsGeral,
-  getLeadsStatsService,
-  getTempoMedioPorLoja,
-  getLeadsLast30Days,
-  getLeadsGeoStats,
-  getLeadsPorInvestimento,
-  getLeadsPorInteresse,
-  getLeadsPorOrigem
-} from '@/lib/leads-service'
+  getLeadsStatsGeralServer,
+  getLeadsStatsServiceServer,
+  getTempoMedioPorLojaServer,
+  getLeadsLast30DaysServer,
+  getLeadsGeoStatsServer,
+  getLeadsPorInvestimentoServer,
+  getLeadsPorInteresseServer,
+  getLeadsPorOrigemServer,
+} from '@/lib/server-leads-service'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import ChartLeadsContato from '@/components/dashboard/chart-leads-contato'
@@ -19,7 +19,7 @@ import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartPieOrigem } from './chart-pie-origem'
 
 export async function StatsSection() {
-  const statsGeral = await getLeadsStatsGeral()
+  const statsGeral = await getLeadsStatsGeralServer()
 
   return (
     <StatsCards
@@ -32,8 +32,8 @@ export async function StatsSection() {
 
 export async function ContatoRankingSection() {
   const [contatoStats, tempoPorLoja] = await Promise.all([
-    getLeadsStatsService(),
-    getTempoMedioPorLoja(),
+    getLeadsStatsServiceServer(),
+    getTempoMedioPorLojaServer(),
   ])
 
   return (
@@ -51,15 +51,15 @@ export async function ContatoRankingSection() {
 }
 
 export async function Leads30DaysSection() {
-  const leads30Days = await getLeadsLast30Days()
+  const leads30Days = await getLeadsLast30DaysServer()
 
   return <ChartLeads30Days data={leads30Days} />
 }
 
 export async function GeoInvestSection() {
   const [estadosGroup, faturamentoPorFaixa] = await Promise.all([
-    getLeadsGeoStats(),
-    getLeadsPorInvestimento(),
+    getLeadsGeoStatsServer(),
+    getLeadsPorInvestimentoServer(),
   ])
 
   const estadoChartData = Object.entries(estadosGroup)
@@ -84,8 +84,8 @@ export async function GeoInvestSection() {
 
 export async function InteresseSection() {
   const [interessePorGrupo, origemData] = await Promise.all([
-    getLeadsPorInteresse(),
-    getLeadsPorOrigem(),
+    getLeadsPorInteresseServer(),
+    getLeadsPorOrigemServer(),
   ])
 
   const interesseChartData = Object.entries(interessePorGrupo)

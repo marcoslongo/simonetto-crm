@@ -2,13 +2,14 @@ import { Lead, LeadsResponse, TimeStoreResponse } from "./types";
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || process.env.NEXT_PUBLIC_API_URL?.replace('/wp-json/api/v1', '');
 
-async function fetchAPI(endpoint: string, errorMessage: string) {
+async function fetchAPI(endpoint: string, errorMessage: string, token?: string) {
   const url = `${WP_API_BASE}/wp-json/api/v1/${endpoint}`;
 
   const res = await fetch(url, { 
     cache: "no-store",
     headers: {
       'Accept': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     }
   });
 
@@ -45,27 +46,17 @@ export async function getLeads(
   lojaId?: number,
   search?: string,
   from?: string,
-  to?: string
+  to?: string,
+  token?: string
 ): Promise<LeadsResponse> {
   let endpoint = `leads?page=${page}&per_page=${perPage}`;
 
-  if (lojaId) {
-    endpoint += `&loja_id=${lojaId}`;
-  }
+  if (lojaId) endpoint += `&loja_id=${lojaId}`;
+  if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+  if (from)   endpoint += `&from=${encodeURIComponent(from)}`;
+  if (to)     endpoint += `&to=${encodeURIComponent(to)}`;
 
-  if (search) {
-    endpoint += `&search=${encodeURIComponent(search)}`;
-  }
-
-  if (from) {
-    endpoint += `&from=${encodeURIComponent(from)}`;
-  }
-
-  if (to) {
-    endpoint += `&to=${encodeURIComponent(to)}`;
-  }
-
-  const data = await fetchAPI(endpoint, 'Erro ao buscar leads');
+  const data = await fetchAPI(endpoint, 'Erro ao buscar leads', token);
 
   if (!data.success) {
     throw new Error("Resposta da API indica falha");
@@ -74,21 +65,19 @@ export async function getLeads(
   return data;
 }
 
-export async function getAllLeads(lojaId?: number): Promise<Lead[]> {
+export async function getAllLeads(lojaId?: number, token?: string): Promise<Lead[]> {
   let endpoint = `leads?page=1&per_page=10000`;
 
-  if (lojaId) {
-    endpoint += `&loja_id=${lojaId}`;
-  }
+  if (lojaId) endpoint += `&loja_id=${lojaId}`;
 
-  const data = await fetchAPI(endpoint, 'Erro ao buscar todos os leads');
+  const data = await fetchAPI(endpoint, 'Erro ao buscar todos os leads', token);
 
   return data.leads || [];
 }
 
-export async function getLeadById(id: number): Promise<Lead | null> {
+export async function getLeadById(id: number, token?: string): Promise<Lead | null> {
   try {
-    const data = await fetchAPI(`leads/${id}`, `Erro ao buscar lead ${id}`);
+    const data = await fetchAPI(`leads/${id}`, `Erro ao buscar lead ${id}`, token);
     return data.success ? data.lead : null;
   } catch (error) {
     console.error('Erro ao buscar lead:', error);
@@ -96,13 +85,13 @@ export async function getLeadById(id: number): Promise<Lead | null> {
   }
 }
 
-export async function getLojas() {
-  const data = await fetchAPI('lojas', 'Erro ao buscar lojas');
+export async function getLojas(token?: string) {
+  const data = await fetchAPI('lojas', 'Erro ao buscar lojas', token);
   return data;
 }
 
-export async function getLojasWithStats() {
-  const data = await fetchAPI('lojas-with-stats', 'Erro ao buscar lojas com stats');
+export async function getLojasWithStats(token?: string) {
+  const data = await fetchAPI('lojas-with-stats', 'Erro ao buscar lojas com stats', token);
   return data;
 }
 
@@ -110,8 +99,8 @@ export async function getLojasWithStats() {
    STATS GERAIS
 ============================ */
 
-export async function getLeadsStatsGeral() {
-  const json = await fetchAPI('leads-stats-geral', 'Erro ao buscar stats gerais');
+export async function getLeadsStatsGeral(token?: string) {
+  const json = await fetchAPI('leads-stats-geral', 'Erro ao buscar stats gerais', token);
   
   return json.data || {
     total: 0,
@@ -124,8 +113,8 @@ export async function getLeadsStatsGeral() {
    AGRUPAMENTOS
 ============================ */
 
-export async function getLeadsPorInvestimento() {
-  const json = await fetchAPI('leads-por-investimento', 'Erro ao buscar leads por investimento');
+export async function getLeadsPorInvestimento(token?: string) {
+  const json = await fetchAPI('leads-por-investimento', 'Erro ao buscar leads por investimento', token);
   
   const grouped: Record<string, number> = {};
   
@@ -139,26 +128,17 @@ export async function getLeadsPorInvestimento() {
   return grouped;
 }
 
-
-export async function getLeadsByDate(date: string) {
-  const data = await getLeads(
-    1,
-    100,      
-    undefined,
-    undefined,
-    date,
-    date
-  )
+export async function getLeadsByDate(date: string, token?: string) {
+  const data = await getLeads(1, 100, undefined, undefined, date, date, token);
 
   return {
     success: true,
     data: data.leads || [],
-  }
+  };
 }
 
-
-export async function getLeadsPorInteresse() {
-  const json = await fetchAPI('leads-por-interesse', 'Erro ao buscar leads por interesse');
+export async function getLeadsPorInteresse(token?: string) {
+  const json = await fetchAPI('leads-por-interesse', 'Erro ao buscar leads por interesse', token);
   
   const grouped: Record<string, number> = {};
   
@@ -172,8 +152,8 @@ export async function getLeadsPorInteresse() {
   return grouped;
 }
 
-export async function getLeadsPorLoja() {
-  const json = await fetchAPI('leads-por-loja', 'Erro ao buscar leads por loja');
+export async function getLeadsPorLoja(token?: string) {
+  const json = await fetchAPI('leads-por-loja', 'Erro ao buscar leads por loja', token);
   
   const grouped: Record<string, number> = {};
   
@@ -191,13 +171,13 @@ export async function getLeadsPorLoja() {
    LEADS ÚLTIMOS 30 DIAS
 ============================ */
 
-export async function getLeadsLast30Days(from?: string, to?: string) {
+export async function getLeadsLast30Days(from?: string, to?: string, token?: string) {
   let endpoint = `leads-30dias`;
 
   if (from) endpoint += `?from=${from}`;
-  if (to) endpoint += `${from ? "&" : "?"}to=${to}`;
+  if (to)   endpoint += `${from ? "&" : "?"}to=${to}`;
 
-  const json = await fetchAPI(endpoint, 'Erro ao buscar leads período');
+  const json = await fetchAPI(endpoint, 'Erro ao buscar leads período', token);
 
   if (!json.data || !Array.isArray(json.data)) {
     return [];
@@ -212,13 +192,13 @@ export async function getLeadsLast30Days(from?: string, to?: string) {
 export async function getLeadsStatsFilterDate(from: string, to: string) {
   const res = await fetch(`/api/leads/leads-stats?from=${from}&to=${to}`, {
     cache: "no-store",
-  })
+  });
 
   if (!res.ok) {
-    throw new Error("Erro ao buscar leads")
+    throw new Error("Erro ao buscar leads");
   }
 
-  return res.json()
+  return res.json();
 }
 
 /* ============================
@@ -237,19 +217,11 @@ export interface EstadoGeoStat {
   lojas: LojaGeo[]
 }
 
-/**
- * Busca estatísticas geográficas de leads agrupadas por estado.
- *
- * @param estado  - Sigla do estado para filtrar (ex: "SP"). Omitir para todos.
- * @param from    - Data início no formato yyyy-MM-dd (opcional)
- * @param to      - Data fim no formato yyyy-MM-dd (opcional)
- *
- * @returns Record<sigla, { total, lojas }> — compatível com ChartGeoBrasil
- */
 export async function getLeadsGeoStats(
   estado?: string,
   from?: string,
-  to?: string
+  to?: string,
+  token?: string
 ): Promise<Record<string, { total: number; lojas: LojaGeo[] }>> {
   let endpoint = 'leads-por-estado';
   const params: string[] = [];
@@ -260,7 +232,7 @@ export async function getLeadsGeoStats(
 
   if (params.length) endpoint += `?${params.join('&')}`;
 
-  const json = await fetchAPI(endpoint, 'Erro ao buscar stats geográficas');
+  const json = await fetchAPI(endpoint, 'Erro ao buscar stats geográficas', token);
 
   if (!json.data || !Array.isArray(json.data)) {
     return {};
@@ -278,19 +250,13 @@ export async function getLeadsGeoStats(
   return grouped;
 }
 
-/**
- * Busca estatísticas detalhadas de um único estado.
- *
- * @param estado  - Sigla obrigatória (ex: "SP")
- * @param from    - Data início no formato yyyy-MM-dd (opcional)
- * @param to      - Data fim no formato yyyy-MM-dd (opcional)
- */
 export async function getLeadsGeoStatsByEstado(
   estado: string,
   from?: string,
-  to?: string
+  to?: string,
+  token?: string
 ): Promise<EstadoGeoStat | null> {
-  const grouped = await getLeadsGeoStats(estado, from, to);
+  const grouped = await getLeadsGeoStats(estado, from, to, token);
   const estadoData = grouped[estado.toUpperCase()];
 
   if (!estadoData) return null;
@@ -305,8 +271,8 @@ export async function getLeadsGeoStatsByEstado(
    STATS DE ATENDIMENTO
 ============================ */
 
-export async function getLeadsStatsService() {
-  const json = await fetchAPI('leads-stats-service', 'Erro ao buscar stats de atendimento');
+export async function getLeadsStatsService(token?: string) {
+  const json = await fetchAPI('leads-stats-service', 'Erro ao buscar stats de atendimento', token);
 
   const data = json.data || {};
 
@@ -325,8 +291,8 @@ export async function getLeadsStatsService() {
    TEMPO MÉDIO POR LOJA
 ============================ */
 
-export async function getTempoMedioPorLoja(): Promise<TimeStoreResponse> {
-  const json = await fetchAPI('leads-tempo-por-loja', 'Erro ao buscar tempo por loja');
+export async function getTempoMedioPorLoja(token?: string): Promise<TimeStoreResponse> {
+  const json = await fetchAPI('leads-tempo-por-loja', 'Erro ao buscar tempo por loja', token);
 
   return {
     success: json.success || true,
@@ -344,7 +310,7 @@ export async function registrarContatoLead(params: {
   tipo_contato: string;
   usuario_id?: number;
   observacao?: string;
-}) {
+}, token?: string) {
   const url = `${WP_API_BASE}/wp-json/api/v1/lead-contato`;
   
   const res = await fetch(url, {
@@ -352,6 +318,7 @@ export async function registrarContatoLead(params: {
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
     body: JSON.stringify(params),
   });
@@ -389,7 +356,7 @@ export async function createLead(leadData: {
   mensagem?: string;
   loja_id?: number;
   pipefy_card_id?: string;
-}) {
+}, token?: string) {
   const url = `${WP_API_BASE}/wp-json/api/v1/leads`;
   
   const res = await fetch(url, {
@@ -397,6 +364,7 @@ export async function createLead(leadData: {
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
     body: JSON.stringify(leadData),
   });
@@ -436,21 +404,21 @@ export interface OrigemItem {
 }
 
 export async function getLeadsPorOrigem(from?: string, to?: string): Promise<OrigemItem[]> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
 
-  let url = `${base}/api/leads/origem`
-  if (from) url += `?from=${from}`
-  if (to)   url += `${from ? "&" : "?"}to=${to}`
+  let url = `${base}/api/leads/origem`;
+  if (from) url += `?from=${from}`;
+  if (to)   url += `${from ? "&" : "?"}to=${to}`;
 
-  const res = await fetch(url, { cache: "no-store" })
+  const res = await fetch(url, { cache: "no-store" });
 
-  if (!res.ok) throw new Error("Erro ao buscar origens de leads")
+  if (!res.ok) throw new Error("Erro ao buscar origens de leads");
 
-  const json = await res.json()
+  const json = await res.json();
 
-  if (!json.data || !Array.isArray(json.data)) return []
+  if (!json.data || !Array.isArray(json.data)) return [];
 
-  return json.data as OrigemItem[]
+  return json.data as OrigemItem[];
 }
 
 /* ============================
