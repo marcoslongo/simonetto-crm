@@ -160,7 +160,6 @@ export async function createLeadServer(leadData: {
 }
 
 export async function getLeadsPorOrigemServer(from?: string, to?: string): Promise<OrigemItem[]> {
-  // getLeadsPorOrigem chama uma rota interna Next.js (/api/leads/origem)
-  // que já tem acesso aos cookies via request — não precisa de token explícito.
-  return getLeadsPorOrigem(from, to)
+  const token = await getToken()
+  return getLeadsPorOrigem(from, to, token)
 }
