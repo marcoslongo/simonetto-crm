@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     if (to)   url += `${from ? "&" : "?"}to=${to}`
 
     const response = await fetch(url, {
-      cache: "no-store",
+      cache: "no-store", 
       headers: {
         "Content-Type": "application/json",
       },
