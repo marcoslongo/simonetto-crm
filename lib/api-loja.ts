@@ -1,5 +1,5 @@
 import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaStats, LojaStatsResponse } from "./types-loja"
-
+import type { Lead } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
 
@@ -73,4 +73,30 @@ export async function getLojaLeads12Months(lojaId: string | number): Promise<Lea
   }
 
   return data.data
+}
+
+export async function getLojaLeads(
+  lojaId: string | number,
+  page = 1,
+  perPage = 100
+): Promise<{ leads: Lead[]; total: number }> {
+  const response = await fetch(
+    `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`,
+    {
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar leads da loja: ${response.status}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.success) {
+    throw new Error('API retornou sucesso = false')
+  }
+
+  return { leads: data.leads, total: data.total }
 }

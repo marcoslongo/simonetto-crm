@@ -139,7 +139,7 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Mail className="h-3.5 w-3.5 shrink-0" />
-                          <span className="text-sm truncate max-w-[180px]">
+                          <span className="text-sm truncate max-w-45">
                             {lead.email}
                           </span>
                         </div>

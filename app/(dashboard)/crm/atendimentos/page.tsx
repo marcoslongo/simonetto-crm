@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
-import { getLeads } from '@/lib/api'
 import { KanbanColumns } from '@/components/leads/kanban-columns'
+import { getLojaLeads } from '@/lib/api-loja'
 
 export const metadata = {
   title: 'Atendimentos | Noxus - Lead Ops',
@@ -10,9 +10,22 @@ export const metadata = {
 export default async function CrmAtendimentoPage() {
   const user = await requireAuth()
 
-  const lojaId = user.loja_id ?? undefined
+  const lojaId = user.loja_id
 
-  const { leads } = await getLeads({ page: 1, per_page: 100, loja_id: lojaId })
+  if (!lojaId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Atendimentos</h2>
+          <p className="text-muted-foreground mt-1">
+            Nenhuma loja vinculada ao seu usuário.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { leads } = await getLojaLeads(lojaId, 1, 100)
 
   return (
     <div className="space-y-6">
