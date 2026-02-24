@@ -436,7 +436,7 @@ export interface OrigemItem {
 }
 
 export async function getLeadsPorOrigem(from?: string, to?: string): Promise<OrigemItem[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_SITE_URL
 
   let url = `${base}/api/leads/origem`
   if (from) url += `?from=${from}`
