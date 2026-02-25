@@ -110,7 +110,7 @@ export async function getLeadsGeoStatsServer(
   to?: string
 ): Promise<Record<string, { total: number; lojas: LojaGeo[] }>> {
   const token = await getToken()
-  return getLeadsGeoStats(estado, from, to, token)
+  return getLeadsGeoStats(estado, from, to, token) 
 }
 
 export async function getLeadsGeoStatsByEstadoServer(
