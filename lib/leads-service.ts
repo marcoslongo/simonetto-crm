@@ -128,8 +128,9 @@ export async function getLeadsPorInvestimento(token?: string) {
   return grouped;
 }
 
-export async function getLeadsByDate(date: string, token?: string) {
-  const data = await getLeads(1, 100, undefined, undefined, date, date, token);
+export async function getLeadsByDate(lojaId: string | null | undefined, date: string, token?: string) {
+  const lojaIdNum = lojaId ? parseInt(lojaId) : undefined;
+  const data = await getLeads(1, 100, lojaIdNum, undefined, date, date, token);
 
   return {
     success: true,

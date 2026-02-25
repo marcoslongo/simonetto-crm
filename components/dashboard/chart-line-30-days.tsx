@@ -30,14 +30,12 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 
-import {
-  getLeadsStatsFilterDate,
-  getLeadsByDate,
-} from "@/lib/leads-service"
+import { getLeadsStatsFilterDate } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -73,7 +71,13 @@ function normalizeLeads(data: any[], from: string, to: string) {
   return result
 }
 
-export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
+export function ChartLeads30Days({
+  data: initialData,
+  lojaId,
+}: {
+  data: LeadChart[]
+  lojaId?: string
+}) {
   const [data, setData] = useState(initialData)
   const [from, setFrom] = useState<Date | undefined>()
   const [to, setTo] = useState<Date | undefined>()
@@ -115,12 +119,22 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
     const date = e.activePayload[0].payload.date
 
     setSelectedDate(date)
+    setLeadsDay([])
     setOpenDialog(true)
     setLoadingDialog(true)
 
     try {
-      const res = await getLeadsByDate(date)
-      setLeadsDay(res.data || [])
+      const params = new URLSearchParams({ date })
+      if (lojaId) params.set('loja_id', lojaId)
+
+      const res = await fetch(`/api/leads-por-dia?${params.toString()}`)
+
+      if (!res.ok) {
+        throw new Error(`Erro ao buscar leads: ${res.status}`)
+      }
+
+      const json = await res.json()
+      setLeadsDay(json.data ?? [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -213,32 +227,9 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
           >
             <AreaChart data={data} onClick={handleChartClick}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-              <XAxis
-                dataKey="date"
-                tickFormatter={(v) =>
-                  new Date(v).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "short",
-                  })
-                }
-              />
-
+              <XAxis dataKey="date" />
               <YAxis />
-
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      })
-                    }
-                  />
-                }
-              />
+              <ChartTooltip content={<ChartTooltipContent />} />
 
               <Area
                 dataKey="total"
@@ -264,7 +255,7 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
       </Card>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="dialog-leads-desc">
           <DialogHeader>
             <DialogTitle>
               Leads do dia{" "}

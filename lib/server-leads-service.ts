@@ -84,9 +84,9 @@ export async function getLeadsPorInvestimentoServer() {
   return getLeadsPorInvestimento(token)
 }
 
-export async function getLeadsByDateServer(date: string) {
+export async function getLeadsByDateServer(lojaId: string | null | undefined, date: string) {
   const token = await getToken()
-  return getLeadsByDate(date, token)
+  return getLeadsByDate(lojaId, date, token)
 }
 
 export async function getLeadsPorInteresseServer() {
