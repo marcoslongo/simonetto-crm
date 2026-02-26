@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, LocateFixed, Store, TrendingUp } from "lucide-react"
+import { CalendarIcon, Eraser, LocateFixed, Search, Store, TrendingUp, X } from "lucide-react"
 import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -30,14 +30,12 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 
-import {
-  getLeadsStatsFilterDate,
-  getLeadsByDate,
-} from "@/lib/leads-service"
+import { getLeadsStatsFilterDate } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -73,11 +71,18 @@ function normalizeLeads(data: any[], from: string, to: string) {
   return result
 }
 
-export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
+export function ChartLeads30Days({
+  data: initialData,
+  lojaId,
+}: {
+  data: LeadChart[]
+  lojaId?: string
+}) {
   const [data, setData] = useState(initialData)
   const [from, setFrom] = useState<Date | undefined>()
   const [to, setTo] = useState<Date | undefined>()
   const [loading, setLoading] = useState(false)
+  const [isFiltered, setIsFiltered] = useState(false)
 
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -102,11 +107,19 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
       )
 
       setData(normalized)
+      setIsFiltered(true)
     } catch (error) {
       console.error(error)
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleLimpar() {
+    setFrom(undefined)
+    setTo(undefined)
+    setData(initialData)
+    setIsFiltered(false)
   }
 
   async function handleChartClick(e: any) {
@@ -115,12 +128,22 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
     const date = e.activePayload[0].payload.date
 
     setSelectedDate(date)
+    setLeadsDay([])
     setOpenDialog(true)
     setLoadingDialog(true)
 
     try {
-      const res = await getLeadsByDate(date)
-      setLeadsDay(res.data || [])
+      const params = new URLSearchParams({ date })
+      if (lojaId) params.set('loja_id', lojaId)
+
+      const res = await fetch(`/api/leads-por-dia?${params.toString()}`)
+
+      if (!res.ok) {
+        throw new Error(`Erro ao buscar leads: ${res.status}`)
+      }
+
+      const json = await res.json()
+      setLeadsDay(json.data ?? [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -142,7 +165,11 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
                 Leads por período
               </CardTitle>
               <CardDescription>
-                {loading ? "Buscando dados..." : "Captação diária"}
+                {loading
+                  ? "Buscando dados..."
+                  : isFiltered
+                    ? `Filtrado: ${format(from!, "dd/MM/yyyy", { locale: ptBR })} até ${format(to!, "dd/MM/yyyy", { locale: ptBR })}`
+                    : "Últimos 30 dias"}
               </CardDescription>
             </div>
 
@@ -187,10 +214,23 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
 
               <Button
                 onClick={handleBuscar}
-                className="bg-[#16255c] hover:bg-[#0f1a45]"
+                disabled={!from || !to || loading}
+                className="bg-[#16255c] hover:bg-[#0f1a45] flex items-center gap-1.5 cursor-pointer"
               >
+                <Search />
                 Buscar
               </Button>
+
+              {isFiltered && (
+                <Button
+                  variant="destructive"
+                  onClick={handleLimpar}
+                  className="hover:text-white flex gap-2 items-center text-white cursor-pointer"
+                >
+                  <Eraser className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -213,32 +253,9 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
           >
             <AreaChart data={data} onClick={handleChartClick}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-              <XAxis
-                dataKey="date"
-                tickFormatter={(v) =>
-                  new Date(v).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "short",
-                  })
-                }
-              />
-
+              <XAxis dataKey="date" />
               <YAxis />
-
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      })
-                    }
-                  />
-                }
-              />
+              <ChartTooltip content={<ChartTooltipContent />} />
 
               <Area
                 dataKey="total"
@@ -264,13 +281,16 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
       </Card>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="dialog-leads-desc">
           <DialogHeader>
             <DialogTitle>
               Leads do dia{" "}
               {selectedDate &&
                 new Date(selectedDate).toLocaleDateString("pt-BR")}
             </DialogTitle>
+            <DialogDescription id="dialog-leads-desc">
+              Lista de leads capturados neste dia
+            </DialogDescription>
           </DialogHeader>
 
           {loadingDialog ? (

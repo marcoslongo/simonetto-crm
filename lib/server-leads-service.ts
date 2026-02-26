@@ -84,9 +84,9 @@ export async function getLeadsPorInvestimentoServer() {
   return getLeadsPorInvestimento(token)
 }
 
-export async function getLeadsByDateServer(date: string) {
+export async function getLeadsByDateServer(lojaId: string | null | undefined, date: string) {
   const token = await getToken()
-  return getLeadsByDate(date, token)
+  return getLeadsByDate(lojaId, date, token)
 }
 
 export async function getLeadsPorInteresseServer() {
@@ -110,7 +110,7 @@ export async function getLeadsGeoStatsServer(
   to?: string
 ): Promise<Record<string, { total: number; lojas: LojaGeo[] }>> {
   const token = await getToken()
-  return getLeadsGeoStats(estado, from, to, token)
+  return getLeadsGeoStats(estado, from, to, token) 
 }
 
 export async function getLeadsGeoStatsByEstadoServer(

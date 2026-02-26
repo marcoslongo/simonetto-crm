@@ -128,8 +128,9 @@ export async function getLeadsPorInvestimento(token?: string) {
   return grouped;
 }
 
-export async function getLeadsByDate(date: string, token?: string) {
-  const data = await getLeads(1, 100, undefined, undefined, date, date, token);
+export async function getLeadsByDate(lojaId: string | null | undefined, date: string, token?: string) {
+  const lojaIdNum = lojaId ? parseInt(lojaId) : undefined;
+  const data = await getLeads(1, 100, lojaIdNum, undefined, date, date, token);
 
   return {
     success: true,
@@ -184,13 +185,13 @@ export async function getLeadsLast30Days(from?: string, to?: string, token?: str
   }
 
   return json.data.map((item: any) => ({
-    date: item.data,
+    date: item.data, 
     total: parseInt(item.total) || 0,
   }));
 }
 
 export async function getLeadsStatsFilterDate(from: string, to: string) {
-  const res = await fetch(`/api/leads/leads-stats?from=${from}&to=${to}`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_WP_URL}/wp-json/api/v1/leads-30dias?from=${from}&to=${to}`, {
     cache: "no-store",
   });
 
