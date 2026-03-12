@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, LocateFixed, Store, TrendingUp } from "lucide-react"
+import { CalendarIcon, TrendingUp, Eraser, Search } from "lucide-react"
 import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -27,10 +27,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-
-import {
-  getLeadsStatsFilterDate,
-} from "@/lib/leads-service"
+import { getLeadsStatsFilterDateStats } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -66,11 +63,19 @@ function normalizeLeads(data: any[], from: string, to: string) {
   return result
 }
 
-export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
+export function ChartLeads30Days({
+  data: initialData,
+  lojaId,
+}: {
+  data: LeadChart[]
+  lojaId?: string | number
+}) {
   const [data, setData] = useState(initialData)
   const [from, setFrom] = useState<Date | undefined>()
   const [to, setTo] = useState<Date | undefined>()
   const [loading, setLoading] = useState(false)
+
+  const isFiltered = !!from || !!to
 
   async function handleBuscar() {
     if (!from || !to) return
@@ -78,9 +83,10 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
     setLoading(true)
 
     try {
-      const res = await getLeadsStatsFilterDate(
+      const res = await getLeadsStatsFilterDateStats(
         format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd")
+        format(to, "yyyy-MM-dd"),
+        lojaId,
       )
 
       const normalized = normalizeLeads(
@@ -97,7 +103,11 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
     }
   }
 
- 
+  function handleLimpar() {
+    setFrom(undefined)
+    setTo(undefined)
+    setData(initialData)
+  }
 
   const totalLeads = data.reduce((s, i) => s + i.total, 0)
   const avgLeads = data.length ? Math.round(totalLeads / data.length) : 0
@@ -158,10 +168,23 @@ export function ChartLeads30Days({ data: initialData }: { data: LeadChart[] }) {
 
               <Button
                 onClick={handleBuscar}
-                className="bg-[#16255c] hover:bg-[#0f1a45]"
+                disabled={loading || !from || !to}
+                className="hover:text-white flex gap-2 items-center text-white cursor-pointer bg-[#16255c] hover:bg-[#0f1a45]"
               >
-                Buscar
+                <Search className="h-4 w-4" />
+                {loading ? "Buscando..." : "Buscar"}
               </Button>
+
+              {isFiltered && (
+                <Button
+                  variant="destructive"
+                  onClick={handleLimpar}
+                  className="hover:text-white flex gap-2 items-center text-white cursor-pointer"
+                >
+                  <Eraser className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
             </div>
 
             <div className="flex gap-4">

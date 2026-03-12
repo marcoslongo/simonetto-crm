@@ -34,8 +34,10 @@ export default async function CrmDashboardPage() {
       <div>
         <StatsCards stats={stats} />
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div>
         <ChartLeads30Days data={leads30Days} />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
         <ChartLeads12Months data={leads12Months} />
       </div>
     </div>

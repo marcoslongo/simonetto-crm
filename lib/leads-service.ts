@@ -202,6 +202,27 @@ export async function getLeadsStatsFilterDate(from: string, to: string) {
   return res.json();
 }
 
+
+export async function getLeadsStatsFilterDateStats(
+  from: string,
+  to: string,
+  lojaId?: string | number
+) {
+  const params = new URLSearchParams({ from, to });
+  if (lojaId) params.set("loja_id", String(lojaId));
+
+  const url = `${process.env.NEXT_PUBLIC_WP_URL}/wp-json/api/v1/leads/stats?${params.toString()}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error(`Erro ao buscar estatísticas — status ${res.status}`);
+  }
+
+  return res.json();
+}
+
+
 /* ============================
    STATS POR ESTADO
 ============================ */
