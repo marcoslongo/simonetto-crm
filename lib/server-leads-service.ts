@@ -1,13 +1,3 @@
-/**
- * server-leads-service.ts
- *
- * Wrapper server-only do leads-service.
- * Lê o auth_token do cookie e injeta em todas as chamadas.
- *
- * ⚠️  Importe este arquivo APENAS em Server Components, Server Actions e Route Handlers.
- *     Para Client Components, use leads-service.ts diretamente (sem auth).
- */
-
 import { cookies } from 'next/headers'
 import {
   getLeads,

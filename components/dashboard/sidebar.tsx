@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, Building2, Phone } from 'lucide-react'
+import { LayoutDashboard, Users, Building2, Phone, FileChartColumnIncreasing } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
 import {
@@ -55,6 +55,11 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           name: 'Leads',
           href: `${basePath}/leads`,
           icon: Users,
+        },
+        {
+          name: 'Relatórios',
+          href: `${basePath}/relatorios`,
+          icon: FileChartColumnIncreasing,
         },
       ]
       : []),
