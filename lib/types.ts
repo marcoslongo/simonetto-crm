@@ -4,6 +4,12 @@
 
 export type UserRole = 'administrator' | 'loja';
 
+export type LeadStatus =
+  | 'nao_atendido'
+  | 'em_negociacao'
+  | 'venda_realizada'
+  | 'venda_nao_realizada';
+
 export interface AuthResponse {
   token: string;
   user_email: string;
@@ -34,17 +40,16 @@ export interface Session {
 
 // Loja
 export interface Loja {
-  id: string
-  nome: string
-  cidade: string | null
-  estado: string | null
-  localizacao: string
-  emails: Array<{ email: string }> | null
+  id: string;
+  nome: string;
+  cidade: string | null;
+  estado: string | null;
+  localizacao: string;
+  emails: Array<{ email: string }> | null;
 }
 
 // Lead
 export interface Lead {
-  atendido: boolean;
   id: string;
   nome: string;
   email: string;
@@ -57,6 +62,7 @@ export interface Lead {
   mensagem: string;
   pipefy_card_id: string | null;
   loja_id: string | null;
+  status: LeadStatus;
   data_criacao: string;
   data_atualizacao: string;
   loja_nome: string;
@@ -75,40 +81,40 @@ export interface LeadsResponse {
 
 // Resposta de lojas
 export interface LojasResponse {
-  success: boolean
-  lojas: Loja[]
+  success: boolean;
+  lojas: Loja[];
 }
 
 // Resposta de lead único
 export interface LeadResponse {
-  success: boolean
-  lead: Lead
+  success: boolean;
+  lead: Lead;
 }
 
 // Filtros de leads
 export interface LeadsFilters {
-  page?: number
-  per_page?: number
-  email?: string
-  loja_id?: number
-  search?: string
-  from?: string
-  to?: string
+  page?: number;
+  per_page?: number;
+  email?: string;
+  loja_id?: number;
+  search?: string;
+  from?: string;
+  to?: string;
 }
 
 // Estatísticas do dashboard
 export interface DashboardStats {
-  totalLeads: number
-  leadsHoje: number
-  leadsEsteMes: number
-  ultimoLead: Lead | null
+  totalLeads: number;
+  leadsHoje: number;
+  leadsEsteMes: number;
+  ultimoLead: Lead | null;
 }
 
 // Resposta de erro da API
 export interface ApiError {
-  success: false
-  mensagem: string
-  erro?: string
+  success: false;
+  mensagem: string;
+  erro?: string;
 }
 
 export interface StoreTimeRanking {

@@ -1,6 +1,20 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  closestCenter,
+} from '@dnd-kit/core'
+import { useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import {
   Card,
   CardContent,
@@ -9,209 +23,318 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, Clock, ChevronRight, CircleCheckBig } from 'lucide-react'
-import { Lead } from '@/lib/types'
-import { LeadDetailsModal } from '@/components/leads/lead-dialog'
+import {
+  Clock,
+  ChevronRight,
+  CircleCheckBig,
+  Handshake,
+  CheckCircle2,
+  XCircle,
+  GripVertical,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
+export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
+
+export interface Lead {
+  id: string | number
+  nome: string
+  email?: string
+  telefone?: string
+  cidade?: string
+  estado?: string
+  expectativa_investimento?: string
+  status?: LeadStatus
+  data_criacao: string
+}
+
+const COLUNAS = [
+  {
+    key:         'nao_atendido',
+    label:       'Não Atendidos',
+    description: 'Leads aguardando primeiro contato',
+    color:       'amber',
+    Icon:        Clock,
+  },
+  {
+    key:         'em_negociacao',
+    label:       'Em Negociação',
+    description: 'Leads em processo de negociação',
+    color:       'blue',
+    Icon:        Handshake,
+  },
+  {
+    key:         'venda_realizada',
+    label:       'Venda Realizada',
+    description: 'Leads que fecharam negócio',
+    color:       'emerald',
+    Icon:        CheckCircle2,
+  },
+  {
+    key:         'venda_nao_realizada',
+    label:       'Venda Não Realizada',
+    description: 'Leads que não fecharam negócio',
+    color:       'red',
+    Icon:        XCircle,
+  },
+] as const
+
+type StatusKey = typeof COLUNAS[number]['key']
+
+
+const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string }> = {
+  amber:   { 
+    icon: 'text-amber-500',   
+    badge: 'bg-amber-100 text-amber-700 hover:bg-amber-100',     
+    empty: 'text-amber-400',
+    dropzone: 'ring-amber-400 bg-amber-50/50'
+  },
+  blue:    { 
+    icon: 'text-blue-500',    
+    badge: 'bg-blue-100 text-blue-700 hover:bg-blue-100',         
+    empty: 'text-blue-400',
+    dropzone: 'ring-blue-400 bg-blue-50/50'
+  },
+  emerald: { 
+    icon: 'text-emerald-500', 
+    badge: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100', 
+    empty: 'text-emerald-400',
+    dropzone: 'ring-emerald-400 bg-emerald-50/50'
+  },
+  red:     { 
+    icon: 'text-red-500',     
+    badge: 'bg-red-100 text-red-700 hover:bg-red-100',             
+    empty: 'text-red-400',
+    dropzone: 'ring-red-400 bg-red-50/50'
+  },
+}
 
 interface KanbanColumnsProps {
   leads: Lead[]
+  onLeadClick?: (lead: Lead) => void
 }
 
-async function registrarContato(leadId: string) {
-  const res = await fetch('/api/lead-contato', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      lead_id: leadId,
-      tipo_contato: 'manual',
-      observacao: 'Marcado como atendido pelo lojista',
+export function KanbanColumns({ leads: initialLeads, onLeadClick }: KanbanColumnsProps) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [activeLead, setActiveLead] = useState<Lead | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
     }),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data?.mensagem ?? 'Erro ao registrar contato.')
-  }
-}
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    })
+  )
 
-export function KanbanColumns({ leads: initialLeads }: KanbanColumnsProps) {
-  const [leads, setLeads]               = useState<Lead[]>(initialLeads)
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [pendingId, setPendingId]       = useState<string | null>(null)
+  const leadsByStatus = (status: string) =>
+    leads.filter((l) => (l.status ?? 'nao_atendido') === status)
 
-  const contatoRealizadoRef = useRef(false)
+  const moverLead = async (lead: Lead, novoStatus: LeadStatus) => {
+    const statusAnterior = lead.status ?? 'nao_atendido'
+    
+    if (statusAnterior === novoStatus) return
 
-  const naoAtendidos = leads.filter((l) => !l.atendido)
-  const atendidos    = leads.filter((l) => l.atendido)
-
-  const marcarAtendidoLocalmente = (id: string) => {
     setLeads((prev) =>
-      prev.map((l) => String(l.id) === id ? { ...l, atendido: true } : l)
+      prev.map((l) =>
+        String(l.id) === String(lead.id) ? { ...l, status: novoStatus } : l
+      )
     )
-  }
-
-  const handleMarcarAtendido = async (lead: Lead) => {
-    const id = String(lead.id)
-
-    marcarAtendidoLocalmente(id)
-    setPendingId(id)
 
     try {
-      await registrarContato(id)
-      toast.success('Lead marcado como atendido.')
-    } catch (err: any) {
+      const res = await fetch('/api/lead-status', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ lead_id: lead.id, status: novoStatus }),
+      })
+
+      if (!res.ok) throw new Error()
+
+      toast.success('Lead movido com sucesso.')
+    } catch {
       setLeads((prev) =>
-        prev.map((l) => String(l.id) === id ? { ...l, atendido: false } : l)
+        prev.map((l) =>
+          String(l.id) === String(lead.id) ? { ...l, status: statusAnterior } : l
+        )
       )
-      toast.error(err?.message ?? 'Erro ao atualizar lead.')
-    } finally {
-      setPendingId(null)
+      toast.error('Erro ao mover lead.')
     }
   }
 
-  const handleOpenModal = (lead: Lead) => {
-    contatoRealizadoRef.current = false
-    setSelectedLead(lead)
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event
+    const lead = leads.find((l) => String(l.id) === String(active.id))
+    if (lead) {
+      setActiveLead(lead)
+    }
   }
 
-  const handleModalClose = () => {
-    if (contatoRealizadoRef.current && selectedLead) {
-      marcarAtendidoLocalmente(String(selectedLead.id))
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveLead(null)
+
+    if (!over) return
+
+    const leadId = active.id
+    const novoStatus = over.id as LeadStatus
+
+    const lead = leads.find((l) => String(l.id) === String(leadId))
+    if (lead && novoStatus !== (lead.status ?? 'nao_atendido')) {
+      moverLead(lead, novoStatus)
     }
-    contatoRealizadoRef.current = false
-    setSelectedLead(null)
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {COLUNAS.map((coluna) => {
+          const items  = leadsByStatus(coluna.key)
+          const styles = colorStyles[coluna.color]
 
-        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-base">Não Atendidos</CardTitle>
-              </div>
-              <Badge
-                variant="secondary"
-                className="bg-amber-100 text-amber-700 hover:bg-amber-100"
-              >
-                {naoAtendidos.length}
-              </Badge>
-            </div>
-            <CardDescription>Leads aguardando primeiro contato</CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {naoAtendidos.length === 0 ? (
-                <div className='flex justify-center'>
-                  <p className="px-6 py-8 text-center text-lg text-muted-foreground flex items-center gap-2">
-                    Nenhum lead pendente <CircleCheckBig size={20} className='text-emerald-500' />
-                  </p>
-                </div>
-              ) : (
-                naoAtendidos.map((lead) => (
-                  <LeadKanbanRow
-                    key={lead.id}
-                    lead={lead}
-                    isPending={pendingId === String(lead.id)}
-                    onOpen={() => handleOpenModal(lead)}
-                    onMarcarAtendido={() => handleMarcarAtendido(lead)}
-                  />
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='bg-linear-to-br from-slate-50 to-slate-100'>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <CardTitle className="text-base">Atendidos</CardTitle>
-              </div>
-              <Badge
-                variant="secondary"
-                className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
-              >
-                {atendidos.length}
-              </Badge>
-            </div>
-            <CardDescription>Leads que já foram contactados</CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {atendidos.length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  Nenhum lead atendido ainda
-                </p>
-              ) : (
-                atendidos.map((lead) => (
-                  <LeadKanbanRow
-                    key={lead.id}
-                    lead={lead}
-                    attended
-                    isPending={false}
-                    onOpen={() => handleOpenModal(lead)}
-                  />
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          return (
+            <KanbanColumn
+              key={coluna.key}
+              coluna={coluna}
+              items={items}
+              styles={styles}
+              onLeadClick={onLeadClick}
+            />
+          )
+        })}
       </div>
 
-      {selectedLead && (
-        <LeadDetailsModal
-          lead={selectedLead}
-          open={!!selectedLead}
-          onContatoRealizado={() => {
-            contatoRealizadoRef.current = true
-          }}
-          onOpenChange={(open) => {
-            if (!open) handleModalClose()
-          }}
-        />
-      )}
-    </>
+      <DragOverlay>
+        {activeLead && (
+          <div className="rounded-lg border bg-card p-4 shadow-lg opacity-90">
+            <p className="truncate text-sm font-medium text-foreground">{activeLead.nome}</p>
+            {activeLead.email && (
+              <p className="truncate text-xs text-muted-foreground">{activeLead.email}</p>
+            )}
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   )
 }
 
-interface LeadKanbanRowProps {
-  lead: Lead
-  attended?: boolean
-  isPending: boolean
-  onOpen: () => void
-  onMarcarAtendido?: () => void
+interface KanbanColumnProps {
+  coluna: typeof COLUNAS[number]
+  items: Lead[]
+  styles: typeof colorStyles[string]
+  onLeadClick?: (lead: Lead) => void
 }
 
-function LeadKanbanRow({
-  lead,
-  attended = false,
-  isPending,
-  onOpen,
-  onMarcarAtendido,
-}: LeadKanbanRowProps) {
-  const criado = formatDistanceToNow(new Date(lead.data_criacao), {
-    addSuffix: true,
-    locale: ptBR,
+function KanbanColumn({ coluna, items, styles, onLeadClick }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: coluna.key,
   })
 
   return (
-    <div className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40">
+    <Card 
+      ref={setNodeRef}
+      className={cn(
+        "bg-gradient-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
+        isOver && `ring-2 ${styles.dropzone}`
+      )}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <coluna.Icon className={`h-4 w-4 ${styles.icon}`} />
+            <CardTitle className="text-base">{coluna.label}</CardTitle>
+          </div>
+          <Badge variant="secondary" className={styles.badge}>
+            {items.length}
+          </Badge>
+        </div>
+        <CardDescription>{coluna.description}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        <div className="divide-y min-h-25">
+          {items.length === 0 ? (
+            <div className="flex justify-center">
+              <p className={`px-6 py-8 text-center text-sm text-muted-foreground flex items-center gap-2`}>
+                {isOver ? 'Solte aqui' : 'Nenhum lead aqui'}
+                <CircleCheckBig size={16} className={styles.empty} />
+              </p>
+            </div>
+          ) : (
+            items.map((lead) => (
+              <DraggableLeadRow
+                key={lead.id}
+                lead={lead}
+                onOpen={() => onLeadClick?.(lead)}
+              />
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface DraggableLeadRowProps {
+  lead: Lead
+  onOpen: () => void
+}
+
+function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: String(lead.id),
+  })
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  }
+
+  const criado = formatDistanceToNow(new Date(lead.data_criacao), {
+    addSuffix: true,
+    locale:    ptBR,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50",
+        isDragging && "opacity-50 shadow-lg z-50"
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="mt-1 cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
+        aria-label="Arrastar lead"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
       <button
         onClick={onOpen}
         className="min-w-0 flex-1 text-left focus-visible:outline-none"
       >
-        <p className={`truncate text-sm font-medium ${attended ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-          {lead.nome}
-        </p>
+        <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
 
         {lead.email && (
           <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
