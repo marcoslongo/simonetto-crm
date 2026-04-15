@@ -258,6 +258,7 @@ export function ChartLeads30Days({
               <ChartTooltip content={<ChartTooltipContent />} />
 
               <Area
+                type="monotone"
                 dataKey="total"
                 stroke="#16255c"
                 fill="#16255c33"
@@ -265,6 +266,7 @@ export function ChartLeads30Days({
               />
 
               <Line
+                type="monotone"
                 dataKey="total"
                 stroke="#16255c"
                 strokeWidth={2}
