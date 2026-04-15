@@ -47,6 +47,12 @@ import { Lead } from '@/lib/types'
 
 export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
 
+const statusLabels: Record<string, string> = {
+  nao_atendido: 'Não Atendido',
+  em_negociacao: 'Em Negociação',
+  venda_realizada: 'Venda Realizada',
+  venda_nao_realizada: 'Venda Não Realizada',
+}
 
 const COLUNAS = [
   {
@@ -139,6 +145,22 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   const leadsByStatus = (status: string) =>
     leads.filter((l) => (l.status ?? 'nao_atendido') === status)
 
+  const registrarContato = async (leadId: string | number, tipoContato: string, observacao?: string) => {
+    try {
+      await fetch("/api/lead-contato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: leadId,
+          tipo_contato: tipoContato,
+          observacao: observacao || `Contato via ${tipoContato}`,
+        }),
+      });
+    } catch (error) {
+      console.error("Erro ao registrar contato:", error);
+    }
+  };
+
   const moverLead = async (lead: Lead, novoStatus: LeadStatus) => {
     const statusAnterior = lead.status ?? 'nao_atendido'
     
@@ -158,6 +180,13 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
       })
 
       if (!res.ok) throw new Error()
+
+      // Registrar ação de movimentação no histórico
+      await registrarContato(
+        lead.id, 
+        "movimentacao", 
+        `Status alterado de ${statusLabels[statusAnterior]} para ${statusLabels[novoStatus]}`
+      )
 
       toast.success('Lead movido com sucesso.')
     } catch {
