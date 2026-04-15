@@ -24,6 +24,12 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   Clock,
   ChevronRight,
   CircleCheckBig,
@@ -36,20 +42,11 @@ import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { LeadDetailsModal } from './lead-dialog'
+import { Lead } from '@/lib/types'
 
 export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
 
-export interface Lead {
-  id: string | number
-  nome: string
-  email?: string
-  telefone?: string
-  cidade?: string
-  estado?: string
-  expectativa_investimento?: string
-  status?: LeadStatus
-  data_criacao: string
-}
 
 const COLUNAS = [
   {
@@ -115,11 +112,15 @@ const colorStyles: Record<string, { icon: string; badge: string; empty: string; 
 interface KanbanColumnsProps {
   leads: Lead[]
   onLeadClick?: (lead: Lead) => void
+  isAdmin?: boolean
+  lojas?: Array<{ id: number; nome: string }>
 }
 
-export function KanbanColumns({ leads: initialLeads, onLeadClick }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [] }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -192,41 +193,59 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick }: KanbanColumn
     }
   }
 
+  const handleLeadClick = (lead: Lead) => {
+    setSelectedLead(lead)
+    setIsModalOpen(true)
+    onLeadClick?.(lead)
+  }
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {COLUNAS.map((coluna) => {
-          const items  = leadsByStatus(coluna.key)
-          const styles = colorStyles[coluna.color]
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {COLUNAS.map((coluna) => {
+            const items  = leadsByStatus(coluna.key)
+            const styles = colorStyles[coluna.color]
 
-          return (
-            <KanbanColumn
-              key={coluna.key}
-              coluna={coluna}
-              items={items}
-              styles={styles}
-              onLeadClick={onLeadClick}
-            />
-          )
-        })}
-      </div>
+            return (
+              <KanbanColumn
+                key={coluna.key}
+                coluna={coluna}
+                items={items}
+                styles={styles}
+                onLeadClick={handleLeadClick}
+              />
+            )
+          })}
+        </div>
 
-      <DragOverlay>
-        {activeLead && (
-          <div className="rounded-lg border bg-card p-4 shadow-lg opacity-90">
-            <p className="truncate text-sm font-medium text-foreground">{activeLead.nome}</p>
-            {activeLead.email && (
-              <p className="truncate text-xs text-muted-foreground">{activeLead.email}</p>
-            )}
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeLead && (
+            <div className="rounded-lg border bg-card p-4 shadow-lg opacity-90">
+              <p className="truncate text-sm font-medium text-foreground">{activeLead.nome}</p>
+              {activeLead.email && (
+                <p className="truncate text-xs text-muted-foreground">{activeLead.email}</p>
+              )}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
+
+      {selectedLead && (
+        <LeadDetailsModal
+          lead={selectedLead}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          isAdmin={isAdmin}
+          lojas={lojas}
+        />
+      )}
+    </>
   )
 }
 
@@ -313,58 +332,67 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
   })
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50",
-        isDragging && "opacity-50 shadow-lg z-50"
-      )}
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        className="mt-1 cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
-        aria-label="Arrastar lead"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-
-      <button
-        onClick={onOpen}
-        className="min-w-0 flex-1 text-left focus-visible:outline-none"
-      >
-        <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
-
-        {lead.email && (
-          <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
+    <TooltipProvider>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50",
+          isDragging && "opacity-50 shadow-lg z-50"
         )}
-
-        {lead.cidade && (
-          <p className="text-xs text-muted-foreground">
-            {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
-          </p>
-        )}
-
-        <div className="mt-1.5 flex items-center gap-2">
-          {lead.expectativa_investimento && (
-            <span className="text-xs font-medium text-emerald-600">
-              {lead.expectativa_investimento}
-            </span>
-          )}
-          <span className="text-[10px] text-muted-foreground">{criado}</span>
-        </div>
-      </button>
-
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      >
         <button
-          onClick={onOpen}
-          title="Ver detalhes"
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
+          {...attributes}
+          {...listeners}
+          className="mt-1 cursor-grab touch-none text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
+          aria-label="Arrastar lead"
         >
-          <ChevronRight className="h-4 w-4" />
+          <GripVertical className="h-4 w-4" />
         </button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onOpen}
+              className="min-w-0 flex-1 text-left focus-visible:outline-none cursor-pointer"
+            >
+              <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
+
+              {lead.email && (
+                <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
+              )}
+
+              {lead.cidade && (
+                <p className="text-xs text-muted-foreground">
+                  {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
+                </p>
+              )}
+
+              <div className="mt-1.5 flex items-center gap-2">
+                {lead.expectativa_investimento && (
+                  <span className="text-xs font-medium text-emerald-600">
+                    {lead.expectativa_investimento}
+                  </span>
+                )}
+                <span className="text-[10px] text-muted-foreground">{criado}</span>
+              </div>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Ver informações completas
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={onOpen}
+            title="Ver detalhes"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
