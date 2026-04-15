@@ -416,7 +416,7 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
           <button
             onClick={onOpen}
             title="Ver detalhes"
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors"
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
