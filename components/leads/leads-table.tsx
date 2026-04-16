@@ -127,13 +127,13 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
           <TableHeader>
             <TableRow className="border-b border-border hover:bg-transparent">
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Lead
+              </TableHead>
+              <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Classificação
               </TableHead>
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Status
-              </TableHead>
-              <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Lead
               </TableHead>
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Contato
@@ -178,10 +178,17 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                 onClick={() => handleRowClick(lead)}
                 className="cursor-pointer transition-all duration-150 group hover:bg-muted/40"
               >
-                {/* --- CLASSIFICAÇÃO (TEMPERATURA) --- */}
+                <TableCell className="py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-card-foreground truncate">
+                        {lead.nome}
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell className="py-3">
                   {(() => {
-                    // Normaliza a string (ex: 'Quente' -> 'quente')
                     const key = lead.classificacao?.toLowerCase().trim() || "";
                     const config = classificacaoMap[key] || {
                       label: lead.classificacao || "-",
@@ -202,7 +209,6 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                   })()}
                 </TableCell>
 
-                {/* --- STATUS --- */}
                 <TableCell className="py-3">
                   {(() => {
                     const key = lead.status?.toLowerCase().trim() || "";
@@ -224,17 +230,6 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                     );
                   })()}
                 </TableCell>
-
-                <TableCell className="py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-card-foreground truncate">
-                        {lead.nome}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-
                 <TableCell className="py-3">
                   <div className="flex flex-col gap-1">
                     <Tooltip>
