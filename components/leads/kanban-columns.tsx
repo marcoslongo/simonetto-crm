@@ -37,6 +37,9 @@ import {
   CheckCircle2,
   XCircle,
   GripVertical,
+  Snowflake,
+  Thermometer,
+  Flame,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -56,32 +59,32 @@ const statusLabels: Record<string, string> = {
 
 const COLUNAS = [
   {
-    key:         'nao_atendido',
-    label:       'Não Atendidos',
+    key: 'nao_atendido',
+    label: 'Não Atendidos',
     description: 'Leads aguardando primeiro contato',
-    color:       'amber',
-    Icon:        Clock,
+    color: 'amber',
+    Icon: Clock,
   },
   {
-    key:         'em_negociacao',
-    label:       'Em Negociação',
+    key: 'em_negociacao',
+    label: 'Em Negociação',
     description: 'Leads em processo de negociação',
-    color:       'blue',
-    Icon:        Handshake,
+    color: 'blue',
+    Icon: Handshake,
   },
   {
-    key:         'venda_realizada',
-    label:       'Venda Realizada',
+    key: 'venda_realizada',
+    label: 'Venda Realizada',
     description: 'Leads que fecharam negócio',
-    color:       'emerald',
-    Icon:        CheckCircle2,
+    color: 'emerald',
+    Icon: CheckCircle2,
   },
   {
-    key:         'venda_nao_realizada',
-    label:       'Venda Não Realizada',
+    key: 'venda_nao_realizada',
+    label: 'Venda Não Realizada',
     description: 'Leads que não fecharam negócio',
-    color:       'red',
-    Icon:        XCircle,
+    color: 'red',
+    Icon: XCircle,
   },
 ] as const
 
@@ -89,27 +92,27 @@ type StatusKey = typeof COLUNAS[number]['key']
 
 
 const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string }> = {
-  amber:   { 
-    icon: 'text-amber-500',   
-    badge: 'bg-amber-100 text-amber-700 hover:bg-amber-100',     
+  amber: {
+    icon: 'text-amber-500',
+    badge: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
     empty: 'text-amber-400',
     dropzone: 'ring-amber-400 bg-amber-50/50'
   },
-  blue:    { 
-    icon: 'text-blue-500',    
-    badge: 'bg-blue-100 text-blue-700 hover:bg-blue-100',         
+  blue: {
+    icon: 'text-blue-500',
+    badge: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
     empty: 'text-blue-400',
     dropzone: 'ring-blue-400 bg-blue-50/50'
   },
-  emerald: { 
-    icon: 'text-emerald-500', 
-    badge: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100', 
+  emerald: {
+    icon: 'text-emerald-500',
+    badge: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
     empty: 'text-emerald-400',
     dropzone: 'ring-emerald-400 bg-emerald-50/50'
   },
-  red:     { 
-    icon: 'text-red-500',     
-    badge: 'bg-red-100 text-red-700 hover:bg-red-100',             
+  red: {
+    icon: 'text-red-500',
+    badge: 'bg-red-100 text-red-700 hover:bg-red-100',
     empty: 'text-red-400',
     dropzone: 'ring-red-400 bg-red-50/50'
   },
@@ -163,7 +166,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
 
   const moverLead = async (lead: Lead, novoStatus: LeadStatus) => {
     const statusAnterior = lead.status ?? 'nao_atendido'
-    
+
     if (statusAnterior === novoStatus) return
 
     setLeads((prev) =>
@@ -174,17 +177,16 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
 
     try {
       const res = await fetch('/api/lead-status', {
-        method:  'PATCH',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ lead_id: lead.id, status: novoStatus }),
+        body: JSON.stringify({ lead_id: lead.id, status: novoStatus }),
       })
 
       if (!res.ok) throw new Error()
 
-      // Registrar ação de movimentação no histórico
       await registrarContato(
-        lead.id, 
-        "movimentacao", 
+        lead.id,
+        "movimentacao",
         `Status alterado de ${statusLabels[statusAnterior]} para ${statusLabels[novoStatus]}`
       )
 
@@ -238,7 +240,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           {COLUNAS.map((coluna) => {
-            const items  = leadsByStatus(coluna.key)
+            const items = leadsByStatus(coluna.key)
             const styles = colorStyles[coluna.color]
 
             return (
@@ -291,7 +293,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick }: KanbanColumnProps)
   })
 
   return (
-    <Card 
+    <Card
       ref={setNodeRef}
       className={cn(
         "bg-gradient-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
@@ -357,7 +359,7 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
 
   const criado = formatDistanceToNow(new Date(lead.data_criacao), {
     addSuffix: true,
-    locale:    ptBR,
+    locale: ptBR,
   })
 
   return (
@@ -385,6 +387,29 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
               onClick={onOpen}
               className="min-w-0 flex-1 text-left focus-visible:outline-none cursor-pointer"
             >
+              <div className="flex items-center gap-2 mb-1">
+                {lead.classificacao === "quente" && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                    <Flame size={12} />
+                    Quente
+                  </span>
+                )}
+
+                {lead.classificacao === "morno" && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                    <Thermometer size={12} />
+                    Morno
+                  </span>
+                )}
+
+                {lead.classificacao === "frio" && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                    <Snowflake size={12} />
+                    Frio
+                  </span>
+                )}
+              </div>
+
               <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
 
               {lead.email && (
