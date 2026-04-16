@@ -1,7 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { KanbanColumns } from '@/components/leads/kanban-columns'
 import { getLojaLeads } from '@/lib/api-loja'
-import { classificarLead } from '@/lib/lead-score' // 👈 IMPORTANTE
 
 export const metadata = {
   title: 'Atendimentos | Noxus - Lead Ops',
@@ -30,16 +29,6 @@ export default async function CrmAtendimentoPage() {
 
   const { leads } = await getLojaLeads(lojaId, 1, 200)
 
-  const leadsComScore = leads.map((lead) => {
-    const { score, classificacao } = classificarLead(lead)
-
-    return {
-      ...lead,
-      score,
-      classificacao,
-    }
-  })
-
   return (
     <div className="space-y-6">
       <div>
@@ -51,7 +40,7 @@ export default async function CrmAtendimentoPage() {
         </p>
       </div>
 
-      <KanbanColumns leads={leadsComScore} />
+      <KanbanColumns leads={leads} />
     </div>
   )
 }
