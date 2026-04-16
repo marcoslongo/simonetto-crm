@@ -55,7 +55,7 @@ export function StatsCards({
 
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm">
+      <div className="shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-border/50 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
           <Link
             href="/admin/leads"
@@ -116,7 +116,7 @@ export function StatsCards({
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-6">
+      <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
         <h3 className="text-sm font-semibold text-[#16255c] mb-5">
           Temperatura dos Leads
         </h3>
