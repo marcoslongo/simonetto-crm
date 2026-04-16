@@ -26,6 +26,12 @@ import {
   Store,
   DollarSign,
   ChevronRight,
+  Handshake,
+  CheckCircle2,
+  XCircle,
+  Flame,
+  Thermometer,
+  Snowflake,
 } from "lucide-react";
 import { LeadDetailsModal } from "./lead-dialog";
 import { Lead } from "@/lib/types";
@@ -62,6 +68,49 @@ const interestColors: Record<string, string> = {
   escritorio: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
 };
 
+// --- NOVOS MAPEAMENTOS DE ESTILO ---
+
+const statusMap: Record<string, { label: string; colorClass: string; Icon: any }> = {
+  nao_atendido: {
+    label: "Não Atendido",
+    colorClass: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    Icon: Clock,
+  },
+  em_negociacao: {
+    label: "Em Negociação",
+    colorClass: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    Icon: Handshake,
+  },
+  venda_realizada: {
+    label: "Venda Realizada",
+    colorClass: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    Icon: CheckCircle2,
+  },
+  venda_nao_realizada: {
+    label: "Venda Não Realizada",
+    colorClass: "bg-red-500/10 text-red-600 border-red-500/20",
+    Icon: XCircle,
+  },
+};
+
+const classificacaoMap: Record<string, { label: string; colorClass: string; Icon: any }> = {
+  quente: {
+    label: "Quente",
+    colorClass: "bg-red-500/10 text-red-600 border-red-500/20",
+    Icon: Flame,
+  },
+  morno: {
+    label: "Morno",
+    colorClass: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    Icon: Thermometer,
+  },
+  frio: {
+    label: "Frio",
+    colorClass: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    Icon: Snowflake,
+  },
+};
+
 export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,6 +126,12 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
         <Table className="bg-linear-to-br from-slate-50 to-slate-100">
           <TableHeader>
             <TableRow className="border-b border-border hover:bg-transparent">
+              <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Classificação
+              </TableHead>
+              <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Status
+              </TableHead>
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Lead
               </TableHead>
@@ -123,6 +178,53 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                 onClick={() => handleRowClick(lead)}
                 className="cursor-pointer transition-all duration-150 group hover:bg-muted/40"
               >
+                {/* --- CLASSIFICAÇÃO (TEMPERATURA) --- */}
+                <TableCell className="py-3">
+                  {(() => {
+                    // Normaliza a string (ex: 'Quente' -> 'quente')
+                    const key = lead.classificacao?.toLowerCase().trim() || "";
+                    const config = classificacaoMap[key] || {
+                      label: lead.classificacao || "-",
+                      colorClass: "bg-secondary text-secondary-foreground border-border",
+                      Icon: null,
+                    };
+                    const { Icon } = config;
+
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={`flex w-fit items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 ${config.colorClass}`}
+                      >
+                        {Icon && <Icon className="h-3.5 w-3.5" />}
+                        {config.label}
+                      </Badge>
+                    );
+                  })()}
+                </TableCell>
+
+                {/* --- STATUS --- */}
+                <TableCell className="py-3">
+                  {(() => {
+                    const key = lead.status?.toLowerCase().trim() || "";
+                    const config = statusMap[key] || {
+                      label: lead.status || "-",
+                      colorClass: "bg-secondary text-secondary-foreground border-border",
+                      Icon: null,
+                    };
+                    const { Icon } = config;
+
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={`flex w-fit items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 ${config.colorClass}`}
+                      >
+                        {Icon && <Icon className="h-3.5 w-3.5" />}
+                        {config.label}
+                      </Badge>
+                    );
+                  })()}
+                </TableCell>
+
                 <TableCell className="py-3">
                   <div className="flex items-center gap-3">
                     <div className="min-w-0">
