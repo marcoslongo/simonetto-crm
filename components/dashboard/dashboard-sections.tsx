@@ -7,6 +7,7 @@ import {
   getLeadsPorInvestimentoServer,
   getLeadsPorInteresseServer,
   getLeadsPorOrigemServer,
+  getLeadsClassificacaoServer,
 } from '@/lib/server-leads-service'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { formatLastCapture } from '@/lib/utils'
@@ -19,13 +20,20 @@ import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartPieOrigem } from './chart-pie-origem'
 
 export async function StatsSection() {
-  const statsGeral = await getLeadsStatsGeralServer()
+  const [statsGeral, classificacao] = await Promise.all([
+    getLeadsStatsGeralServer(),
+    getLeadsClassificacaoServer(),
+  ])
 
   return (
     <StatsCards
       totalLeads={statsGeral.total}
       leadsHoje={statsGeral.today}
       ultimaCaptura={formatLastCapture(statsGeral.ultimaCaptura)}
+
+      quentes={classificacao.quente}
+      mornos={classificacao.morno}
+      frios={classificacao.frio}
     />
   )
 }

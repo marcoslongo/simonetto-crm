@@ -128,6 +128,34 @@ export async function getLeadsPorInvestimento(token?: string) {
   return grouped;
 }
 
+export async function getLeadsClassificacao(
+  from?: string,
+  to?: string,
+  token?: string
+): Promise<{ frio: number; morno: number; quente: number; total: number }> {
+  const params = new URLSearchParams()
+
+  if (from) params.append('from', from)
+  if (to) params.append('to', to)
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/leads-classificacao?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    }
+  )
+
+  const json = await res.json()
+
+  return {
+    ...json.data,
+    total: json.total,
+  }
+}
+
 export async function getLeadsByDate(lojaId: string | null | undefined, date: string, token?: string) {
   const lojaIdNum = lojaId ? parseInt(lojaId) : undefined;
   const data = await getLeads(1, 100, lojaIdNum, undefined, date, date, token);
