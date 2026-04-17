@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
-import { ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { StatsCardsSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { StatusStatsSection } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
   title: 'Conversão | Noxus',
@@ -19,9 +20,8 @@ export default async function ConversaoPage() {
           Análise do funil e taxas de conversão
         </p>
       </div>
-
-      <Suspense fallback={<ChartCardSkeleton height="h-[350px]" />}>
-        <div>EM DESENVOLVIMENTO</div>
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <StatusStatsSection />
       </Suspense>
     </div>
   )

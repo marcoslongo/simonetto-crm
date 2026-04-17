@@ -1,7 +1,11 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
-import { DualChartSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import {
+  DualChartSkeleton,
+  ChartCardSkeleton
+} from '@/components/dashboard/dashboard-skeletons'
 import { GeoInvestSection } from '@/components/dashboard/dashboard-sections'
+import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
 
 export const metadata = {
   title: 'Aquisição | Noxus',
@@ -20,6 +24,10 @@ export default async function AquisicaoPage() {
           Origem dos leads e investimentos
         </p>
       </div>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[200px]" />}>
+        <LeadsTemperature />
+      </Suspense>
 
       <Suspense fallback={<DualChartSkeleton />}>
         <GeoInvestSection />
