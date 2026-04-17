@@ -1,41 +1,30 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
-import {
-  DualChartSkeleton,
-  ChartCardSkeleton
-} from '@/components/dashboard/dashboard-skeletons'
-import { GeoInvestSection } from '@/components/dashboard/dashboard-sections'
-import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
-import { getLeadsClassificacaoServer } from '@/lib/server-leads-service'
+import { ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { DateFilterClient } from '@/components/ui/date-filter-client'
+import { LeadsTemperatureSection } from '@/components/dashboard/dashboard-sections'
 
-export const metadata = {
-  title: 'Aquisição | Noxus',
+export const metadata = { title: 'Aquisição | Noxus' }
+
+interface AquisicaoPageProps {
+  searchParams: Promise<{ from?: string; to?: string }>
 }
 
-export default async function AquisicaoPage() {
+export default async function AquisicaoPage({ searchParams }: AquisicaoPageProps) {
   await requireAdmin()
-
-  const [statsClassificacao] = await Promise.all([
-    getLeadsClassificacaoServer(),
-  ])
+  const { from, to } = await searchParams
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">
-          Aquisição
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          Origem dos leads e investimentos
-        </p>
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Aquisição</h2>
+        <p className="text-muted-foreground mt-1">Origem dos leads e investimentos</p>
       </div>
 
-      <Suspense fallback={<ChartCardSkeleton height="h-[200px]" />}>
-        <LeadsTemperature
-          quentes={statsClassificacao.quente}
-          mornos={statsClassificacao.morno}
-          frios={statsClassificacao.frio}
-        />
+      <DateFilterClient />
+
+      <Suspense key={`${from}-${to}`} fallback={<ChartCardSkeleton height="h-[200px]" />}>
+        <LeadsTemperatureSection from={from} to={to} />
       </Suspense>
     </div>
   )

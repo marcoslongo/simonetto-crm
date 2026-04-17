@@ -8,6 +8,7 @@ import {
   getLeadsPorInteresseServer,
   getLeadsPorOrigemServer,
   getLeadsStatusTotalServer,
+  getLeadsClassificacaoServer,
 } from '@/lib/server-leads-service'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -20,6 +21,7 @@ import { ChartGeoBrasil } from '@/components/dashboard/chart-geo-brasil'
 import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartPieOrigem } from './chart-pie-origem'
+import { LeadsTemperature } from './leads-temperature'
 
 export async function StatsSection() {
   const [statsGeral] = await Promise.all([
@@ -72,6 +74,23 @@ export async function ContatoRankingSection() {
       />
       <ChartRankingLojas data={tempoPorLoja.data} />
     </div>
+  )
+}
+
+interface LeadsTemperatureSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function LeadsTemperatureSection({ from, to }: LeadsTemperatureSectionProps) {
+  const statsClassificacao = await getLeadsClassificacaoServer(from, to)
+
+  return (
+    <LeadsTemperature
+      quentes={statsClassificacao.quente}
+      mornos={statsClassificacao.morno}
+      frios={statsClassificacao.frio}
+    />
   )
 }
 
