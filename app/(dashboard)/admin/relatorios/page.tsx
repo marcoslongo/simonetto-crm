@@ -1,5 +1,9 @@
 import { Content } from "@/components/relatorios/content";
 
+export const metadata = {
+  title: 'Relatórios | Noxus',
+}
+
 export default async function ReportsPage() {
   return (
     <div className="space-y-6">
