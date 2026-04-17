@@ -4,10 +4,13 @@ import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
 } from '@/components/dashboard/dashboard-skeletons'
-
-import {
+import { 
+  ContatoRankingSection, 
+  GeoInvestSection, 
+  InteresseSection, 
+  Leads30DaysSection, 
   StatsSection,
-  Leads30DaysSection,
+  StatusStatsSection
 } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
@@ -30,6 +33,14 @@ export default async function AdminDashboardPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <StatusStatsSection />
+      </Suspense>
+
+      <Suspense fallback={<DualChartSkeleton />}>
+        <ContatoRankingSection />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>

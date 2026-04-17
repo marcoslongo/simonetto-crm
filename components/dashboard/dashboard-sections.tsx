@@ -8,8 +8,11 @@ import {
   getLeadsPorInteresseServer,
   getLeadsPorOrigemServer,
   getLeadsClassificacaoServer,
+  getLeadsStatusTotalServer,
 } from '@/lib/server-leads-service'
+
 import { StatsCards } from '@/components/dashboard/stats-cards'
+import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import ChartLeadsContato from '@/components/dashboard/chart-leads-contato'
 import { ChartRankingLojas } from '@/components/dashboard/chart-ranking-lojas'
@@ -34,6 +37,21 @@ export async function StatsSection() {
       quentes={classificacao.quente}
       mornos={classificacao.morno}
       frios={classificacao.frio}
+    />
+  )
+}
+
+export async function StatusStatsSection() {
+  const statusTotal = await getLeadsStatusTotalServer()
+
+  return (
+    <KanbanStatsCards
+      data={{
+        nao_atendido: statusTotal.nao_atendido,
+        em_negociacao: statusTotal.em_negociacao,
+        venda_realizada: statusTotal.venda_realizada,
+        venda_nao_realizada: statusTotal.venda_nao_realizada,
+      }}
     />
   )
 }

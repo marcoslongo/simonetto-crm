@@ -22,6 +22,7 @@ import {
   type EstadoGeoStat,
   type OrigemItem,
   getLeadsClassificacao,
+  getLeadsStatusTotal,
 } from './leads-service'
 import type { Lead, LeadsResponse, TimeStoreResponse } from './types'
 
@@ -98,6 +99,11 @@ export async function getLeadsPorLojaServer() {
 export async function getLeadsLast30DaysServer(from?: string, to?: string) {
   const token = await getToken()
   return getLeadsLast30Days(from, to, token)
+}
+
+export async function getLeadsStatusTotalServer(from?: string, to?: string, lojaId?: number) {
+  const token = await getToken()
+  return getLeadsStatusTotal(from, to, lojaId, token)
 }
 
 export async function getLeadsGeoStatsServer(
