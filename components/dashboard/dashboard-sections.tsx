@@ -35,8 +35,13 @@ export async function StatsSection() {
   )
 }
 
-export async function StatusStatsSection() {
-  const statusTotal = await getLeadsStatusTotalServer()
+interface StatusStatsSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function StatusStatsSection({ from, to }: StatusStatsSectionProps) {
+  const statusTotal = await getLeadsStatusTotalServer(from, to)
 
   return (
     <KanbanStatsCards
