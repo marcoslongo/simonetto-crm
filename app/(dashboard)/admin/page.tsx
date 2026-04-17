@@ -3,13 +3,10 @@ import { requireAdmin } from '@/lib/auth'
 import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
-  DualChartSkeleton,
 } from '@/components/dashboard/dashboard-skeletons'
 import { 
-  ContatoRankingSection,
   Leads30DaysSection, 
   StatsSection,
-  StatusStatsSection
 } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
@@ -32,10 +29,6 @@ export default async function AdminDashboardPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
-      </Suspense>
-
-      <Suspense fallback={<DualChartSkeleton />}>
-        <ContatoRankingSection />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>

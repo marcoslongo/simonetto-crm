@@ -37,10 +37,6 @@ export default async function AquisicaoPage() {
           frios={statsClassificacao.frio}
         />
       </Suspense>
-
-      <Suspense fallback={<DualChartSkeleton />}>
-        <GeoInvestSection />
-      </Suspense>
     </div>
   )
 }
