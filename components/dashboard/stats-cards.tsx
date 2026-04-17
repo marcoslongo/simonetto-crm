@@ -120,7 +120,12 @@ export function StatsCards({
       </div>
 
       <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
-        <h3 className="text-sm font-semibold text-[#16255c] mb-5">Temperatura dos Leads</h3>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-[#16255c]">Temperatura dos Leads</h2>
+          <p className="flex items-center gap-2 text-slate-600">
+            Classificação atualizada com base no nível de engajamento e intenção de compra
+          </p>
+        </div>
 
         <div className="flex flex-col gap-2 mb-4">
           {temperaturas.map((temp) => (
