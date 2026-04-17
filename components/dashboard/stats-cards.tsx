@@ -70,7 +70,6 @@ export function StatsCards({
 
   return (
     <div className="space-y-6">
-      {/* Cards principais */}
       <div className="shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-border/50">
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
           <Link
@@ -120,11 +119,9 @@ export function StatsCards({
         </div>
       </div>
 
-      {/* Card de temperatura com gráfico de barras horizontal */}
       <div className="bg-card rounded-2xl border border-border/50 p-6 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
         <h3 className="text-sm font-semibold text-[#16255c] mb-5">Temperatura dos Leads</h3>
 
-        {/* Legenda com ícones */}
         <div className="flex flex-col gap-2 mb-4">
           {temperaturas.map((temp) => (
             <div key={temp.label} className="flex items-center gap-2">
@@ -140,7 +137,6 @@ export function StatsCards({
           ))}
         </div>
 
-        {/* Gráfico de barras horizontal shadcn */}
         <ChartContainer config={chartConfig} className="h-[120px] w-full">
           <BarChart
             layout="vertical"

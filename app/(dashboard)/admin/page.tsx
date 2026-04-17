@@ -10,7 +10,8 @@ import {
   GeoInvestSection, 
   InteresseSection, 
   Leads30DaysSection, 
-  StatsSection 
+  StatsSection,
+  StatusStatsSection
 } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
@@ -32,6 +33,10 @@ export default async function AdminLeadsPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <StatusStatsSection />
       </Suspense>
 
       <Suspense fallback={<DualChartSkeleton />}>

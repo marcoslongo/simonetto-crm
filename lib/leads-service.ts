@@ -485,6 +485,31 @@ export function getLastLeadDate(leads: Lead[]): string | null {
   return lastLead.data_criacao;
 }
 
+export async function getLeadsStatusTotal(
+  from?: string, 
+  to?: string, 
+  lojaId?: number, 
+  token?: string
+): Promise<{ nao_atendido: number; em_negociacao: number; venda_realizada: number; venda_nao_realizada: number }> {
+  let endpoint = 'leads-status-total';
+  const params: string[] = [];
+
+  if (from) params.push(`from=${encodeURIComponent(from)}`);
+  if (to)   params.push(`to=${encodeURIComponent(to)}`);
+  if (lojaId) params.push(`loja_id=${lojaId}`);
+
+  if (params.length) endpoint += `?${params.join('&')}`;
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar totais por status', token);
+
+  return json.data || {
+    nao_atendido: 0,
+    em_negociacao: 0,
+    venda_realizada: 0,
+    venda_nao_realizada: 0,
+  };
+}
+
 // Aliases para compatibilidade
 export const getFaturamentoStats = getLeadsPorInvestimento;
 export const getInteresseStats = getLeadsPorInteresse;
