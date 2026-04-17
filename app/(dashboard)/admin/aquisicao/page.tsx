@@ -6,6 +6,7 @@ import {
 } from '@/components/dashboard/dashboard-skeletons'
 import { GeoInvestSection } from '@/components/dashboard/dashboard-sections'
 import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
+import { getLeadsClassificacaoServer } from '@/lib/server-leads-service'
 
 export const metadata = {
   title: 'Aquisição | Noxus',
@@ -13,6 +14,10 @@ export const metadata = {
 
 export default async function AquisicaoPage() {
   await requireAdmin()
+
+  const [statsClassificacao] = await Promise.all([
+    getLeadsClassificacaoServer(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -26,7 +31,11 @@ export default async function AquisicaoPage() {
       </div>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[200px]" />}>
-        <LeadsTemperature />
+        <LeadsTemperature
+          quentes={statsClassificacao.quente}
+          mornos={statsClassificacao.morno}
+          frios={statsClassificacao.frio}
+        />
       </Suspense>
 
       <Suspense fallback={<DualChartSkeleton />}>
