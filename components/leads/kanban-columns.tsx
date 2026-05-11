@@ -40,6 +40,7 @@ import {
   Snowflake,
   Thermometer,
   Flame,
+  ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
@@ -90,31 +91,37 @@ const COLUNAS = [
 
 type StatusKey = typeof COLUNAS[number]['key']
 
+const INITIAL_VISIBLE = 10
+const LOAD_MORE_STEP = 3
 
-const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string }> = {
+const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string; loadMore: string }> = {
   amber: {
     icon: 'text-amber-500',
     badge: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
     empty: 'text-amber-400',
-    dropzone: 'ring-amber-400 bg-amber-50/50'
+    dropzone: 'ring-amber-400 bg-amber-50/50',
+    loadMore: 'text-amber-600 hover:text-amber-800 hover:bg-amber-50',
   },
   blue: {
     icon: 'text-blue-500',
     badge: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
     empty: 'text-blue-400',
-    dropzone: 'ring-blue-400 bg-blue-50/50'
+    dropzone: 'ring-blue-400 bg-blue-50/50',
+    loadMore: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50',
   },
   emerald: {
     icon: 'text-emerald-500',
     badge: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
     empty: 'text-emerald-400',
-    dropzone: 'ring-emerald-400 bg-emerald-50/50'
+    dropzone: 'ring-emerald-400 bg-emerald-50/50',
+    loadMore: 'text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50',
   },
   red: {
     icon: 'text-red-500',
     badge: 'bg-red-100 text-red-700 hover:bg-red-100',
     empty: 'text-red-400',
-    dropzone: 'ring-red-400 bg-red-50/50'
+    dropzone: 'ring-red-400 bg-red-50/50',
+    loadMore: 'text-red-600 hover:text-red-800 hover:bg-red-50',
   },
 }
 
@@ -130,6 +137,11 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
+
+  const getVisible = (status: string) => visibleCount[status] ?? INITIAL_VISIBLE
+  const loadMore = (status: string) =>
+    setVisibleCount(prev => ({ ...prev, [status]: (prev[status] ?? INITIAL_VISIBLE) + LOAD_MORE_STEP }))
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -250,6 +262,8 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
                 items={items}
                 styles={styles}
                 onLeadClick={handleLeadClick}
+                visibleCount={getVisible(coluna.key)}
+                onLoadMore={() => loadMore(coluna.key)}
               />
             )
           })}
@@ -285,12 +299,18 @@ interface KanbanColumnProps {
   items: Lead[]
   styles: typeof colorStyles[string]
   onLeadClick?: (lead: Lead) => void
+  visibleCount: number
+  onLoadMore: () => void
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick }: KanbanColumnProps) {
+function KanbanColumn({ coluna, items, styles, onLeadClick, visibleCount, onLoadMore }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
+
+  const visibleItems = items.slice(0, visibleCount)
+  const remaining = items.length - visibleCount
+  const hasMore = remaining > 0
 
   return (
     <Card
@@ -323,13 +343,30 @@ function KanbanColumn({ coluna, items, styles, onLeadClick }: KanbanColumnProps)
               </p>
             </div>
           ) : (
-            items.map((lead) => (
-              <DraggableLeadRow
-                key={lead.id}
-                lead={lead}
-                onOpen={() => onLeadClick?.(lead)}
-              />
-            ))
+            <>
+              {visibleItems.map((lead) => (
+                <DraggableLeadRow
+                  key={lead.id}
+                  lead={lead}
+                  onOpen={() => onLeadClick?.(lead)}
+                />
+              ))}
+
+              {hasMore && (
+                <div className="px-5 py-3">
+                  <button
+                    onClick={onLoadMore}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md transition-colors cursor-pointer",
+                      styles.loadMore
+                    )}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    Ver mais ({remaining} restante{remaining !== 1 ? 's' : ''})
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </CardContent>
