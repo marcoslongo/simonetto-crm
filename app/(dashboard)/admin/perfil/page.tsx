@@ -1,7 +1,10 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
 import { ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
-import { InteresseSection } from '@/components/dashboard/dashboard-sections'
+import {
+  InteresseSection,
+  CampanhasLandingSection,
+} from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
   title: 'Perfil dos Leads | Noxus',
@@ -17,12 +20,16 @@ export default async function PerfilPage() {
           Perfil dos Leads
         </h2>
         <p className="text-muted-foreground mt-1">
-          Interesses e comportamento dos leads
+          Interesses, comportamento e rastreamento dos leads
         </p>
       </div>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[350px]" />}>
         <InteresseSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[400px]" />}>
+        <CampanhasLandingSection />
       </Suspense>
     </div>
   )

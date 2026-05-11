@@ -510,6 +510,93 @@ export async function getLeadsStatusTotal(
   };
 }
 
+/* ============================
+   SCORE DISTRIBUIÇÃO
+============================ */
+
+export interface ScoreDistribuicaoItem {
+  faixa: string
+  total: number
+  classificacao: 'frio' | 'morno' | 'quente'
+}
+
+export async function getLeadsScoreDistribuicao(from?: string, to?: string, token?: string): Promise<ScoreDistribuicaoItem[]> {
+  let endpoint = 'leads-score-distribuicao'
+  const params: string[] = []
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (params.length) endpoint += `?${params.join('&')}`
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar distribuição de scores', token)
+  return json.data || []
+}
+
+/* ============================
+   INVESTIMENTO × CLASSIFICAÇÃO
+============================ */
+
+export interface InvestimentoClassificacaoItem {
+  faixa: string
+  frio: number
+  morno: number
+  quente: number
+}
+
+export async function getLeadsInvestimentoClassificacao(from?: string, to?: string, token?: string): Promise<InvestimentoClassificacaoItem[]> {
+  let endpoint = 'leads-investimento-classificacao'
+  const params: string[] = []
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (params.length) endpoint += `?${params.join('&')}`
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar investimento por classificação', token)
+  return json.data || []
+}
+
+/* ============================
+   CAMPANHAS UTM
+============================ */
+
+export interface CampanhaUTMItem {
+  utm_campaign: string
+  total: number
+  pct: number
+}
+
+export async function getLeadsCampanhasUTM(from?: string, to?: string, limit = 10, token?: string): Promise<CampanhaUTMItem[]> {
+  let endpoint = `leads-campanhas-utm?limit=${limit}`
+  if (from) endpoint += `&from=${encodeURIComponent(from)}`
+  if (to)   endpoint += `&to=${encodeURIComponent(to)}`
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar campanhas UTM', token)
+  return json.data || []
+}
+
+/* ============================
+   LANDING PAGES / REFERRERS
+============================ */
+
+export interface LandingPageItem {
+  pagina: string
+  total: number
+  pct: number
+}
+
+export async function getLeadsLandingPages(
+  from?: string,
+  to?: string,
+  tipo: 'landing_page' | 'referrer' = 'landing_page',
+  limit = 10,
+  token?: string
+): Promise<LandingPageItem[]> {
+  let endpoint = `leads-landing-pages?limit=${limit}&tipo=${tipo}`
+  if (from) endpoint += `&from=${encodeURIComponent(from)}`
+  if (to)   endpoint += `&to=${encodeURIComponent(to)}`
+
+  const json = await fetchAPI(endpoint, 'Erro ao buscar landing pages', token)
+  return json.data || []
+}
+
 // Aliases para compatibilidade
 export const getFaturamentoStats = getLeadsPorInvestimento;
 export const getInteresseStats = getLeadsPorInteresse;

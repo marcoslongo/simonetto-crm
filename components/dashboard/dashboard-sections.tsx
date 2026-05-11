@@ -9,6 +9,10 @@ import {
   getLeadsPorOrigemServer,
   getLeadsStatusTotalServer,
   getLeadsClassificacaoServer,
+  getLeadsScoreDistribuicaoServer,
+  getLeadsInvestimentoClassificacaoServer,
+  getLeadsCampanhasUTMServer,
+  getLeadsLandingPagesServer,
 } from '@/lib/server-leads-service'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -22,6 +26,10 @@ import { ChartBarInvest } from '@/components/dashboard/chart-bar-investment'
 import { ChartPieInteresse } from '@/components/dashboard/chart-pie-interesse'
 import { ChartPieOrigem } from './chart-pie-origem'
 import { LeadsTemperature } from './leads-temperature'
+import { ChartScoreHistogram } from './chart-score-histogram'
+import { ChartInvestimentoClass } from './chart-investimento-class'
+import { ChartCampanhasUTM } from './chart-campanhas-utm'
+import { ChartLandingPages } from './chart-landing-pages'
 
 export async function StatsSection() {
   const [statsGeral] = await Promise.all([
@@ -140,6 +148,40 @@ export async function InteresseSection() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <ChartPieInteresse data={interesseChartData} />
       <ChartPieOrigem initialData={origemData} />
+    </div>
+  )
+}
+
+interface ScoreInvestSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function ScoreInvestSection({ from, to }: ScoreInvestSectionProps = {}) {
+  const [scoreData, investData] = await Promise.all([
+    getLeadsScoreDistribuicaoServer(from, to),
+    getLeadsInvestimentoClassificacaoServer(from, to),
+  ])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartScoreHistogram data={scoreData} />
+      <ChartInvestimentoClass data={investData} />
+    </div>
+  )
+}
+
+export async function CampanhasLandingSection() {
+  const [campanhas, landingPages, referrers] = await Promise.all([
+    getLeadsCampanhasUTMServer(),
+    getLeadsLandingPagesServer(),
+    getLeadsLandingPagesServer(undefined, undefined, 'referrer'),
+  ])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartCampanhasUTM data={campanhas} />
+      <ChartLandingPages landingPages={landingPages} referrers={referrers} />
     </div>
   )
 }

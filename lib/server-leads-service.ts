@@ -23,11 +23,19 @@ import {
   type OrigemItem,
   getLeadsClassificacao,
   getLeadsStatusTotal,
+  getLeadsScoreDistribuicao,
+  getLeadsInvestimentoClassificacao,
+  getLeadsCampanhasUTM,
+  getLeadsLandingPages,
+  type ScoreDistribuicaoItem,
+  type InvestimentoClassificacaoItem,
+  type CampanhaUTMItem,
+  type LandingPageItem,
 } from './leads-service'
 import type { Lead, LeadsResponse, TimeStoreResponse } from './types'
 
 // Re-exporta tipos para quem importar daqui
-export type { LojaGeo, EstadoGeoStat, OrigemItem }
+export type { LojaGeo, EstadoGeoStat, OrigemItem, ScoreDistribuicaoItem, InvestimentoClassificacaoItem, CampanhaUTMItem, LandingPageItem }
 
 async function getToken(): Promise<string | undefined> {
   const cookieStore = await cookies()
@@ -164,4 +172,29 @@ export async function createLeadServer(leadData: {
 export async function getLeadsPorOrigemServer(from?: string, to?: string): Promise<OrigemItem[]> {
   const token = await getToken()
   return getLeadsPorOrigem(from, to, token)
+}
+
+export async function getLeadsScoreDistribuicaoServer(from?: string, to?: string) {
+  const token = await getToken()
+  return getLeadsScoreDistribuicao(from, to, token)
+}
+
+export async function getLeadsInvestimentoClassificacaoServer(from?: string, to?: string) {
+  const token = await getToken()
+  return getLeadsInvestimentoClassificacao(from, to, token)
+}
+
+export async function getLeadsCampanhasUTMServer(from?: string, to?: string, limit = 10) {
+  const token = await getToken()
+  return getLeadsCampanhasUTM(from, to, limit, token)
+}
+
+export async function getLeadsLandingPagesServer(
+  from?: string,
+  to?: string,
+  tipo: 'landing_page' | 'referrer' = 'landing_page',
+  limit = 10
+) {
+  const token = await getToken()
+  return getLeadsLandingPages(from, to, tipo, limit, token)
 }

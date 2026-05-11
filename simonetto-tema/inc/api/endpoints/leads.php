@@ -125,6 +125,34 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_leads_status_total',
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
+
+  // GET /api/v1/leads-score-distribuicao — histograma de scores (10 faixas de 10 pontos)
+  register_rest_route('api/v1', '/leads-score-distribuicao', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_score_distribuicao',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-investimento-classificacao — frio/morno/quente por faixa de investimento
+  register_rest_route('api/v1', '/leads-investimento-classificacao', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_investimento_classificacao',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-campanhas-utm — top campanhas UTM por volume de leads
+  register_rest_route('api/v1', '/leads-campanhas-utm', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_campanhas_utm',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-landing-pages — top landing pages ou referrers
+  register_rest_route('api/v1', '/leads-landing-pages', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_landing_pages',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
 });
 
 
@@ -826,4 +854,288 @@ function mytheme_api_leads_status_total(WP_REST_Request $request)
     'data' => $data,
     'total_geral' => array_sum($data),
   ], 200);
+}
+
+/**
+ * GET /api/v1/leads-score-distribuicao
+ *
+ * Histograma de leads por faixa de score (10 buckets de 10 pontos cada).
+ * Query params opcionais: from (yyyy-MM-dd), to (yyyy-MM-dd)
+ */
+function mytheme_api_leads_score_distribuicao(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table = $wpdb->prefix . 'leads';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) {
+    $where_clauses[]  = "data_criacao >= %s";
+    $prepare_values[] = $from . ' 00:00:00';
+  }
+  if ($to) {
+    $where_clauses[]  = "data_criacao <= %s";
+    $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  // LEAST garante que score=100 cai no bucket 9 (90+) em vez de criar bucket 10
+  $query = "
+    SELECT
+      LEAST(FLOOR(COALESCE(score, 0) / 10), 9) AS bucket,
+      COUNT(*) AS total
+    FROM {$table}
+    {$where_sql}
+    GROUP BY bucket
+    ORDER BY bucket ASC
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $result_map = [];
+  foreach ($rows as $row) {
+    $result_map[(int) $row['bucket']] = (int) $row['total'];
+  }
+
+  $data = [];
+  for ($i = 0; $i <= 9; $i++) {
+    $label = ($i * 10) . '-' . ($i * 10 + 9);
+    if ($i === 9) $label = '90+';
+
+    if ($i <= 1)      $class = 'frio';
+    elseif ($i <= 5)  $class = 'morno';
+    else              $class = 'quente';
+
+    $data[] = [
+      'faixa'         => $label,
+      'total'         => $result_map[$i] ?? 0,
+      'classificacao' => $class,
+    ];
+  }
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-investimento-classificacao
+ *
+ * Retorna, para cada faixa de investimento, o total de leads
+ * separado por classificação (frio / morno / quente).
+ * Query params opcionais: from, to
+ */
+function mytheme_api_leads_investimento_classificacao(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table = $wpdb->prefix . 'leads';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) {
+    $where_clauses[]  = "data_criacao >= %s";
+    $prepare_values[] = $from . ' 00:00:00';
+  }
+  if ($to) {
+    $where_clauses[]  = "data_criacao <= %s";
+    $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  $query = "
+    SELECT
+      COALESCE(NULLIF(TRIM(expectativa_investimento), ''), 'Não informado') AS faixa,
+      COALESCE(classificacao, 'frio')                                       AS classificacao,
+      COUNT(*)                                                               AS total
+    FROM {$table}
+    {$where_sql}
+    GROUP BY faixa, classificacao
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $pivot = [];
+  foreach ($rows as $row) {
+    $faixa = $row['faixa'];
+    $class = $row['classificacao'];
+    if (!isset($pivot[$faixa])) {
+      $pivot[$faixa] = ['faixa' => $faixa, 'frio' => 0, 'morno' => 0, 'quente' => 0];
+    }
+    if (array_key_exists($class, $pivot[$faixa])) {
+      $pivot[$faixa][$class] = (int) $row['total'];
+    }
+  }
+
+  $data = array_values($pivot);
+
+  $order = ['35-50k', '50-100k', '100-150k', '150-200k', 'acima-250k', 'Não informado'];
+  usort($data, function ($a, $b) use ($order) {
+    $ia = array_search($a['faixa'], $order);
+    $ib = array_search($b['faixa'], $order);
+    $ia = ($ia !== false) ? $ia : 999;
+    $ib = ($ib !== false) ? $ib : 999;
+    return $ia - $ib;
+  });
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-campanhas-utm
+ *
+ * Top N campanhas UTM por volume de leads (join com lead_tracking).
+ * Query params opcionais: from, to, limit (padrão 10, máx 20)
+ */
+function mytheme_api_leads_campanhas_utm(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from  = sanitize_text_field($request->get_param('from')  ?? '');
+  $to    = sanitize_text_field($request->get_param('to')    ?? '');
+  $limit = max(1, min(20, intval($request->get_param('limit') ?? 10)));
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) {
+    $where_clauses[]  = "l.data_criacao >= %s";
+    $prepare_values[] = $from . ' 00:00:00';
+  }
+  if ($to) {
+    $where_clauses[]  = "l.data_criacao <= %s";
+    $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  $where_sql      = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+  $prepare_values[] = $limit;
+
+  $query = "
+    SELECT
+      COALESCE(NULLIF(t.utm_campaign, ''), '(sem campanha)') AS utm_campaign,
+      COUNT(l.id)                                             AS total,
+      ROUND(COUNT(l.id) * 100.0 / SUM(COUNT(l.id)) OVER(), 1) AS pct
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY t.utm_campaign
+    ORDER BY total DESC
+    LIMIT %d
+  ";
+
+  $rows = $wpdb->get_results(
+    $wpdb->prepare($query, ...$prepare_values),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'utm_campaign' => $row['utm_campaign'],
+      'total'        => (int)   $row['total'],
+      'pct'          => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-landing-pages
+ *
+ * Top N landing pages ou referrers por volume de leads.
+ * Query params:
+ *   from, to          — filtro de data
+ *   tipo              — 'landing_page' (padrão) ou 'referrer'
+ *   limit             — máximo de resultados (padrão 10, máx 20)
+ */
+function mytheme_api_leads_landing_pages(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from  = sanitize_text_field($request->get_param('from')  ?? '');
+  $to    = sanitize_text_field($request->get_param('to')    ?? '');
+  $limit = max(1, min(20, intval($request->get_param('limit') ?? 10)));
+  $tipo  = sanitize_text_field($request->get_param('tipo')  ?? 'landing_page');
+
+  // Restringe explicitamente a colunas válidas (evita injeção de coluna)
+  $campo = ($tipo === 'referrer') ? 'referrer' : 'landing_page';
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) {
+    $where_clauses[]  = "l.data_criacao >= %s";
+    $prepare_values[] = $from . ' 00:00:00';
+  }
+  if ($to) {
+    $where_clauses[]  = "l.data_criacao <= %s";
+    $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  $where_sql        = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+  $prepare_values[] = $limit;
+
+  // $campo só pode ser 'landing_page' ou 'referrer' — validado acima
+  $query = "
+    SELECT
+      COALESCE(NULLIF(t.{$campo}, ''), '(direto)') AS pagina,
+      COUNT(l.id)                                  AS total,
+      ROUND(COUNT(l.id) * 100.0 / SUM(COUNT(l.id)) OVER(), 1) AS pct
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY t.{$campo}
+    ORDER BY total DESC
+    LIMIT %d
+  ";
+
+  $rows = $wpdb->get_results(
+    $wpdb->prepare($query, ...$prepare_values),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'pagina' => $row['pagina'],
+      'total'  => (int)   $row['total'],
+      'pct'    => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }
