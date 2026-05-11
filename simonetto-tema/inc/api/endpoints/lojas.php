@@ -63,6 +63,20 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_loja_register_contact',
     'permission_callback' => '__return_true',
   ]);
+
+  // Status do funil da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/status-funil', [
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_get_loja_status_funil',
+    'permission_callback' => '__return_true',
+  ]);
+
+  // Classificação de temperatura da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/classificacao', [
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_get_loja_classificacao',
+    'permission_callback' => '__return_true',
+  ]);
 });
 
 /**
@@ -262,4 +276,85 @@ function mytheme_api_loja_register_contact(WP_REST_Request $request)
     'success'  => true,
     'mensagem' => 'Contato registrado com sucesso.',
   ], 201);
+}
+
+/**
+ * GET /api/v1/lojas/:id/status-funil
+ * Retorna contagem de leads por status para a loja específica
+ */
+function mytheme_api_get_loja_status_funil($request)
+{
+  global $wpdb;
+
+  $loja_id = (int) $request['id'];
+  $table   = $wpdb->prefix . 'leads';
+
+  $rows = $wpdb->get_results(
+    $wpdb->prepare(
+      "SELECT status, COUNT(*) as total FROM {$table} WHERE loja_id = %d GROUP BY status",
+      $loja_id
+    ),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = [
+    'nao_atendido'     => 0,
+    'em_negociacao'    => 0,
+    'venda_realizada'  => 0,
+    'venda_nao_realizada' => 0,
+  ];
+
+  foreach ($rows as $row) {
+    if (array_key_exists($row['status'], $data)) {
+      $data[$row['status']] = (int) $row['total'];
+    }
+  }
+
+  return new WP_REST_Response([
+    'success' => true,
+    'data'    => $data,
+    'total'   => array_sum($data),
+  ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/classificacao
+ * Retorna contagem de leads por classificação (frio/morno/quente) para a loja específica
+ */
+function mytheme_api_get_loja_classificacao($request)
+{
+  global $wpdb;
+
+  $loja_id = (int) $request['id'];
+  $table   = $wpdb->prefix . 'leads';
+
+  $rows = $wpdb->get_results(
+    $wpdb->prepare(
+      "SELECT classificacao, COUNT(*) as total FROM {$table} WHERE loja_id = %d GROUP BY classificacao",
+      $loja_id
+    ),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = ['frio' => 0, 'morno' => 0, 'quente' => 0];
+
+  foreach ($rows as $row) {
+    if (array_key_exists($row['classificacao'], $data)) {
+      $data[$row['classificacao']] = (int) $row['total'];
+    }
+  }
+
+  return new WP_REST_Response([
+    'success' => true,
+    'data'    => $data,
+    'total'   => array_sum($data),
+  ], 200);
 }

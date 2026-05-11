@@ -1,4 +1,4 @@
-import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaStats, LojaStatsResponse } from "./types-loja"
+import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
 import type { Lead } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
@@ -73,6 +73,28 @@ export async function getLojaLeads12Months(lojaId: string | number): Promise<Lea
   }
 
   return data.data
+}
+
+export async function getLojaStatusFunil(lojaId: string | number): Promise<LojaStatusFunil> {
+  const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/status-funil`, {
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) throw new Error(`Erro ao buscar status do funil: ${response.status}`)
+  const data = await response.json()
+  return data.data || { nao_atendido: 0, em_negociacao: 0, venda_realizada: 0, venda_nao_realizada: 0 }
+}
+
+export async function getLojaClassificacao(lojaId: string | number): Promise<LojaClassificacao> {
+  const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/classificacao`, {
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) throw new Error(`Erro ao buscar classificação: ${response.status}`)
+  const data = await response.json()
+  return data.data || { frio: 0, morno: 0, quente: 0 }
 }
 
 export async function getLojaLeads(

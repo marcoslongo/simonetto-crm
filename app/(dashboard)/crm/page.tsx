@@ -1,8 +1,10 @@
 import { requireAuth } from '@/lib/auth'
-import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months } from '@/lib/api-loja'
+import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months, getLojaStatusFunil, getLojaClassificacao } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
+import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
+import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
 
 export const metadata = {
   title: 'Dashboard | Noxus - Lead Ops',
@@ -15,10 +17,12 @@ export default async function CrmDashboardPage() {
   const isLoja = user.role === 'loja'
   const lojaId = isLoja ? (user.loja_id ?? undefined) : undefined
 
-  const [stats, leads30Days, leads12Months] = await Promise.all([
+  const [stats, leads30Days, leads12Months, statusFunil, classificacao] = await Promise.all([
     getLojaStats(String(lojaId)),
     getLojaLeads30Days(String(lojaId)),
     getLojaLeads12Months(String(lojaId)),
+    getLojaStatusFunil(String(lojaId)),
+    getLojaClassificacao(String(lojaId)),
   ])
 
   return (
@@ -31,15 +35,24 @@ export default async function CrmDashboardPage() {
             : 'Visão geral de todas as unidades (Administrador)'}
         </p>
       </div>
-      <div>
-        <StatsCards stats={stats} />
-      </div>
-      <div>
+
+      <StatsCards stats={stats} />
+
+      <KanbanStatsCards
+        data={statusFunil}
+        description="Acompanhamento da jornada de vendas da sua unidade"
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LeadsTemperature
+          quentes={classificacao.quente}
+          mornos={classificacao.morno}
+          frios={classificacao.frio}
+        />
         <ChartLeads30Days data={leads30Days} />
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <ChartLeads12Months data={leads12Months} />
-      </div>
+
+      <ChartLeads12Months data={leads12Months} />
     </div>
   )
 }

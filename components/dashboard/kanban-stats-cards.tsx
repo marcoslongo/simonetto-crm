@@ -13,9 +13,10 @@ interface KanbanStatsCardsProps {
     venda_realizada: number
     venda_nao_realizada: number
   }
+  description?: string
 }
 
-export function KanbanStatsCards({ data }: KanbanStatsCardsProps) {
+export function KanbanStatsCards({ data, description = 'Acompanhamento em tempo real da jornada de vendas de todas as lojas' }: KanbanStatsCardsProps) {
   const stats = [
     {
       title: "Não Atendidos",
@@ -54,7 +55,7 @@ export function KanbanStatsCards({ data }: KanbanStatsCardsProps) {
           Status do Funil
         </h2>
         <p className="flex items-center gap-2 text-slate-600">
-          Acompanhamento em tempo real da jornada de vendas de todas as lojas
+          {description}
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -38,99 +38,54 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname()
 
   const isAdmin = user.role === 'administrator'
-  const isStore = user.role === 'loja'
+  const rootHref = isAdmin ? '/admin' : '/crm'
 
-  const basePath = isAdmin ? '/admin' : '/crm'
-
-  const navigation = [
-    {
-      group: 'Visão Geral',
-      items: [
+  const navigation = isAdmin
+    ? [
         {
-          name: 'Dashboard',
-          href: basePath,
-          icon: LayoutDashboard,
-        },
-      ],
-    },
-
-    {
-      group: 'Performance',
-      items: [
-        {
-          name: 'Conversão',
-          href: `${basePath}/conversao`,
-          icon: Target,
-        },
-        {
-          name: 'Operação',
-          href: `${basePath}/operacao`,
-          icon: Activity,
-        },
-        {
-          name: 'Aquisição',
-          href: `${basePath}/aquisicao`,
-          icon: Filter,
-        },
-      ],
-    },
-
-    {
-      group: 'Análise',
-      items: [
-        {
-          name: 'Perfil dos Leads',
-          href: `${basePath}/perfil`,
-          icon: UserSearch,
-        },
-        {
-          name: 'Geografia',
-          href: `${basePath}/geografia`,
-          icon: Map,
-        },
-      ],
-    },
-
-    ...(isStore
-      ? [
-        {
-          group: 'CRM',
+          group: 'Visão Geral',
           items: [
-            {
-              name: 'Atendimentos',
-              href: '/crm/atendimentos',
-              icon: Phone,
-            },
+            { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
           ],
         },
-      ]
-      : []),
-
-    ...(isAdmin
-      ? [
+        {
+          group: 'Performance',
+          items: [
+            { name: 'Conversão', href: '/admin/conversao', icon: Target },
+            { name: 'Operação', href: '/admin/operacao', icon: Activity },
+            { name: 'Aquisição', href: '/admin/aquisicao', icon: Filter },
+          ],
+        },
+        {
+          group: 'Análise',
+          items: [
+            { name: 'Perfil dos Leads', href: '/admin/perfil', icon: UserSearch },
+            { name: 'Geografia', href: '/admin/geografia', icon: Map },
+          ],
+        },
         {
           group: 'Administração',
           items: [
-            {
-              name: 'Lojas',
-              href: '/admin/lojas',
-              icon: Building2,
-            },
-            {
-              name: 'Leads',
-              href: `${basePath}/leads`,
-              icon: Users,
-            },
-            {
-              name: 'Relatórios',
-              href: `${basePath}/relatorios`,
-              icon: FileChartColumnIncreasing,
-            },
+            { name: 'Lojas', href: '/admin/lojas', icon: Building2 },
+            { name: 'Leads', href: '/admin/leads', icon: Users },
+            { name: 'Relatórios', href: '/admin/relatorios', icon: FileChartColumnIncreasing },
           ],
         },
       ]
-      : []),
-  ]
+    : [
+        {
+          group: 'Visão Geral',
+          items: [
+            { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
+          ],
+        },
+        {
+          group: 'CRM',
+          items: [
+            { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
+          ],
+        },
+      ]
 
   return (
     <aside
@@ -187,7 +142,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                 {group.items.map((item) => {
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== basePath && pathname.startsWith(item.href))
+                    (item.href !== rootHref && pathname.startsWith(item.href))
 
                   const link = (
                     <Link

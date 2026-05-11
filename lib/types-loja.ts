@@ -5,6 +5,19 @@ export interface LojaStats {
   mes: number
 }
 
+export interface LojaStatusFunil {
+  nao_atendido: number
+  em_negociacao: number
+  venda_realizada: number
+  venda_nao_realizada: number
+}
+
+export interface LojaClassificacao {
+  frio: number
+  morno: number
+  quente: number
+}
+
 export interface LeadsByDay {
   date: string
   total: number
