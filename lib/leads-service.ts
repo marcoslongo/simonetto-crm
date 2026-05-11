@@ -36,10 +36,6 @@ async function fetchAPI(endpoint: string, errorMessage: string, token?: string) 
   }
 }
 
-/* ============================
-   LEADS BASE
-============================ */
-
 export async function getLeads(
   page = 1,
   perPage = 10,
@@ -95,10 +91,6 @@ export async function getLojasWithStats(token?: string) {
   return data;
 }
 
-/* ============================
-   STATS GERAIS
-============================ */
-
 export async function getLeadsStatsGeral(token?: string) {
   const json = await fetchAPI('leads-stats-geral', 'Erro ao buscar stats gerais', token);
   
@@ -108,10 +100,6 @@ export async function getLeadsStatsGeral(token?: string) {
     ultimaCaptura: null,
   };
 }
-
-/* ============================
-   AGRUPAMENTOS
-============================ */
 
 export async function getLeadsPorInvestimento(token?: string) {
   const json = await fetchAPI('leads-por-investimento', 'Erro ao buscar leads por investimento', token);
@@ -196,10 +184,6 @@ export async function getLeadsPorLoja(token?: string) {
   return grouped;
 }
 
-/* ============================
-   LEADS ÚLTIMOS 30 DIAS
-============================ */
-
 export async function getLeadsLast30Days(from?: string, to?: string, token?: string) {
   let endpoint = `leads-30dias`;
 
@@ -251,10 +235,6 @@ export async function getLeadsStatsFilterDateStats(
 }
 
 
-/* ============================
-   STATS POR ESTADO
-============================ */
-
 export interface LojaGeo {
   id: number
   nome: string
@@ -265,6 +245,40 @@ export interface EstadoGeoStat {
   estado: string
   total: number
   lojas: LojaGeo[]
+}
+
+const IBGE_TO_UF: Record<string, string> = {
+  '11': 'RO', '12': 'AC', '13': 'AM', '14': 'RR', '15': 'PA',
+  '16': 'AP', '17': 'TO', '21': 'MA', '22': 'PI', '23': 'CE',
+  '24': 'RN', '25': 'PB', '26': 'PE', '27': 'AL', '28': 'SE',
+  '29': 'BA', '31': 'MG', '32': 'ES', '33': 'RJ', '35': 'SP',
+  '41': 'PR', '42': 'SC', '43': 'RS', '50': 'MS', '51': 'MT',
+  '52': 'GO', '53': 'DF',
+}
+
+const NOME_TO_UF: Record<string, string> = {
+  'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM',
+  'Bahia': 'BA', 'Ceará': 'CE', 'Distrito Federal': 'DF',
+  'Espírito Santo': 'ES', 'Goiás': 'GO', 'Maranhão': 'MA',
+  'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS', 'Minas Gerais': 'MG',
+  'Pará': 'PA', 'Paraíba': 'PB', 'Paraná': 'PR', 'Pernambuco': 'PE',
+  'Piauí': 'PI', 'Rio de Janeiro': 'RJ', 'Rio Grande do Norte': 'RN',
+  'Rio Grande do Sul': 'RS', 'Rondônia': 'RO', 'Roraima': 'RR',
+  'Santa Catarina': 'SC', 'São Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO',
+}
+
+const VALID_UFS = new Set([
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+  'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+])
+
+function normalizeEstado(raw: string): string | null {
+  const s = raw.trim()
+  if (IBGE_TO_UF[s])         return IBGE_TO_UF[s]
+  if (NOME_TO_UF[s])         return NOME_TO_UF[s]
+  const upper = s.toUpperCase()
+  if (VALID_UFS.has(upper))  return upper
+  return null
 }
 
 export async function getLeadsGeoStats(
@@ -291,11 +305,28 @@ export async function getLeadsGeoStats(
   const grouped: Record<string, { total: number; lojas: LojaGeo[] }> = {};
 
   json.data.forEach((item: EstadoGeoStat) => {
-    grouped[item.estado] = {
-      total: item.total,
-      lojas: item.lojas ?? [],
-    };
-  });
+    const uf = normalizeEstado(item.estado)
+    if (!uf) return
+
+    if (!grouped[uf]) {
+      grouped[uf] = { total: 0, lojas: [] }
+    }
+
+    grouped[uf].total += item.total
+
+    for (const loja of item.lojas ?? []) {
+      const existing = grouped[uf].lojas.find(l => l.id === loja.id)
+      if (existing) {
+        existing.leads += loja.leads
+      } else {
+        grouped[uf].lojas.push({ ...loja })
+      }
+    }
+  })
+
+  for (const uf in grouped) {
+    grouped[uf].lojas.sort((a, b) => b.leads - a.leads)
+  }
 
   return grouped;
 }
@@ -317,10 +348,6 @@ export async function getLeadsGeoStatsByEstado(
   };
 }
 
-/* ============================
-   STATS DE ATENDIMENTO
-============================ */
-
 export async function getLeadsStatsService(token?: string) {
   const json = await fetchAPI('leads-stats-service', 'Erro ao buscar stats de atendimento', token);
 
@@ -337,10 +364,6 @@ export async function getLeadsStatsService(token?: string) {
   };
 }
 
-/* ============================
-   TEMPO MÉDIO POR LOJA
-============================ */
-
 export async function getTempoMedioPorLoja(token?: string): Promise<TimeStoreResponse> {
   const json = await fetchAPI('leads-tempo-por-loja', 'Erro ao buscar tempo por loja', token);
 
@@ -350,10 +373,6 @@ export async function getTempoMedioPorLoja(token?: string): Promise<TimeStoreRes
     data: Array.isArray(json.data) ? json.data : [],
   };
 }
-
-/* ============================
-   REGISTRAR CONTATO COM LEAD
-============================ */
 
 export async function registrarContatoLead(params: {
   lead_id: number;
@@ -389,10 +408,6 @@ export async function registrarContatoLead(params: {
     throw new Error('Erro ao processar resposta');
   }
 }
-
-/* ============================
-   CRIAR NOVO LEAD
-============================ */
 
 export async function createLead(leadData: {
   nome: string;
@@ -442,10 +457,6 @@ export async function createLead(leadData: {
   }
 }
 
-/* ============================
-   ORIGEM DE LEADS (UTM)
-============================ */
-
 export interface OrigemItem {
   utm_source: string
   utm_medium: string
@@ -469,9 +480,6 @@ export async function getLeadsPorOrigem(from?: string, to?: string, token?: stri
   return json.data as OrigemItem[];
 }
 
-/* ============================
-   FUNÇÕES AUXILIARES
-============================ */
 
 export function getLastLeadDate(leads: Lead[]): string | null {
   if (!leads.length) return null;
@@ -510,10 +518,6 @@ export async function getLeadsStatusTotal(
   };
 }
 
-/* ============================
-   SCORE DISTRIBUIÇÃO
-============================ */
-
 export interface ScoreDistribuicaoItem {
   faixa: string
   total: number
@@ -531,9 +535,6 @@ export async function getLeadsScoreDistribuicao(from?: string, to?: string, toke
   return json.data || []
 }
 
-/* ============================
-   INVESTIMENTO × CLASSIFICAÇÃO
-============================ */
 
 export interface InvestimentoClassificacaoItem {
   faixa: string
@@ -553,10 +554,6 @@ export async function getLeadsInvestimentoClassificacao(from?: string, to?: stri
   return json.data || []
 }
 
-/* ============================
-   CAMPANHAS UTM
-============================ */
-
 export interface CampanhaUTMItem {
   utm_campaign: string
   total: number
@@ -572,9 +569,6 @@ export async function getLeadsCampanhasUTM(from?: string, to?: string, limit = 1
   return json.data || []
 }
 
-/* ============================
-   LANDING PAGES / REFERRERS
-============================ */
 
 export interface LandingPageItem {
   pagina: string
@@ -597,7 +591,6 @@ export async function getLeadsLandingPages(
   return json.data || []
 }
 
-// Aliases para compatibilidade
 export const getFaturamentoStats = getLeadsPorInvestimento;
 export const getInteresseStats = getLeadsPorInteresse;
 export const getLojaStats = getLeadsPorLoja;
