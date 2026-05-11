@@ -77,6 +77,13 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_get_loja_classificacao',
     'permission_callback' => '__return_true',
   ]);
+
+  // Métricas de atendimento da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/service-stats', [
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_get_loja_service_stats',
+    'permission_callback' => '__return_true',
+  ]);
 });
 
 /**
@@ -356,5 +363,29 @@ function mytheme_api_get_loja_classificacao($request)
     'success' => true,
     'data'    => $data,
     'total'   => array_sum($data),
+  ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/service-stats
+ * Retorna métricas de atendimento (taxa de contato, tempo médio) para a loja específica
+ */
+function mytheme_api_get_loja_service_stats($request)
+{
+  $loja_id = (int) $request['id'];
+
+  $loja = get_post($loja_id);
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response([
+      'success' => false,
+      'mensagem' => 'Loja não encontrada',
+    ], 404);
+  }
+
+  $stats = Loja_Handler::get_service_stats($loja_id);
+
+  return new WP_REST_Response([
+    'success' => true,
+    'data'    => $stats,
   ], 200);
 }

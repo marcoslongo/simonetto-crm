@@ -203,6 +203,77 @@ class Loja_Handler
   }
 
   /**
+   * Métricas de atendimento da loja (taxa de contato, tempo médio de resposta)
+   */
+  public static function get_service_stats($loja_id)
+  {
+    global $wpdb;
+
+    $table_leads   = $wpdb->prefix . 'leads';
+    $table_actions = $wpdb->prefix . 'leads_actions';
+
+    $row = $wpdb->get_row($wpdb->prepare("
+      SELECT
+        COUNT(DISTINCT l.id)            AS total_leads,
+        COUNT(DISTINCT a.lead_id)       AS leads_contatados,
+        COUNT(DISTINCT l.id) - COUNT(DISTINCT a.lead_id) AS leads_nao_contatados,
+
+        ROUND(
+          COUNT(DISTINCT a.lead_id) * 100.0 /
+          NULLIF(COUNT(DISTINCT l.id), 0), 2
+        ) AS perc_contatados,
+
+        ROUND(
+          (COUNT(DISTINCT l.id) - COUNT(DISTINCT a.lead_id)) * 100.0 /
+          NULLIF(COUNT(DISTINCT l.id), 0), 2
+        ) AS perc_nao_contatados,
+
+        ROUND(
+          AVG(TIMESTAMPDIFF(MINUTE, l.data_criacao, fa.primeiro_atendimento)), 2
+        ) AS tempo_medio_minutos,
+
+        ROUND(
+          AVG(TIMESTAMPDIFF(HOUR, l.data_criacao, fa.primeiro_atendimento)), 2
+        ) AS tempo_medio_horas
+
+      FROM {$table_leads} l
+
+      LEFT JOIN {$table_actions} a
+        ON a.lead_id = l.id
+
+      LEFT JOIN (
+        SELECT lead_id, MIN(criado_em) AS primeiro_atendimento
+        FROM {$table_actions}
+        GROUP BY lead_id
+      ) fa ON fa.lead_id = l.id
+
+      WHERE l.loja_id = %d
+    ", $loja_id), ARRAY_A);
+
+    if (!$row) {
+      return [
+        'total_leads'          => 0,
+        'leads_contatados'     => 0,
+        'leads_nao_contatados' => 0,
+        'perc_contatados'      => 0,
+        'perc_nao_contatados'  => 0,
+        'tempo_medio_minutos'  => null,
+        'tempo_medio_horas'    => null,
+      ];
+    }
+
+    return [
+      'total_leads'          => (int)   $row['total_leads'],
+      'leads_contatados'     => (int)   $row['leads_contatados'],
+      'leads_nao_contatados' => (int)   $row['leads_nao_contatados'],
+      'perc_contatados'      => (float) $row['perc_contatados'],
+      'perc_nao_contatados'  => (float) $row['perc_nao_contatados'],
+      'tempo_medio_minutos'  => $row['tempo_medio_minutos'] !== null ? (float) $row['tempo_medio_minutos'] : null,
+      'tempo_medio_horas'    => $row['tempo_medio_horas']   !== null ? (float) $row['tempo_medio_horas']   : null,
+    ];
+  }
+
+  /**
    * Leads dos últimos 12 meses (agrupados por mês)
    */
   public static function get_leads_12_months($loja_id)

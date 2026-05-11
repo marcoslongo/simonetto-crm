@@ -1,6 +1,13 @@
 import { requireAdmin } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
-import { getLojaStats, getLojaLeads30Days, getLojaLeads12Months } from '@/lib/api-loja'
+import {
+  getLojaStats,
+  getLojaLeads30Days,
+  getLojaLeads12Months,
+  getLojaStatusFunil,
+  getLojaClassificacao,
+  getLojaServiceStats,
+} from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -8,6 +15,9 @@ import Link from 'next/link'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { LojaInfoCard } from '@/components/lojas/loja-info-card'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
+import { FunilStatus } from '@/components/lojas/funil-status'
+import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
+import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>
@@ -44,11 +54,15 @@ export default async function LojaPage({ params }: LojaPageProps) {
     )
   }
 
-  const [stats, leads30Days, leads12Months] = await Promise.all([
-    getLojaStats(id),
-    getLojaLeads30Days(id),
-    getLojaLeads12Months(id),
-  ])
+  const [stats, leads30Days, leads12Months, statusFunil, classificacao, serviceStats] =
+    await Promise.all([
+      getLojaStats(id),
+      getLojaLeads30Days(id),
+      getLojaLeads12Months(id),
+      getLojaStatusFunil(id),
+      getLojaClassificacao(id),
+      getLojaServiceStats(id),
+    ])
 
   return (
     <div className="space-y-6">
@@ -66,12 +80,21 @@ export default async function LojaPage({ params }: LojaPageProps) {
           </Button>
         </Link>
       </div>
+
       <div>
         <LojaInfoCard loja={loja} />
       </div>
+
       <div>
         <StatsCards stats={stats} />
       </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        <MetricasAtendimento data={serviceStats} />
+        <FunilStatus data={statusFunil} />
+        <TemperaturaLeads data={classificacao} />
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         <ChartLeads30Days data={leads30Days} />
         <ChartLeads12Months data={leads12Months} />

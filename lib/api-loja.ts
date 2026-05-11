@@ -1,4 +1,4 @@
-import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
+import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaServiceStats, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
 import type { Lead } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
@@ -95,6 +95,25 @@ export async function getLojaClassificacao(lojaId: string | number): Promise<Loj
   if (!response.ok) throw new Error(`Erro ao buscar classificação: ${response.status}`)
   const data = await response.json()
   return data.data || { frio: 0, morno: 0, quente: 0 }
+}
+
+export async function getLojaServiceStats(lojaId: string | number): Promise<LojaServiceStats> {
+  const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/service-stats`, {
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) throw new Error(`Erro ao buscar métricas de atendimento: ${response.status}`)
+  const data = await response.json()
+  return data.data || {
+    total_leads: 0,
+    leads_contatados: 0,
+    leads_nao_contatados: 0,
+    perc_contatados: 0,
+    perc_nao_contatados: 0,
+    tempo_medio_minutos: null,
+    tempo_medio_horas: null,
+  }
 }
 
 export async function getLojaLeads(

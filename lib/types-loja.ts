@@ -42,3 +42,13 @@ export interface Leads12MonthsResponse {
   success: boolean
   data: LeadsByMonth[]
 }
+
+export interface LojaServiceStats {
+  total_leads: number
+  leads_contatados: number
+  leads_nao_contatados: number
+  perc_contatados: number
+  perc_nao_contatados: number
+  tempo_medio_minutos: number | null
+  tempo_medio_horas: number | null
+}
