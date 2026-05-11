@@ -35,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-import { getLeadsStatsFilterDate } from "@/lib/leads-service"
+import { getLeadsStatsFilterDateStats } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -50,22 +50,20 @@ const chartConfig = {
 } satisfies ChartConfig
 
 function normalizeLeads(data: any[], from: string, to: string) {
-  const start = new Date(from)
-  const end = new Date(to)
+  if (!Array.isArray(data)) return []
 
-  const map = new Map(
-    data.map((i) => [i.data, parseInt(i.total) || 0])
-  )
-
+  const map = new Map(data.map((i) => [i.data, parseInt(i.total) || 0]))
   const result = []
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split("T")[0]
+  const [sy, sm, sd] = from.split("-").map(Number)
+  const [ey, em, ed] = to.split("-").map(Number)
+  let d = new Date(Date.UTC(sy, sm - 1, sd))
+  const end = new Date(Date.UTC(ey, em - 1, ed))
 
-    result.push({
-      date: dateStr,
-      total: map.get(dateStr) || 0,
-    })
+  while (d <= end) {
+    const dateStr = d.toISOString().split("T")[0]
+    result.push({ date: dateStr, total: map.get(dateStr) || 0 })
+    d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
   }
 
   return result
@@ -95,9 +93,10 @@ export function ChartLeads30Days({
     setLoading(true)
 
     try {
-      const res = await getLeadsStatsFilterDate(
+      const res = await getLeadsStatsFilterDateStats(
         format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd")
+        format(to, "yyyy-MM-dd"),
+        lojaId,
       )
 
       const normalized = normalizeLeads(
