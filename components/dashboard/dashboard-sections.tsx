@@ -13,6 +13,10 @@ import {
   getLeadsInvestimentoClassificacaoServer,
   getLeadsCampanhasUTMServer,
   getLeadsLandingPagesServer,
+  getLeadsTrackingDeviceServer,
+  getLeadsTrackingHorarioServer,
+  getLeadsTrackingUtmContentServer,
+  getLeadsTrackingMediumServer,
 } from '@/lib/server-leads-service'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -30,6 +34,9 @@ import { ChartScoreHistogram } from './chart-score-histogram'
 import { ChartInvestimentoClass } from './chart-investimento-class'
 import { ChartCampanhasUTM } from './chart-campanhas-utm'
 import { ChartLandingPages } from './chart-landing-pages'
+import { ChartDeviceBreakdown } from './chart-device-breakdown'
+import { ChartHorarioLeads } from './chart-horario-leads'
+import { ChartUtmContentMedium } from './chart-utm-content-medium'
 
 export async function StatsSection() {
   const [statsGeral] = await Promise.all([
@@ -182,6 +189,25 @@ export async function CampanhasLandingSection() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <ChartCampanhasUTM data={campanhas} />
       <ChartLandingPages landingPages={landingPages} referrers={referrers} />
+    </div>
+  )
+}
+
+export async function TrackingDetalheSection() {
+  const [device, horario, utmContent, utmMedium] = await Promise.all([
+    getLeadsTrackingDeviceServer(),
+    getLeadsTrackingHorarioServer(),
+    getLeadsTrackingUtmContentServer(),
+    getLeadsTrackingMediumServer(),
+  ])
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartDeviceBreakdown data={device} />
+        <ChartHorarioLeads data={horario} />
+      </div>
+      <ChartUtmContentMedium contentData={utmContent} mediumData={utmMedium} />
     </div>
   )
 }

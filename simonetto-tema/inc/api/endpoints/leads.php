@@ -153,6 +153,34 @@ add_action('rest_api_init', function () {
     'callback'            => 'mytheme_api_leads_landing_pages',
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
+
+  // GET /api/v1/leads-tracking-device — Mobile / Desktop / Tablet (user_agent)
+  register_rest_route('api/v1', '/leads-tracking-device', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_tracking_device',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-tracking-horario — volume de leads por hora do dia (0–23)
+  register_rest_route('api/v1', '/leads-tracking-horario', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_tracking_horario',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-tracking-utm-content — top utm_content por volume
+  register_rest_route('api/v1', '/leads-tracking-utm-content', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_tracking_utm_content',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // GET /api/v1/leads-tracking-medium — distribuição por utm_medium
+  register_rest_route('api/v1', '/leads-tracking-medium', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_tracking_medium',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
 });
 
 
@@ -1138,4 +1166,248 @@ function mytheme_api_leads_landing_pages(WP_REST_Request $request)
   }, $rows);
 
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-tracking-device
+ *
+ * Distribuição por tipo de dispositivo detectado via user_agent.
+ * Retorna: Mobile | Desktop | Tablet | Desconhecido
+ * Query params opcionais: from, to
+ */
+function mytheme_api_leads_tracking_device(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  $query = "
+    SELECT
+      CASE
+        WHEN t.user_agent LIKE '%iPad%' OR t.user_agent LIKE '%Tablet%'
+          THEN 'Tablet'
+        WHEN t.user_agent LIKE '%Mobile%'
+          OR t.user_agent LIKE '%Android%'
+          OR t.user_agent LIKE '%iPhone%'
+          OR t.user_agent LIKE '%webOS%'
+          OR t.user_agent LIKE '%BlackBerry%'
+          OR t.user_agent LIKE '%Windows Phone%'
+          THEN 'Mobile'
+        WHEN t.user_agent IS NULL OR t.user_agent = ''
+          THEN 'Desconhecido'
+        ELSE 'Desktop'
+      END AS device_type,
+      COUNT(l.id)                                               AS total,
+      ROUND(COUNT(l.id) * 100.0 / SUM(COUNT(l.id)) OVER(), 1) AS pct
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY device_type
+    ORDER BY total DESC
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'device_type' => $row['device_type'],
+      'total'       => (int)   $row['total'],
+      'pct'         => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-tracking-horario
+ *
+ * Volume de leads por hora do dia (0–23).
+ * Usa created_at do tracking; fallback para data_criacao do lead.
+ * Query params opcionais: from, to
+ */
+function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  $query = "
+    SELECT
+      HOUR(COALESCE(t.created_at, l.data_criacao)) AS hora,
+      COUNT(l.id)                                   AS total
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY hora
+    ORDER BY hora ASC
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $map = [];
+  foreach ($rows as $row) {
+    $map[(int) $row['hora']] = (int) $row['total'];
+  }
+
+  $data = [];
+  for ($h = 0; $h <= 23; $h++) {
+    $data[] = [
+      'hora'     => sprintf('%02dh', $h),
+      'hora_int' => $h,
+      'total'    => $map[$h] ?? 0,
+    ];
+  }
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-tracking-utm-content
+ *
+ * Top utm_content por volume de leads.
+ * Query params opcionais: from, to, limit (padrão 10, máx 20)
+ */
+function mytheme_api_leads_tracking_utm_content(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from  = sanitize_text_field($request->get_param('from')  ?? '');
+  $to    = sanitize_text_field($request->get_param('to')    ?? '');
+  $limit = max(1, min(20, intval($request->get_param('limit') ?? 10)));
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  $where_sql        = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+  $prepare_values[] = $limit;
+
+  $query = "
+    SELECT
+      COALESCE(NULLIF(t.utm_content, ''), '(sem conteúdo)')    AS utm_content,
+      COUNT(l.id)                                               AS total,
+      ROUND(COUNT(l.id) * 100.0 / SUM(COUNT(l.id)) OVER(), 1) AS pct
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY t.utm_content
+    ORDER BY total DESC
+    LIMIT %d
+  ";
+
+  $rows = $wpdb->get_results(
+    $wpdb->prepare($query, ...$prepare_values),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'utm_content' => $row['utm_content'],
+      'total'       => (int)   $row['total'],
+      'pct'         => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-tracking-medium
+ *
+ * Distribuição por utm_medium (canal de marketing).
+ * Query params opcionais: from, to
+ */
+function mytheme_api_leads_tracking_medium(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  $query = "
+    SELECT
+      COALESCE(NULLIF(t.utm_medium, ''), '(direto)')           AS utm_medium,
+      COUNT(l.id)                                               AS total,
+      ROUND(COUNT(l.id) * 100.0 / SUM(COUNT(l.id)) OVER(), 1) AS pct
+    FROM {$table_leads} l
+    LEFT JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY t.utm_medium
+    ORDER BY total DESC
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'utm_medium' => $row['utm_medium'],
+      'total'      => (int)   $row['total'],
+      'pct'        => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }

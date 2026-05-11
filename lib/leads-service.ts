@@ -597,3 +597,65 @@ export const getLojaStats = getLeadsPorLoja;
 export const getEstadoStats = getLeadsGeoStats;
 export const gettimeStoreAtend = getTempoMedioPorLoja;
 export const getLeadsStats = getLeadsStatsGeral;
+
+export interface DeviceItem {
+  device_type: string
+  total: number
+  pct: number
+}
+
+export interface HorarioItem {
+  hora: string
+  hora_int: number
+  total: number
+}
+
+export interface UtmContentItem {
+  utm_content: string
+  total: number
+  pct: number
+}
+
+export interface UtmMediumItem {
+  utm_medium: string
+  total: number
+  pct: number
+}
+
+export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string): Promise<DeviceItem[]> {
+  let endpoint = 'leads-tracking-device'
+  const params: string[] = []
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (params.length) endpoint += `?${params.join('&')}`
+  const json = await fetchAPI(endpoint, 'Erro ao buscar device breakdown', token)
+  return json.data || []
+}
+
+export async function getLeadsTrackingHorario(from?: string, to?: string, token?: string): Promise<HorarioItem[]> {
+  let endpoint = 'leads-tracking-horario'
+  const params: string[] = []
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (params.length) endpoint += `?${params.join('&')}`
+  const json = await fetchAPI(endpoint, 'Erro ao buscar horário de leads', token)
+  return json.data || []
+}
+
+export async function getLeadsTrackingUtmContent(from?: string, to?: string, limit = 10, token?: string): Promise<UtmContentItem[]> {
+  let endpoint = `leads-tracking-utm-content?limit=${limit}`
+  if (from) endpoint += `&from=${encodeURIComponent(from)}`
+  if (to)   endpoint += `&to=${encodeURIComponent(to)}`
+  const json = await fetchAPI(endpoint, 'Erro ao buscar utm_content', token)
+  return json.data || []
+}
+
+export async function getLeadsTrackingMedium(from?: string, to?: string, token?: string): Promise<UtmMediumItem[]> {
+  let endpoint = 'leads-tracking-medium'
+  const params: string[] = []
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (params.length) endpoint += `?${params.join('&')}`
+  const json = await fetchAPI(endpoint, 'Erro ao buscar utm_medium', token)
+  return json.data || []
+}

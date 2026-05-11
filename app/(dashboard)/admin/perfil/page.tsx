@@ -4,6 +4,7 @@ import { ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 import {
   InteresseSection,
   CampanhasLandingSection,
+  TrackingDetalheSection,
 } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
@@ -30,6 +31,10 @@ export default async function PerfilPage() {
 
       <Suspense fallback={<ChartCardSkeleton height="h-[400px]" />}>
         <CampanhasLandingSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
+        <TrackingDetalheSection />
       </Suspense>
     </div>
   )
