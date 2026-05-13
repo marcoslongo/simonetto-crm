@@ -7,8 +7,13 @@ const publicRoutes = ['/login', '/unauthorized']
 // Rotas de admin
 const adminRoutes = ['/admin']
 
-// Rotas do CRM (loja e admin podem acessar)
-const crmRoutes = ['/crm']
+const INACTIVITY_LIMIT_MS = 10 * 60 * 60 * 1000 // 10 horas
+
+function clearSessionCookies(response: NextResponse) {
+  response.cookies.delete('crm_session')
+  response.cookies.delete('auth_token')
+  response.cookies.delete('last_activity')
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -29,7 +34,7 @@ export function middleware(request: NextRequest) {
   if (sessionCookie?.value) {
     try {
       session = JSON.parse(sessionCookie.value)
-      
+
       // Verifica se expirou
       if (new Date(session.expires) < new Date()) {
         session = null
@@ -59,19 +64,26 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Verifica inatividade (apenas para usuários autenticados)
+  const lastActivityCookie = request.cookies.get('last_activity')
+  const lastActivity = lastActivityCookie ? Number(lastActivityCookie.value) : null
+
+  if (lastActivity && Date.now() - lastActivity > INACTIVITY_LIMIT_MS) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('reason', 'inatividade')
+    const response = NextResponse.redirect(loginUrl)
+    clearSessionCookies(response)
+    return response
+  }
+
   // Rota de admin - apenas administradores
   if (adminRoutes.some(route => pathname.startsWith(route))) {
     if (userRole !== 'administrator') {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
-    return NextResponse.next()
   }
 
-  // Rota do CRM - lojas e admins podem acessar
-  if (crmRoutes.some(route => pathname.startsWith(route))) {
-    // Ambos os roles podem acessar
-    return NextResponse.next()
-  }
+  // Rota do CRM - lojas e admins podem acessar (sem restrição adicional)
 
   // Página raiz - redireciona baseado no role
   if (pathname === '/') {
@@ -79,7 +91,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(redirectPath, request.url))
   }
 
-  return NextResponse.next()
+  // Atualiza o timestamp de atividade em cada navegação autenticada
+  const response = NextResponse.next()
+  response.cookies.set('last_activity', String(Date.now()), {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+  })
+  return response
 }
 
 export const config = {

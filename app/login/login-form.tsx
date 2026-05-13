@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, Mail, Lock, Clock } from 'lucide-react'
 import { loginAction, type LoginState } from './actions'
 
 export function LoginForm() {
@@ -20,6 +21,8 @@ export function LoginForm() {
     loginAction,
     {}
   )
+  const searchParams = useSearchParams()
+  const isInactivity = searchParams.get('reason') === 'inatividade'
 
   useEffect(() => {
     if (state?.error) toast.error(state.error)
@@ -43,6 +46,12 @@ export function LoginForm() {
         <CardDescription>
           Digite seu email e senha para acessar o sistema
         </CardDescription>
+        {isInactivity && (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 mt-2">
+            <Clock className="h-4 w-4 shrink-0" />
+            Sua sessão expirou por inatividade. Faça login novamente.
+          </div>
+        )}
       </CardHeader>
 
       <CardContent>

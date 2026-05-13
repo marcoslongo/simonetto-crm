@@ -4,6 +4,7 @@ import { DashboardHeader } from '@/components/dashboard/header'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { SidebarProvider } from '@/components/dashboard/sidebar-context'
 import { LayoutShell } from '@/components/dashboard/layout-shell'
+import { SessionTimeout } from '@/components/providers/session-timeout'
 
 export default async function DashboardLayout({
   children,
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
           </main>
         </LayoutShell>
       </div>
+      <SessionTimeout />
     </SidebarProvider>
   )
 }
