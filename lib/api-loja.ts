@@ -1,7 +1,17 @@
+import { cookies } from 'next/headers'
 import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaServiceStats, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
 import type { Lead } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth_token')?.value
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
 
 /**
  * Buscar estatísticas gerais da loja
@@ -9,9 +19,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonet
 export async function getLojaStats(lojaId: string | number): Promise<LojaStats> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/stats`, {
     cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -33,9 +41,7 @@ export async function getLojaStats(lojaId: string | number): Promise<LojaStats> 
 export async function getLojaLeads30Days(lojaId: string | number): Promise<LeadsByDay[]> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/leads-30-days`, {
     cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -57,9 +63,7 @@ export async function getLojaLeads30Days(lojaId: string | number): Promise<Leads
 export async function getLojaLeads12Months(lojaId: string | number): Promise<LeadsByMonth[]> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/leads-12-months`, {
     cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) {
@@ -78,7 +82,7 @@ export async function getLojaLeads12Months(lojaId: string | number): Promise<Lea
 export async function getLojaStatusFunil(lojaId: string | number): Promise<LojaStatusFunil> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/status-funil`, {
     cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) throw new Error(`Erro ao buscar status do funil: ${response.status}`)
@@ -89,7 +93,7 @@ export async function getLojaStatusFunil(lojaId: string | number): Promise<LojaS
 export async function getLojaClassificacao(lojaId: string | number): Promise<LojaClassificacao> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/classificacao`, {
     cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) throw new Error(`Erro ao buscar classificação: ${response.status}`)
@@ -100,7 +104,7 @@ export async function getLojaClassificacao(lojaId: string | number): Promise<Loj
 export async function getLojaServiceStats(lojaId: string | number): Promise<LojaServiceStats> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/service-stats`, {
     cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await getAuthHeaders(),
   })
 
   if (!response.ok) throw new Error(`Erro ao buscar métricas de atendimento: ${response.status}`)
@@ -125,7 +129,7 @@ export async function getLojaLeads(
     `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`,
     {
       cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
     }
   )
 
