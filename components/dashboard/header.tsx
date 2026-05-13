@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { logoutAction } from '@/app/login/actions'
+import { NotificationBell } from './notification-bell'
 import type { User as UserType } from '@/lib/types'
 
 interface DashboardHeaderProps {
@@ -33,6 +34,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             </Badge>
           )}
         </div>
+
+        <div className="flex items-center gap-2">
+          {isAdmin && <NotificationBell />}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -80,6 +84,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   )
