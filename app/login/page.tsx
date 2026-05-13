@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { LoginForm } from './login-form'
 import Image from 'next/image'
 
@@ -142,7 +143,9 @@ export default function LoginPage() {
             boxShadow: '0 25px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
           }}
         >
+          <Suspense>
           <LoginForm />
+        </Suspense>
         </div>
       </div>
 
