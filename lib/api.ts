@@ -134,6 +134,17 @@ export async function getLojas(): Promise<LojasResponse> {
 }
 
 // =====================================
+// USUÁRIO
+// =====================================
+
+export async function changePassword(userId: number, newPassword: string): Promise<void> {
+  await fetchApi(`/wp/v2/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ password: newPassword }),
+  })
+}
+
+// =====================================
 // ESTATÍSTICAS
 // =====================================
 

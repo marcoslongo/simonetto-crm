@@ -1,6 +1,7 @@
 'use client'
 
-import { User, LogOut, Store, Shield } from 'lucide-react'
+import { User, LogOut, Store, Shield, Settings } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -22,7 +23,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const isAdmin = user.role === 'administrator'
 
   return (
-    <header className="z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <header className="z-50 w-full border-b bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/60">
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-4">
           {!isAdmin && user.loja_nome && (
@@ -60,6 +61,13 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <Badge variant={isAdmin ? 'default' : 'secondary'} className="text-xs">
                 {isAdmin ? 'Administrador' : 'Loja'}
               </Badge>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/configuracoes" className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                Configurações
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

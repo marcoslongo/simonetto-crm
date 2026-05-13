@@ -13,7 +13,7 @@ add_action('rest_api_init', function () {
   register_rest_route('api/v1', '/lojas', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_list_lojas',
-    'permission_callback' => 'mytheme_api_is_authenticated',
+    'permission_callback' => '__return_true',
   ));
 
   register_rest_route('api/v1', '/lojas-with-stats', array(

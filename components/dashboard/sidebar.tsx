@@ -15,7 +15,8 @@ import {
   Activity,
   Target,
   Map,
-  UserSearch
+  UserSearch,
+  Settings
 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
@@ -71,6 +72,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             { name: 'Relatórios', href: '/admin/relatorios', icon: FileChartColumnIncreasing },
           ],
         },
+        {
+          group: 'Conta',
+          items: [
+            { name: 'Configurações', href: '/configuracoes', icon: Settings },
+          ],
+        },
       ]
     : [
         {
@@ -83,6 +90,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           group: 'CRM',
           items: [
             { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
+          ],
+        },
+        {
+          group: 'Conta',
+          items: [
+            { name: 'Configurações', href: '/configuracoes', icon: Settings },
           ],
         },
       ]
@@ -156,7 +169,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
                         collapsed && 'justify-center px-2'
                       )}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <item.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && <span>{item.name}</span>}
                     </Link>
                   )
