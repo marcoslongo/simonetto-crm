@@ -1,5 +1,6 @@
 import { requireAdmin } from '@/lib/auth'
-import { buscarLojas, type SortBy } from '@/lib/lojas-service'
+import { buscarLojasServer } from '@/lib/server-lojas-service'
+import type { SortBy } from '@/lib/lojas-service'
 
 import {
   Card,
@@ -47,7 +48,7 @@ export default async function AdminLojasPage({
   const searchQuery = params.search || ''
   const sortBy = (params.sortBy as SortBy) || 'nome'
 
-  const resultado = await buscarLojas({
+  const resultado = await buscarLojasServer({
     search: searchQuery,
     sortBy,
     page,

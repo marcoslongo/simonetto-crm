@@ -19,11 +19,14 @@ export interface LojasWithStatsResponse {
   total: number
 }
 
-const defaultFetchOptions: RequestInit = {
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  cache: 'no-store',
+function buildFetchOptions(token?: string): RequestInit {
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    cache: 'no-store',
+  }
 }
 
 async function handleApiError(response: Response, endpoint: string) {
@@ -36,11 +39,11 @@ async function handleApiError(response: Response, endpoint: string) {
   throw new Error(`Falha ao acessar ${endpoint}: ${response.status} ${response.statusText}`)
 }
 
-export async function getLojas(): Promise<Loja[]> {
+export async function getLojas(token?: string): Promise<Loja[]> {
   const endpoint = `${API_BASE_URL}/lojas`
 
   try {
-    const response = await fetch(endpoint, defaultFetchOptions)
+    const response = await fetch(endpoint, buildFetchOptions(token))
 
     if (!response.ok) {
       await handleApiError(response, 'getLojas')
@@ -61,11 +64,11 @@ export async function getLojas(): Promise<Loja[]> {
 }
 
 
-export async function getLojasComStats(): Promise<LojaWithStats[]> {
+export async function getLojasComStats(token?: string): Promise<LojaWithStats[]> {
   const endpoint = `${API_BASE_URL}/lojas-with-stats`
 
   try {
-    const response = await fetch(endpoint, defaultFetchOptions)
+    const response = await fetch(endpoint, buildFetchOptions(token))
 
     if (!response.ok) {
       await handleApiError(response, 'getLojasComStats')
@@ -84,11 +87,11 @@ export async function getLojasComStats(): Promise<LojaWithStats[]> {
   }
 }
 
-export async function getLojaById(id: string | number): Promise<Loja> {
+export async function getLojaById(id: string | number, token?: string): Promise<Loja> {
   const endpoint = `${API_BASE_URL}/wp-json/api/v1/lojas/${id}`
 
   try {
-    const response = await fetch(endpoint, defaultFetchOptions)
+    const response = await fetch(endpoint, buildFetchOptions(token))
 
     if (!response.ok) {
       await handleApiError(response, `getLojaById(${id})`)
@@ -115,11 +118,11 @@ export interface LojaStats {
   thisMonth?: number
 }
 
-export async function getLojaStats(lojaId: string | number): Promise<LojaStats> {
+export async function getLojaStats(lojaId: string | number, token?: string): Promise<LojaStats> {
   const endpoint = `${API_BASE_URL}/wp-json/api/v1/leads-stats/${lojaId}`
 
   try {
-    const response = await fetch(endpoint, defaultFetchOptions)
+    const response = await fetch(endpoint, buildFetchOptions(token))
 
     if (!response.ok) {
       await handleApiError(response, `getLojaStats(${lojaId})`)
@@ -246,6 +249,7 @@ export interface BuscarLojasParams {
   sortBy?: SortBy
   page?: number
   perPage?: number
+  token?: string
 }
 
 export async function buscarLojas(
@@ -256,9 +260,10 @@ export async function buscarLojas(
     sortBy = 'nome',
     page = 1,
     perPage = 9,
+    token,
   } = params
 
-  const todasLojas = await getLojasComStats()
+  const todasLojas = await getLojasComStats(token)
 
   const lojasFiltradas = filtrarLojas(todasLojas, search)
 

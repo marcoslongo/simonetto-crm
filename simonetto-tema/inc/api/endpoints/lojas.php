@@ -13,76 +13,76 @@ add_action('rest_api_init', function () {
   register_rest_route('api/v1', '/lojas', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_list_lojas',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   register_rest_route('api/v1', '/lojas-with-stats', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_list_lojas_with_stats',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Detalhes da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Stats completas da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/stats', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_stats',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Leads dos últimos 30 dias
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/leads-30-days', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_leads_30_days',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Leads dos últimos 12 meses
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/leads-12-months', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_leads_12_months',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Leads da loja (kanban de atendimentos)
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/leads', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_leads',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // Registrar contato com lead da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/lead-contato', [
     'methods' => 'POST',
     'callback' => 'mytheme_api_loja_register_contact',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
   // Status do funil da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/status-funil', [
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_status_funil',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
   // Classificação de temperatura da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/classificacao', [
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_classificacao',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
   // Métricas de atendimento da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/service-stats', [
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_loja_service_stats',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 });
 
