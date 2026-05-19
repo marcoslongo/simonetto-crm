@@ -32,12 +32,12 @@ export default async function AdminDashboardPage() {
         <StatsSection />
       </Suspense>
 
-      <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
-        <Leads12MonthsSection />
-      </Suspense>
-
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>
         <Leads30DaysSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
+        <Leads12MonthsSection />
       </Suspense>
     </div>
   )
