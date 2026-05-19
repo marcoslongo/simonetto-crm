@@ -37,7 +37,7 @@ export function ConfiguracoesForm() {
             placeholder="Digite sua senha atual"
             required
             disabled={isPending}
-            className="pr-10"
+            className="pr-10 bg-white"
           />
           <button
             type="button"
@@ -62,7 +62,7 @@ export function ConfiguracoesForm() {
             placeholder="Mínimo 8 caracteres"
             required
             disabled={isPending}
-            className="pr-10"
+            className="pr-10 bg-white"
           />
           <button
             type="button"
@@ -87,7 +87,7 @@ export function ConfiguracoesForm() {
             placeholder="Repita a nova senha"
             required
             disabled={isPending}
-            className="pr-10"
+            className="pr-10 bg-white"
           />
           <button
             type="button"
@@ -117,7 +117,7 @@ export function ConfiguracoesForm() {
       <Button
         type="submit"
         disabled={isPending}
-        className="w-full bg-[#2463eb] hover:bg-[#1d4ed8]"
+        className="w-full bg-[#16255c] hover:bg-[#16255c] cursor-pointer"
       >
         {isPending ? (
           <>
