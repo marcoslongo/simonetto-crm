@@ -293,7 +293,7 @@ export function LeadDetailsModal({
                 {lead.mensagem && (
                   <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
                 )}
-                <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
+                {/* <TabsTrigger value="atendimento">Atendimento</TabsTrigger> */}
                 {isAdmin && (
                   <TabsTrigger value="historico" onClick={fetchActions}>
                     Histórico
@@ -570,13 +570,13 @@ export function LeadDetailsModal({
               )}
 
               {/* Atendimento — chat WhatsApp */}
-              <TabsContent value="atendimento" className="mt-0">
+              {/* <TabsContent value="atendimento" className="mt-0">
                 <ChatPanel
                   leadId={lead.id}
                   telefone={lead.telefone}
                   lojaId={lead.loja_id ? Number(lead.loja_id) : null}
                 />
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Histórico */}
               {isAdmin && (
