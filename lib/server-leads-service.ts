@@ -206,14 +206,14 @@ export async function getLeadsLandingPagesServer(
   return getLeadsLandingPages(from, to, tipo, limit, token)
 }
 
-export async function getLeadsTrackingDeviceServer(from?: string, to?: string) {
+export async function getLeadsTrackingDeviceServer(from?: string, to?: string, lojaId?: number) {
   const token = await getToken()
-  return getLeadsTrackingDevice(from, to, token)
+  return getLeadsTrackingDevice(from, to, token, lojaId)
 }
 
-export async function getLeadsTrackingHorarioServer(from?: string, to?: string) {
+export async function getLeadsTrackingHorarioServer(from?: string, to?: string, lojaId?: number) {
   const token = await getToken()
-  return getLeadsTrackingHorario(from, to, token)
+  return getLeadsTrackingHorario(from, to, token, lojaId)
 }
 
 export async function getLeadsTrackingUtmContentServer(from?: string, to?: string, limit = 10) {

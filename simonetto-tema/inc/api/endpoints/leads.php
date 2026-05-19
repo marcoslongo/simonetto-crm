@@ -158,14 +158,14 @@ add_action('rest_api_init', function () {
   register_rest_route('api/v1', '/leads-tracking-device', [
     'methods'             => 'GET',
     'callback'            => 'mytheme_api_leads_tracking_device',
-    'permission_callback' => 'mytheme_api_is_administrator',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
   // GET /api/v1/leads-tracking-horario — volume de leads por hora do dia (0–23)
   register_rest_route('api/v1', '/leads-tracking-horario', [
     'methods'             => 'GET',
     'callback'            => 'mytheme_api_leads_tracking_horario',
-    'permission_callback' => 'mytheme_api_is_administrator',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
   // GET /api/v1/leads-tracking-utm-content — top utm_content por volume
@@ -1182,28 +1182,30 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+  $from    = sanitize_text_field($request->get_param('from')    ?? '');
+  $to      = sanitize_text_field($request->get_param('to')      ?? '');
+  $loja_id = intval($request->get_param('loja_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
 
-  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
-  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+  if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+  if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
   $query = "
     SELECT
       CASE
-        WHEN t.user_agent LIKE '%iPad%' OR t.user_agent LIKE '%Tablet%'
+        WHEN t.user_agent LIKE '%%iPad%%' OR t.user_agent LIKE '%%Tablet%%'
           THEN 'Tablet'
-        WHEN t.user_agent LIKE '%Mobile%'
-          OR t.user_agent LIKE '%Android%'
-          OR t.user_agent LIKE '%iPhone%'
-          OR t.user_agent LIKE '%webOS%'
-          OR t.user_agent LIKE '%BlackBerry%'
-          OR t.user_agent LIKE '%Windows Phone%'
+        WHEN t.user_agent LIKE '%%Mobile%%'
+          OR t.user_agent LIKE '%%Android%%'
+          OR t.user_agent LIKE '%%iPhone%%'
+          OR t.user_agent LIKE '%%webOS%%'
+          OR t.user_agent LIKE '%%BlackBerry%%'
+          OR t.user_agent LIKE '%%Windows Phone%%'
           THEN 'Mobile'
         WHEN t.user_agent IS NULL OR t.user_agent = ''
           THEN 'Desconhecido'
@@ -1251,14 +1253,16 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+  $from    = sanitize_text_field($request->get_param('from')    ?? '');
+  $to      = sanitize_text_field($request->get_param('to')      ?? '');
+  $loja_id = intval($request->get_param('loja_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
 
-  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
-  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+  if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+  if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 

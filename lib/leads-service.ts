@@ -622,21 +622,23 @@ export interface UtmMediumItem {
   pct: number
 }
 
-export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string): Promise<DeviceItem[]> {
+export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string, lojaId?: number): Promise<DeviceItem[]> {
   let endpoint = 'leads-tracking-device'
   const params: string[] = []
-  if (from) params.push(`from=${encodeURIComponent(from)}`)
-  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (from)   params.push(`from=${encodeURIComponent(from)}`)
+  if (to)     params.push(`to=${encodeURIComponent(to)}`)
+  if (lojaId) params.push(`loja_id=${lojaId}`)
   if (params.length) endpoint += `?${params.join('&')}`
   const json = await fetchAPI(endpoint, 'Erro ao buscar device breakdown', token)
   return json.data || []
 }
 
-export async function getLeadsTrackingHorario(from?: string, to?: string, token?: string): Promise<HorarioItem[]> {
+export async function getLeadsTrackingHorario(from?: string, to?: string, token?: string, lojaId?: number): Promise<HorarioItem[]> {
   let endpoint = 'leads-tracking-horario'
   const params: string[] = []
-  if (from) params.push(`from=${encodeURIComponent(from)}`)
-  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (from)   params.push(`from=${encodeURIComponent(from)}`)
+  if (to)     params.push(`to=${encodeURIComponent(to)}`)
+  if (lojaId) params.push(`loja_id=${lojaId}`)
   if (params.length) endpoint += `?${params.join('&')}`
   const json = await fetchAPI(endpoint, 'Erro ao buscar horário de leads', token)
   return json.data || []
