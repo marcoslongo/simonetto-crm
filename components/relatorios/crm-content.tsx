@@ -1,10 +1,10 @@
 'use client'
 
-import { FileText, Table2, Calendar as CalendarIcon2, Eraser, Loader2 } from "lucide-react";
+import { Table2, Calendar as CalendarIcon2, Eraser, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { fetchAllLeadsForExport } from "@/actions/leads-actions";
+import { fetchLojaLeadsForExport } from "@/actions/leads-actions";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -105,7 +105,7 @@ export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
     setIsExporting(true);
 
     try {
-      const leads = await fetchAllLeadsForExport(lojaId);
+      const leads = await fetchLojaLeadsForExport(lojaId);
 
       let fromDate: Date;
       let toDate: Date;
@@ -118,7 +118,7 @@ export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
         toDate   = new Date(to!);   toDate.setHours(23, 59, 59, 999);
       }
 
-      const filtered = leads.filter(lead => {
+      const filtered = leads.filter((lead: { data_criacao: string }) => {
         const d = new Date(lead.data_criacao);
         return d >= fromDate && d <= toDate;
       });

@@ -13,6 +13,8 @@ export default async function CrmRelatoriosPage() {
     redirect('/crm')
   }
 
+  const lojaId = user.loja_id as number
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
@@ -21,7 +23,7 @@ export default async function CrmRelatoriosPage() {
           Gere e exporte relatórios da sua unidade: {user.loja_nome || user.name}
         </p>
       </div>
-      <CrmContent lojaId={user.loja_id} lojaNome={user.loja_nome} />
+      <CrmContent lojaId={lojaId} lojaNome={user.loja_nome} />
     </div>
   )
 }
