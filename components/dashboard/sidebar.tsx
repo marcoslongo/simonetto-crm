@@ -16,7 +16,9 @@ import {
   Target,
   Map,
   UserSearch,
-  Settings
+  Settings,
+  TrendingUp,
+  MousePointerClick,
 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
@@ -83,11 +85,18 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         {
           group: 'Visão Geral',
           items: [
-            { name: 'Dashboard', href: '/crm', icon: LayoutDashboard },
+            { name: 'Resumo', href: '/crm', icon: LayoutDashboard },
           ],
         },
         {
-          group: 'CRM',
+          group: 'Análise',
+          items: [
+            { name: 'Desempenho', href: '/crm/desempenho', icon: TrendingUp },
+            { name: 'Comportamento', href: '/crm/comportamento', icon: MousePointerClick },
+          ],
+        },
+        {
+          group: 'Operações',
           items: [
             { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
             { name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing },
