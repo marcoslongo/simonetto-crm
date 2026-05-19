@@ -26,11 +26,9 @@ export default async function DesempenhoPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Desempenho</h2>
         <p className="text-muted-foreground mt-1">
-          Evolução de captação e métricas de atendimento da sua unidade
+          Evolução de captação da sua unidade
         </p>
       </div>
-
-      <MetricasAtendimento data={serviceStats} />
 
       <ChartLeads30Days data={leads30Days} />
 
