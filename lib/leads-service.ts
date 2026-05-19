@@ -661,3 +661,38 @@ export async function getLeadsTrackingMedium(from?: string, to?: string, token?:
   const json = await fetchAPI(endpoint, 'Erro ao buscar utm_medium', token)
   return json.data || []
 }
+
+export async function getLeadsLast12Months(token?: string): Promise<{ date: string; total: number }[]> {
+  const today = new Date()
+  const from = new Date(today.getFullYear(), today.getMonth() - 11, 1)
+  const fromStr = from.toISOString().split('T')[0]
+  const toStr = today.toISOString().split('T')[0]
+
+  const json = await fetchAPI(
+    `leads/stats?from=${fromStr}&to=${toStr}`,
+    'Erro ao buscar leads 12 meses',
+    token
+  )
+
+  const monthly: Record<string, number> = {}
+
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    monthly[key] = 0
+  }
+
+  if (json.data && Array.isArray(json.data)) {
+    json.data.forEach((item: any) => {
+      const date: string = item.data || item.date || ''
+      if (!date) return
+      const [year, month] = date.split('-')
+      const key = `${year}-${month}-01`
+      if (key in monthly) {
+        monthly[key] += parseInt(item.total) || 0
+      }
+    })
+  }
+
+  return Object.entries(monthly).map(([date, total]) => ({ date, total }))
+}

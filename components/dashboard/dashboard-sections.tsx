@@ -17,6 +17,7 @@ import {
   getLeadsTrackingHorarioServer,
   getLeadsTrackingUtmContentServer,
   getLeadsTrackingMediumServer,
+  getLeadsLast12MonthsServer,
 } from '@/lib/server-leads-service'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -37,6 +38,7 @@ import { ChartLandingPages } from './chart-landing-pages'
 import { ChartDeviceBreakdown } from './chart-device-breakdown'
 import { ChartHorarioLeads } from './chart-horario-leads'
 import { ChartUtmContentMedium } from './chart-utm-content-medium'
+import { ChartLeads12Months } from './chart-leads-12-months'
 
 export async function StatsSection() {
   const [statsGeral] = await Promise.all([
@@ -113,6 +115,12 @@ export async function Leads30DaysSection() {
   const leads30Days = await getLeadsLast30DaysServer()
 
   return <ChartLeads30Days data={leads30Days} />
+}
+
+export async function Leads12MonthsSection() {
+  const data = await getLeadsLast12MonthsServer()
+
+  return <ChartLeads12Months data={data} />
 }
 
 export async function GeoInvestSection() {

@@ -35,6 +35,7 @@ import {
   getLeadsTrackingHorario,
   getLeadsTrackingUtmContent,
   getLeadsTrackingMedium,
+  getLeadsLast12Months,
   type DeviceItem,
   type HorarioItem,
   type UtmContentItem,
@@ -224,4 +225,9 @@ export async function getLeadsTrackingUtmContentServer(from?: string, to?: strin
 export async function getLeadsTrackingMediumServer(from?: string, to?: string) {
   const token = await getToken()
   return getLeadsTrackingMedium(from, to, token)
+}
+
+export async function getLeadsLast12MonthsServer() {
+  const token = await getToken()
+  return getLeadsLast12Months(token)
 }

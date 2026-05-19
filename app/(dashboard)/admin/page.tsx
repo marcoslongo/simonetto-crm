@@ -4,8 +4,9 @@ import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
 } from '@/components/dashboard/dashboard-skeletons'
-import { 
-  Leads30DaysSection, 
+import {
+  Leads30DaysSection,
+  Leads12MonthsSection,
   StatsSection,
 } from '@/components/dashboard/dashboard-sections'
 
@@ -29,6 +30,10 @@ export default async function AdminDashboardPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
+        <Leads12MonthsSection />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>
