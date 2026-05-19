@@ -120,6 +120,30 @@ export async function getLojaServiceStats(lojaId: string | number): Promise<Loja
   }
 }
 
+export interface LojaIntegrationData {
+  token: string | null
+  endpoint: string | null
+  snippet: string | null
+}
+
+export async function getLojaIntegration(lojaId: string | number): Promise<LojaIntegrationData> {
+  const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/integration`, {
+    cache: 'no-store',
+    headers: await getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    return { token: null, endpoint: null, snippet: null }
+  }
+
+  const data = await response.json()
+  return {
+    token: data.token ?? null,
+    endpoint: data.endpoint ?? null,
+    snippet: data.snippet ?? null,
+  }
+}
+
 export async function getLojaLeads(
   lojaId: string | number,
   page = 1,

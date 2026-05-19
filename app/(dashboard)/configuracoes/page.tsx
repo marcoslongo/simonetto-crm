@@ -1,6 +1,8 @@
 import { requireAuth } from '@/lib/auth'
 import { KeyRound, User } from 'lucide-react'
 import { ConfiguracoesForm } from './configuracoes-form'
+import { IntegracaoLP } from '@/components/lojas/integracao-lp'
+import { getLojaIntegration } from '@/lib/api-loja'
 
 export const metadata = {
   title: 'Configurações | Noxus - Lead Ops',
@@ -8,6 +10,9 @@ export const metadata = {
 
 export default async function ConfiguracoesPage() {
   const user = await requireAuth()
+
+  const isLoja = user.role === 'loja' && !!user.loja_id
+  const integration = isLoja ? await getLojaIntegration(user.loja_id!) : null
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -35,6 +40,14 @@ export default async function ConfiguracoesPage() {
           <ConfiguracoesForm />
         </div>
       </div>
+
+      {isLoja && integration && (
+        <IntegracaoLP
+          lojaId={String(user.loja_id!)}
+          initialData={integration}
+          isAdmin={false}
+        />
+      )}
     </div>
   )
 }

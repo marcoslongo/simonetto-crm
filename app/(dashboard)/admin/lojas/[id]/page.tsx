@@ -7,6 +7,7 @@ import {
   getLojaStatusFunil,
   getLojaClassificacao,
   getLojaServiceStats,
+  getLojaIntegration,
 } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 import { FunilStatus } from '@/components/lojas/funil-status'
 import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
+import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>
@@ -54,7 +56,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
     )
   }
 
-  const [stats, leads30Days, leads12Months, statusFunil, classificacao, serviceStats] =
+  const [stats, leads30Days, leads12Months, statusFunil, classificacao, serviceStats, integration] =
     await Promise.all([
       getLojaStats(id),
       getLojaLeads30Days(id),
@@ -62,6 +64,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
       getLojaStatusFunil(id),
       getLojaClassificacao(id),
       getLojaServiceStats(id),
+      getLojaIntegration(id),
     ])
 
   return (
@@ -98,6 +101,10 @@ export default async function LojaPage({ params }: LojaPageProps) {
       <div className="grid gap-6 md:grid-cols-2">
         <ChartLeads30Days data={leads30Days} />
         <ChartLeads12Months data={leads12Months} />
+      </div>
+
+      <div>
+        <IntegracaoLP lojaId={id} initialData={integration} isAdmin />
       </div>
     </div>
   )

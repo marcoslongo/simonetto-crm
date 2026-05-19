@@ -136,6 +136,44 @@ class Loja_Handler
   }
 
   /**
+   * Retorna o token de integração LP da loja (null se não gerado ainda)
+   */
+  public static function get_integration_token($loja_id)
+  {
+    return get_post_meta($loja_id, 'lp_integration_token', true) ?: null;
+  }
+
+  /**
+   * Gera (ou regenera) o token de integração LP e salva no meta da loja
+   */
+  public static function generate_integration_token($loja_id)
+  {
+    $token = bin2hex(random_bytes(24));
+    update_post_meta($loja_id, 'lp_integration_token', $token);
+    return $token;
+  }
+
+  /**
+   * Busca loja pelo token de integração LP
+   */
+  public static function get_by_token($token)
+  {
+    if (empty($token)) return null;
+
+    $posts = get_posts([
+      'post_type'      => 'lojas',
+      'post_status'    => 'publish',
+      'posts_per_page' => 1,
+      'meta_query'     => [[
+        'key'   => 'lp_integration_token',
+        'value' => sanitize_text_field($token),
+      ]],
+    ]);
+
+    return !empty($posts) ? $posts[0] : null;
+  }
+
+  /**
    * Estatísticas gerais da loja
    */
   public static function get_stats($loja_id)
