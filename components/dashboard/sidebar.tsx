@@ -90,6 +90,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           group: 'CRM',
           items: [
             { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
+            { name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing },
           ],
         },
         {
