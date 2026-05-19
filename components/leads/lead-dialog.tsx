@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { ChatPanel } from "@/components/chat/chat-panel";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -292,6 +293,7 @@ export function LeadDetailsModal({
                 {lead.mensagem && (
                   <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
                 )}
+                <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
                 {isAdmin && (
                   <TabsTrigger value="historico" onClick={fetchActions}>
                     Histórico
@@ -566,6 +568,15 @@ export function LeadDetailsModal({
                   </div>
                 </TabsContent>
               )}
+
+              {/* Atendimento — chat WhatsApp */}
+              <TabsContent value="atendimento" className="mt-0">
+                <ChatPanel
+                  leadId={lead.id}
+                  telefone={lead.telefone}
+                  lojaId={lead.loja_id ? Number(lead.loja_id) : null}
+                />
+              </TabsContent>
 
               {/* Histórico */}
               {isAdmin && (
