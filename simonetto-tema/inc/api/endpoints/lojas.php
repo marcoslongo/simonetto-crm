@@ -84,6 +84,34 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_get_loja_service_stats',
     'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
+
+  // GET/POST /api/v1/lojas/{id}/whatsapp-config — configuração Evolution API da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/whatsapp-config', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_loja_whatsapp_config',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_loja_whatsapp_config',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
+  // GET/POST /api/v1/settings/whatsapp — URL global do servidor Evolution API (admin)
+  register_rest_route('api/v1', '/settings/whatsapp', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_whatsapp_settings',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_whatsapp_settings',
+      'permission_callback' => 'mytheme_api_is_administrator',
+    ],
+  ]);
 });
 
 /**
@@ -388,4 +416,109 @@ function mytheme_api_get_loja_service_stats($request)
     'success' => true,
     'data'    => $stats,
   ], 200);
+}
+
+// -------------------------------------------------------------------------
+// WhatsApp / Evolution API — configuração por loja
+// -------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/lojas/{id}/whatsapp-config
+ */
+function mytheme_api_get_loja_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = (int) $request['id'];
+  $loja    = get_post($loja_id);
+
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
+  }
+
+  // Autorização: admin ou própria loja
+  $current_user = wp_get_current_user();
+  if (!in_array('administrator', (array) $current_user->roles, true)) {
+    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
+    if ($user_loja !== $loja_id) {
+      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
+    }
+  }
+
+  $instance = get_post_meta($loja_id, '_evolution_instance', true);
+  $api_key  = get_post_meta($loja_id, '_evolution_api_key',  true);
+
+  return new WP_REST_Response([
+    'success'    => true,
+    'instance'   => $instance ?: null,
+    'api_key'    => $api_key ? '••••' . substr($api_key, -4) : null,
+    'configured' => !empty($instance) && !empty($api_key),
+  ], 200);
+}
+
+/**
+ * POST /api/v1/lojas/{id}/whatsapp-config
+ */
+function mytheme_api_save_loja_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = (int) $request['id'];
+  $loja    = get_post($loja_id);
+
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
+  }
+
+  // Autorização: admin ou própria loja
+  $current_user = wp_get_current_user();
+  if (!in_array('administrator', (array) $current_user->roles, true)) {
+    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
+    if ($user_loja !== $loja_id) {
+      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
+    }
+  }
+
+  $body     = $request->get_json_params();
+  $instance = sanitize_text_field($body['instance'] ?? '');
+  $api_key  = sanitize_text_field($body['api_key']  ?? '');
+
+  if (empty($instance)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Nome da instância é obrigatório.'], 400);
+  }
+
+  update_post_meta($loja_id, '_evolution_instance', $instance);
+
+  // Só atualiza a chave se vier uma nova (não o valor mascarado)
+  if (!empty($api_key) && !str_starts_with($api_key, '••••')) {
+    update_post_meta($loja_id, '_evolution_api_key', $api_key);
+  }
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração WhatsApp salva.'], 200);
+}
+
+// -------------------------------------------------------------------------
+// WhatsApp — configurações globais (URL do servidor Evolution)
+// -------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/settings/whatsapp
+ */
+function mytheme_api_get_whatsapp_settings(WP_REST_Request $request): WP_REST_Response
+{
+  $url = get_option('evolution_api_url', '');
+
+  return new WP_REST_Response([
+    'success'           => true,
+    'evolution_api_url' => $url ?: null,
+  ], 200);
+}
+
+/**
+ * POST /api/v1/settings/whatsapp (admin only)
+ */
+function mytheme_api_save_whatsapp_settings(WP_REST_Request $request): WP_REST_Response
+{
+  $body = $request->get_json_params();
+  $url  = esc_url_raw(trim($body['evolution_api_url'] ?? ''));
+
+  update_option('evolution_api_url', $url);
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Configurações salvas.'], 200);
 }

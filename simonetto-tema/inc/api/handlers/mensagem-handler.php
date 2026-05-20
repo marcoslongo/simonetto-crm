@@ -102,6 +102,24 @@ class Mensagem_Handler
   }
 
   // -------------------------------------------------------------------------
+  // BUSCAR loja_id pelo nome da instância Evolution API
+  // -------------------------------------------------------------------------
+
+  public static function find_loja_by_instance(string $instance): ?int
+  {
+    global $wpdb;
+
+    $loja_id = $wpdb->get_var($wpdb->prepare(
+      "SELECT post_id FROM {$wpdb->postmeta}
+       WHERE meta_key = '_evolution_instance' AND meta_value = %s
+       LIMIT 1",
+      $instance
+    ));
+
+    return $loja_id ? intval($loja_id) : null;
+  }
+
+  // -------------------------------------------------------------------------
   // BUSCAR lead_id pelo telefone (para vincular mensagem recebida)
   // -------------------------------------------------------------------------
 

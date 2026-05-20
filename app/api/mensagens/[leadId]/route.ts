@@ -34,7 +34,7 @@ export async function GET(
   return NextResponse.json(data, { status: res.status })
 }
 
-// POST /api/mensagens/[leadId] — enviar mensagem via WhatsApp + salvar no banco
+// POST /api/mensagens/[leadId] — enviar mensagem via Evolution API + salvar (lógica no PHP)
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ leadId: string }> }
@@ -53,56 +53,12 @@ export async function POST(
     return NextResponse.json({ success: false, mensagem: 'Mensagem não pode ser vazia.' }, { status: 400 })
   }
 
-  // 1. Envia via Meta Cloud API (se configurado)
-  let wamid: string | null = null
-  let statusMensagem = 'erro'
-
-  const metaToken = process.env.META_WHATSAPP_TOKEN
-  const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID
-
-  if (metaToken && phoneNumberId && telefone) {
-    try {
-      const cleanPhone = telefone.replace(/\D/g, '')
-      const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
-
-      const metaRes = await fetch(
-        `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${metaToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to: phoneWithCountry,
-            type: 'text',
-            text: { body: conteudo },
-          }),
-        }
-      )
-
-      if (metaRes.ok) {
-        const metaData = await metaRes.json()
-        wamid = metaData?.messages?.[0]?.id ?? null
-        statusMensagem = 'enviada'
-      } else {
-        const err = await metaRes.json()
-        console.error('[Meta API]', err?.error?.message ?? 'Erro desconhecido')
-      }
-    } catch (err) {
-      console.error('[Meta API] Falha ao enviar:', err)
-    }
-  }
-
-  // 2. Salva no banco via WordPress REST API
   const wpPayload = {
     conteudo,
+    telefone,
     direcao: 'enviada',
-    status: statusMensagem,
     canal: 'whatsapp',
     loja_id: loja_id ?? session.user.loja_id,
-    wamid,
   }
 
   const wpRes = await fetch(`${WP_API_BASE}/mensagens/${leadId}`, {
@@ -119,7 +75,7 @@ export async function POST(
 
   if (!wpRes.ok) {
     return NextResponse.json(
-      { success: false, mensagem: wpData?.mensagem ?? 'Erro ao salvar mensagem.' },
+      { success: false, mensagem: wpData?.mensagem ?? 'Erro ao enviar mensagem.' },
       { status: wpRes.status }
     )
   }

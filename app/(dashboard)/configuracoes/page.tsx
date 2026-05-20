@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { KeyRound, User, ShieldCheck } from 'lucide-react'
 import { ConfiguracoesForm } from './configuracoes-form'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
+import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 import { getLojaIntegration } from '@/lib/api-loja'
 
 export const metadata = {
@@ -90,6 +91,14 @@ export default async function ConfiguracoesPage() {
           lojaId={String(user.loja_id!)}
           initialData={integration}
           isAdmin={false}
+        />
+      )}
+
+      {isLoja && (
+        <WhatsAppConfig
+          lojaId={String(user.loja_id!)}
+          isAdmin={false}
+          siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
         />
       )}
     </div>

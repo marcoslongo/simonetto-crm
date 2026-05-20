@@ -20,6 +20,7 @@ import { FunilStatus } from '@/components/lojas/funil-status'
 import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
+import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>
@@ -105,6 +106,10 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
       <div>
         <IntegracaoLP lojaId={id} initialData={integration} isAdmin />
+      </div>
+
+      <div>
+        <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
       </div>
     </div>
   )
