@@ -83,7 +83,14 @@ function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Resp
 {
   global $wpdb;
   $lead_id = intval($request->get_param('lead_id'));
+  $user_id = get_current_user_id();
 
+  // Persiste "lido agora" no mapa de leituras do usuário (wp_usermeta)
+  $read_map                     = get_user_meta($user_id, 'lead_reads', true) ?: [];
+  $read_map[(string) $lead_id]  = current_time('mysql');
+  update_user_meta($user_id, 'lead_reads', $read_map);
+
+  // Atualiza status no banco também para integridade
   $wpdb->query($wpdb->prepare(
     "UPDATE {$wpdb->prefix}mensagens
      SET status = 'vista', atualizado_em = %s
@@ -96,20 +103,20 @@ function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Resp
 }
 
 // -------------------------------------------------------------------------
-// Timestamp da última mensagem recebida por lead (polling do frontend)
-// O cliente compara com o localStorage para decidir se há não lidas,
-// sem depender do campo status do banco.
+// Mensagens não lidas por lead — baseado em wp_usermeta por usuário
 // -------------------------------------------------------------------------
 
 function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_Response
 {
   global $wpdb;
 
+  $user_id = get_current_user_id();
   $loja_id = intval($request->get_param('loja_id'));
 
   $table_msgs  = $wpdb->prefix . 'mensagens';
   $table_leads = $wpdb->prefix . 'leads';
 
+  // Timestamp da mensagem recebida mais recente por lead
   if ($loja_id) {
     $rows = $wpdb->get_results($wpdb->prepare(
       "SELECT m.lead_id, MAX(m.criado_em) AS latest_at
@@ -130,12 +137,34 @@ function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_
     );
   }
 
-  $latest = [];
+  $latest_map = [];
   foreach ($rows as $row) {
-    $latest[(string) $row['lead_id']] = $row['latest_at'];
+    $latest_map[(string) $row['lead_id']] = $row['latest_at'];
   }
 
-  return new WP_REST_Response(['success' => true, 'latest' => $latest], 200);
+  // Mapa de leituras do usuário salvo no wp_usermeta
+  $read_map = get_user_meta($user_id, 'lead_reads', true) ?: [];
+
+  // Primeiro acesso: inicializa todos os leads como "lidos agora"
+  // para não exibir badge em mensagens históricas
+  if (empty($read_map) && !empty($latest_map)) {
+    $now = current_time('mysql');
+    foreach (array_keys($latest_map) as $lid) {
+      $read_map[$lid] = $now;
+    }
+    update_user_meta($user_id, 'lead_reads', $read_map);
+  }
+
+  // Quais leads têm mensagem recebida após a última leitura do usuário
+  $unread = [];
+  foreach ($latest_map as $lead_id => $latest_at) {
+    $last_read = $read_map[$lead_id] ?? null;
+    if ($last_read === null || strtotime($latest_at) > strtotime($last_read)) {
+      $unread[$lead_id] = 1;
+    }
+  }
+
+  return new WP_REST_Response(['success' => true, 'unread' => $unread], 200);
 }
 
 // -------------------------------------------------------------------------

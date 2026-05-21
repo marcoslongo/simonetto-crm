@@ -157,27 +157,11 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
         if (!res.ok) return
         const data = await res.json()
         if (!data.success) return
-        // latest: { leadId: "2024-01-15 10:30:00" } — timestamp da última msg recebida
-        const latest: Record<string, string> = data.latest ?? {}
-        const now = Date.now()
-
+        // unread: { leadId: 1 } — leads com mensagem recebida após última leitura
+        const unread: Record<string, number> = data.unread ?? {}
         setLeads(prev =>
           prev.map(l => {
-            const latestAt = latest[String(l.id)]
-            const key = `lead_read_${l.id}`
-            let lastReadTs = parseInt(localStorage.getItem(key) ?? '0')
-
-            // Primeira visita: inicializa "lido agora" para não mostrar badge
-            // em mensagens históricas que o usuário já conhece
-            if (!lastReadTs) {
-              lastReadTs = now
-              localStorage.setItem(key, String(now))
-            }
-
-            const hasUnread = latestAt
-              ? new Date(latestAt).getTime() > lastReadTs
-              : false
-            const next = hasUnread ? 1 : 0
+            const next = (unread[String(l.id)] ?? 0) > 0 ? 1 : 0
             return l.unread_count === next ? l : { ...l, unread_count: next }
           })
         )
