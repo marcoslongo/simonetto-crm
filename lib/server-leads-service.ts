@@ -163,7 +163,7 @@ export async function registrarContatoLeadServer(params: {
 
 export async function createLeadServer(leadData: {
   nome: string
-  email: string
+  email?: string
   telefone: string
   cidade?: string
   estado?: string

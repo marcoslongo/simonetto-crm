@@ -54,7 +54,7 @@ export type LeadOrigem = 'industria' | 'proprio';
 export interface Lead {
   id: string;
   nome: string;
-  email: string;
+  email?: string;
   telefone: string;
   cidade: string;
   estado: string;

@@ -413,7 +413,7 @@ export async function registrarContatoLead(params: {
 
 export async function createLead(leadData: {
   nome: string;
-  email: string;
+  email?: string;
   telefone: string;
   cidade?: string;
   estado?: string;

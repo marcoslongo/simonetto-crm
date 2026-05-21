@@ -90,7 +90,7 @@ export function IntegracaoLP({ lojaId, initialData, isAdmin = false }: Integraca
   const exampleCode = `<!-- Exemplo: enviar lead ao submeter o formulário -->
 <form id="form-lp">
   <input name="nome"     placeholder="Seu nome"     required />
-  <input name="email"    placeholder="Seu e-mail"   required />
+  <input name="email"    placeholder="Seu e-mail" />
   <input name="telefone" placeholder="Seu telefone" required />
   <textarea name="mensagem" placeholder="Mensagem"></textarea>
   <button type="submit">Enviar</button>
@@ -331,7 +331,7 @@ export function IntegracaoLP({ lojaId, initialData, isAdmin = false }: Integraca
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   { name: 'nome', req: true },
-                  { name: 'email', req: true },
+                  { name: 'email', req: false },
                   { name: 'telefone', req: true },
                   { name: 'cidade', req: false },
                   { name: 'estado', req: false },

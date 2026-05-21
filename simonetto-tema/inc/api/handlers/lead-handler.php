@@ -288,11 +288,11 @@ class Lead_Handler
   {
     global $wpdb;
 
-    if (empty($params['nome']) || empty($params['email']) || empty($params['telefone'])) {
-      return new WP_Error('missing_fields', 'Nome, email e telefone são obrigatórios.', ['status' => 400]);
+    if (empty($params['nome']) || empty($params['telefone'])) {
+      return new WP_Error('missing_fields', 'Nome e telefone são obrigatórios.', ['status' => 400]);
     }
 
-    if (!is_email($params['email'])) {
+    if (!empty($params['email']) && !is_email($params['email'])) {
       return new WP_Error('invalid_email', 'E-mail inválido.', ['status' => 400]);
     }
 
