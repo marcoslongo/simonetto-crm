@@ -73,6 +73,7 @@ interface LeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onContatoRealizado?: () => void;
+  onMessagesRead?: (leadId: string) => void;
   isAdmin?: boolean;
   lojas?: LojaOption[];
 }
@@ -102,6 +103,7 @@ export function LeadDetailsModal({
   open,
   onOpenChange,
   onContatoRealizado,
+  onMessagesRead,
   isAdmin,
   lojas = [],
 }: LeadDialogProps) {
@@ -110,7 +112,9 @@ export function LeadDetailsModal({
   // Marca mensagens como lidas quando o dialog abre
   useEffect(() => {
     if (open && lead.id) {
-      fetch(`/api/mensagens/${lead.id}/read`, { method: 'POST' }).catch(() => {})
+      fetch(`/api/mensagens/${lead.id}/read`, { method: 'POST' })
+        .then(() => onMessagesRead?.(String(lead.id)))
+        .catch(() => {})
     }
   }, [open, lead.id])
 

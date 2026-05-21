@@ -39,6 +39,15 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET /api/v1/mensagens/unread-counts — contagem de não lidas por lead (para polling)
+  register_rest_route('api/v1', '/mensagens/unread-counts', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_mensagens_unread_counts',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
   // POST /api/v1/mensagens/evolution-webhook — webhook da Evolution API
   register_rest_route('api/v1', '/mensagens/evolution-webhook', [
     [
@@ -84,6 +93,49 @@ function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Resp
   );
 
   return new WP_REST_Response(['success' => true], 200);
+}
+
+// -------------------------------------------------------------------------
+// CONTAR mensagens não lidas por lead (polling do frontend)
+// -------------------------------------------------------------------------
+
+function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_Response
+{
+  global $wpdb;
+
+  $loja_id = intval($request->get_param('loja_id'));
+
+  $table_msgs  = $wpdb->prefix . 'mensagens';
+  $table_leads = $wpdb->prefix . 'leads';
+
+  if ($loja_id) {
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT m.lead_id, COUNT(*) AS unread_count
+       FROM {$table_msgs} m
+       INNER JOIN {$table_leads} l ON l.id = m.lead_id
+       WHERE m.direcao = 'recebida'
+         AND m.status  = 'recebida'
+         AND l.loja_id = %d
+       GROUP BY m.lead_id",
+      $loja_id
+    ), ARRAY_A);
+  } else {
+    $rows = $wpdb->get_results(
+      "SELECT lead_id, COUNT(*) AS unread_count
+       FROM {$table_msgs}
+       WHERE direcao = 'recebida'
+         AND status  = 'recebida'
+       GROUP BY lead_id",
+      ARRAY_A
+    );
+  }
+
+  $counts = [];
+  foreach ($rows as $row) {
+    $counts[(string) $row['lead_id']] = (int) $row['unread_count'];
+  }
+
+  return new WP_REST_Response(['success' => true, 'counts' => $counts], 200);
 }
 
 // -------------------------------------------------------------------------

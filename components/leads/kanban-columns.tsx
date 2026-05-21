@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -90,8 +90,6 @@ const COLUNAS = [
   },
 ] as const
 
-type StatusKey = typeof COLUNAS[number]['key']
-
 const INITIAL_VISIBLE = 10
 const LOAD_MORE_STEP = 3
 
@@ -131,14 +129,46 @@ interface KanbanColumnsProps {
   onLeadClick?: (lead: Lead) => void
   isAdmin?: boolean
   lojas?: Array<{ id: number; nome: string }>
+  lojaId?: string | number
 }
 
-export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [] }: KanbanColumnsProps) {
+const POLL_INTERVAL = 30_000
+
+export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
+  const isModalOpenRef = useRef(isModalOpen)
+
+  useEffect(() => {
+    isModalOpenRef.current = isModalOpen
+  }, [isModalOpen])
+
+  useEffect(() => {
+    const qs = lojaId ? `?loja_id=${lojaId}` : ''
+
+    const poll = async () => {
+      if (isModalOpenRef.current) return
+      try {
+        const res = await fetch(`/api/mensagens/unread${qs}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!data.success) return
+        const counts: Record<string, number> = data.counts ?? {}
+        setLeads(prev =>
+          prev.map(l => {
+            const c = counts[String(l.id)] ?? 0
+            return l.unread_count === c ? l : { ...l, unread_count: c }
+          })
+        )
+      } catch {}
+    }
+
+    const id = setInterval(poll, POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [lojaId])
 
   const getVisible = (status: string) => visibleCount[status] ?? INITIAL_VISIBLE
   const loadMore = (status: string) =>
@@ -243,6 +273,12 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
     onLeadClick?.(lead)
   }
 
+  const handleMessagesRead = (leadId: string) => {
+    setLeads(prev =>
+      prev.map(l => String(l.id) === leadId ? { ...l, unread_count: 0 } : l)
+    )
+  }
+
   return (
     <>
       <DndContext
@@ -287,6 +323,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
           lead={selectedLead}
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
+          onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
           lojas={lojas}
         />

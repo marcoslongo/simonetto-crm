@@ -40,7 +40,7 @@ export default async function CrmAtendimentoPage() {
         </p>
       </div>
 
-      <KanbanColumns leads={leads} />
+      <KanbanColumns leads={leads} lojaId={lojaId} />
     </div>
   )
 }
