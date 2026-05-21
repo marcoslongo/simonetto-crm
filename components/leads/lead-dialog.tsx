@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +106,13 @@ export function LeadDetailsModal({
   lojas = [],
 }: LeadDialogProps) {
   const router = useRouter();
+
+  // Marca mensagens como lidas quando o dialog abre
+  useEffect(() => {
+    if (open && lead.id) {
+      fetch(`/api/mensagens/${lead.id}/read`, { method: 'POST' }).catch(() => {})
+    }
+  }, [open, lead.id])
 
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [actions, setActions] = useState<any[]>([]);
@@ -341,7 +348,7 @@ export function LeadDetailsModal({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={() => copyToClipboard(lead.email)}
+                              onClick={() => copyToClipboard(lead.email ?? '')}
                               className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-background transition-colors"
                             >
                               <Copy className="h-4 w-4 text-muted-foreground hover:text-card-foreground" />

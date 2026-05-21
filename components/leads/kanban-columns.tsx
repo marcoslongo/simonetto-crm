@@ -477,14 +477,21 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
           </TooltipContent>
         </Tooltip>
 
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            onClick={onOpen}
-            title="Ver detalhes"
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {(lead.unread_count ?? 0) > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {lead.unread_count! > 99 ? '99+' : lead.unread_count}
+            </span>
+          )}
+          <div className="opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              onClick={onOpen}
+              title="Ver detalhes"
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </TooltipProvider>

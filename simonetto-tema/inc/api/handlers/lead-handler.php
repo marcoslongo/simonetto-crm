@@ -444,8 +444,14 @@ class Lead_Handler
     $query_values[] = $per_page;
     $query_values[] = $offset;
 
+    $table_msgs = $wpdb->prefix . 'mensagens';
+
     $leads = $wpdb->get_results($wpdb->prepare(
-      "SELECT l.*
+      "SELECT l.*,
+         (SELECT COUNT(*) FROM {$table_msgs} m
+          WHERE m.lead_id = l.id
+            AND m.direcao = 'recebida'
+            AND m.status  = 'recebida') AS unread_count
        FROM {$table_name} l
        {$where_sql}
        ORDER BY l.data_criacao DESC
@@ -676,6 +682,7 @@ class Lead_Handler
     $lead['status']         = $lead['status']         ?? 'nao_atendido';
     $lead['classificacao']  = $lead['classificacao']  ?? 'frio';
     $lead['score']          = isset($lead['score']) ? (int) $lead['score'] : 0;
+    $lead['unread_count']   = isset($lead['unread_count']) ? (int) $lead['unread_count'] : 0;
 
     if ($lead['loja_id']) {
       $loja_id = intval($lead['loja_id']);

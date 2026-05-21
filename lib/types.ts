@@ -73,6 +73,7 @@ export interface Lead {
   loja_estado: string;
   classificacao?: "quente" | "morno" | "frio";
   score?: number;
+  unread_count?: number;
 }
 
 export interface LeadsResponse {

@@ -30,6 +30,15 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // POST /api/v1/mensagens/{lead_id}/read — marcar mensagens recebidas como lidas
+  register_rest_route('api/v1', '/mensagens/(?P<lead_id>\d+)/read', [
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_mark_mensagens_read',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
   // POST /api/v1/mensagens/evolution-webhook — webhook da Evolution API
   register_rest_route('api/v1', '/mensagens/evolution-webhook', [
     [
@@ -55,6 +64,26 @@ function mytheme_api_list_mensagens(WP_REST_Request $request): WP_REST_Response
     'mensagens' => $mensagens,
     'total'     => count($mensagens),
   ], 200);
+}
+
+// -------------------------------------------------------------------------
+// MARCAR mensagens recebidas como lidas (agente abriu o chat)
+// -------------------------------------------------------------------------
+
+function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Response
+{
+  global $wpdb;
+  $lead_id = intval($request->get_param('lead_id'));
+
+  $wpdb->update(
+    $wpdb->prefix . 'mensagens',
+    ['status' => 'vista', 'atualizado_em' => current_time('mysql')],
+    ['lead_id' => $lead_id, 'direcao' => 'recebida', 'status' => 'recebida'],
+    ['%s', '%s'],
+    ['%d', '%s', '%s']
+  );
+
+  return new WP_REST_Response(['success' => true], 200);
 }
 
 // -------------------------------------------------------------------------
