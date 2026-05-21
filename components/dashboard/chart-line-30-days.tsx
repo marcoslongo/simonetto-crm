@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, Eraser, LocateFixed, Search, Store, TrendingUp, X } from "lucide-react"
+import { Building2, CalendarIcon, Eraser, LocateFixed, Search, Store, TrendingUp, X } from "lucide-react"
 import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -69,6 +69,14 @@ function normalizeLeads(data: any[], from: string, to: string) {
   return result
 }
 
+type Origem = 'todos' | 'industria' | 'proprio'
+
+const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] = [
+  { value: 'todos', label: 'Todos', icon: null },
+  { value: 'industria', label: 'Indústria', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { value: 'proprio', label: 'Lojistas', icon: <Store className="h-3.5 w-3.5" /> },
+]
+
 export function ChartLeads30Days({
   data: initialData,
   lojaId,
@@ -81,32 +89,35 @@ export function ChartLeads30Days({
   const [to, setTo] = useState<Date | undefined>()
   const [loading, setLoading] = useState(false)
   const [isFiltered, setIsFiltered] = useState(false)
+  const [origem, setOrigem] = useState<Origem>('todos')
 
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [leadsDay, setLeadsDay] = useState<any[]>([])
   const [loadingDialog, setLoadingDialog] = useState(false)
 
-  async function handleBuscar() {
-    if (!from || !to) return
-
+  async function fetchData(fromDate?: Date, toDate?: Date, origemVal: Origem = origem) {
     setLoading(true)
-
     try {
-      const res = await getLeadsStatsFilterDateStats(
-        format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd"),
-        lojaId,
-      )
-
-      const normalized = normalizeLeads(
-        res.data,
-        format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd")
-      )
-
-      setData(normalized)
-      setIsFiltered(true)
+      if (fromDate && toDate) {
+        const res = await getLeadsStatsFilterDateStats(
+          format(fromDate, "yyyy-MM-dd"),
+          format(toDate, "yyyy-MM-dd"),
+          lojaId,
+          origemVal === 'todos' ? undefined : origemVal,
+        )
+        setData(normalizeLeads(res.data, format(fromDate, "yyyy-MM-dd"), format(toDate, "yyyy-MM-dd")))
+        setIsFiltered(true)
+      } else {
+        const params = new URLSearchParams()
+        if (lojaId) params.set("loja_id", String(lojaId))
+        if (origemVal !== 'todos') params.set("origem", origemVal)
+        const res = await fetch(`/api/leads-30dias?${params.toString()}`)
+        const json = await res.json()
+        const raw = json.data ?? []
+        setData(raw.map((i: any) => ({ date: i.data, total: parseInt(i.total) || 0 })))
+        setIsFiltered(false)
+      }
     } catch (error) {
       console.error(error)
     } finally {
@@ -114,11 +125,22 @@ export function ChartLeads30Days({
     }
   }
 
+  async function handleBuscar() {
+    if (!from || !to) return
+    await fetchData(from, to, origem)
+  }
+
+  async function handleOrigemChange(val: Origem) {
+    setOrigem(val)
+    await fetchData(isFiltered ? from : undefined, isFiltered ? to : undefined, val)
+  }
+
   function handleLimpar() {
     setFrom(undefined)
     setTo(undefined)
     setData(initialData)
     setIsFiltered(false)
+    setOrigem('todos')
   }
 
   async function handleChartClick(e: any) {
@@ -173,6 +195,24 @@ export function ChartLeads30Days({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* Filtro de origem */}
+              <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
+                {origemOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleOrigemChange(opt.value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      origem === opt.value
+                        ? 'bg-[#16255c] text-white'
+                        : 'text-[#16255c]/70 hover:bg-slate-100'
+                    }`}
+                  >
+                    {opt.icon}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-40 justify-start">

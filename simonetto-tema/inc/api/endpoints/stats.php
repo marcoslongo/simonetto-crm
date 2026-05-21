@@ -99,9 +99,15 @@ function mytheme_api_stats_by_store($request)
 
 function mytheme_api_stats_30_days($request)
 {
+  $origem = $request->get_param('origem');
+  $allowed = ['industria', 'proprio'];
+  if ($origem && !in_array($origem, $allowed, true)) {
+    $origem = null;
+  }
+
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::last_30_days()
+    'data' => Stats_Handler::last_30_days($origem)
   ], 200);
 }
 

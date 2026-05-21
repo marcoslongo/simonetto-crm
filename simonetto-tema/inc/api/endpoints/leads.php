@@ -682,6 +682,11 @@ function mytheme_api_leads_stats(WP_REST_Request $request)
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to = sanitize_text_field($request->get_param('to') ?? '');
   $loja_id = intval($request->get_param('loja_id'));
+  $origem = sanitize_text_field($request->get_param('origem') ?? '');
+  $allowed_origem = ['industria', 'proprio'];
+  if (!in_array($origem, $allowed_origem, true)) {
+    $origem = '';
+  }
 
   if (!$from || !$to) {
     return new WP_REST_Response([
@@ -698,6 +703,11 @@ function mytheme_api_leads_stats(WP_REST_Request $request)
   if ($loja_id) {
     $where_clauses[] = "loja_id = %d";
     $prepare_values[] = $loja_id;
+  }
+
+  if ($origem) {
+    $where_clauses[] = "origem = %s";
+    $prepare_values[] = $origem;
   }
 
   $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);

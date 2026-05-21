@@ -102,16 +102,21 @@ class Stats_Handler
   /**
    * Leads últimos 30 dias
    */
-  public static function last_30_days()
+  public static function last_30_days($origem = null)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
 
+    $where = "WHERE data_criacao >= CURDATE() - INTERVAL 30 DAY";
+    if ($origem && in_array($origem, ['industria', 'proprio'], true)) {
+      $where .= $wpdb->prepare(" AND origem = %s", $origem);
+    }
+
     return $wpdb->get_results("
       SELECT DATE(data_criacao) as data, COUNT(*) as total
       FROM {$table}
-      WHERE data_criacao >= CURDATE() - INTERVAL 30 DAY
+      {$where}
       GROUP BY DATE(data_criacao)
       ORDER BY data ASC
     ");

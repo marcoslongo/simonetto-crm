@@ -122,9 +122,9 @@ export async function getLeadsPorLojaServer() {
   return getLeadsPorLoja(token)
 }
 
-export async function getLeadsLast30DaysServer(from?: string, to?: string) {
+export async function getLeadsLast30DaysServer(from?: string, to?: string, origem?: 'industria' | 'proprio') {
   const token = await getToken()
-  return getLeadsLast30Days(from, to, token)
+  return getLeadsLast30Days(from, to, token, origem)
 }
 
 export async function getLeadsStatusTotalServer(from?: string, to?: string, lojaId?: number) {

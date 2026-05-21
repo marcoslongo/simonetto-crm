@@ -188,11 +188,14 @@ export async function getLeadsPorLoja(token?: string) {
   return grouped;
 }
 
-export async function getLeadsLast30Days(from?: string, to?: string, token?: string) {
+export async function getLeadsLast30Days(from?: string, to?: string, token?: string, origem?: 'industria' | 'proprio') {
   let endpoint = `leads-30dias`;
+  const params: string[] = [];
 
-  if (from) endpoint += `?from=${from}`;
-  if (to)   endpoint += `${from ? "&" : "?"}to=${to}`;
+  if (from)   params.push(`from=${from}`);
+  if (to)     params.push(`to=${to}`);
+  if (origem) params.push(`origem=${encodeURIComponent(origem)}`);
+  if (params.length) endpoint += `?${params.join('&')}`;
 
   const json = await fetchAPI(endpoint, 'Erro ao buscar leads período', token);
 
@@ -222,10 +225,12 @@ export async function getLeadsStatsFilterDate(from: string, to: string) {
 export async function getLeadsStatsFilterDateStats(
   from: string,
   to: string,
-  lojaId?: string | number
+  lojaId?: string | number,
+  origem?: 'industria' | 'proprio'
 ) {
   const params = new URLSearchParams({ from, to });
   if (lojaId) params.set("loja_id", String(lojaId));
+  if (origem) params.set("origem", origem);
 
   const url = `${process.env.NEXT_PUBLIC_WP_URL}/wp-json/api/v1/leads/stats?${params.toString()}`;
 
