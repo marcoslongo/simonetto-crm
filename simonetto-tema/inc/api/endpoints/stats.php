@@ -61,9 +61,15 @@ add_action('rest_api_init', function () {
 
 function mytheme_api_stats_general($request)
 {
+  $origem = $request->get_param('origem');
+  $allowed = ['industria', 'proprio'];
+  if ($origem && !in_array($origem, $allowed, true)) {
+    $origem = null;
+  }
+
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::get_general()
+    'data' => Stats_Handler::get_general($origem)
   ], 200);
 }
 

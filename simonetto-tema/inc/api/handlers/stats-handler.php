@@ -14,23 +14,31 @@ class Stats_Handler
   /**
    * Estatísticas gerais
    */
-  public static function get_general()
+  public static function get_general($origem = null)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
 
-    $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+    $where = '';
+    if ($origem && in_array($origem, ['industria', 'proprio'], true)) {
+      $where = $wpdb->prepare(" WHERE origem = %s", $origem);
+    }
+
+    $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}{$where}");
+
+    $today_where = $where
+      ? $where . " AND DATE(data_criacao) = CURDATE()"
+      : " WHERE DATE(data_criacao) = CURDATE()";
 
     $today = $wpdb->get_var("
-      SELECT COUNT(*) 
-      FROM {$table}
-      WHERE DATE(data_criacao) = CURDATE()
+      SELECT COUNT(*)
+      FROM {$table}{$today_where}
     ");
 
     $ultima = $wpdb->get_var("
       SELECT MAX(data_criacao)
-      FROM {$table}
+      FROM {$table}{$where}
     ");
 
     return array(

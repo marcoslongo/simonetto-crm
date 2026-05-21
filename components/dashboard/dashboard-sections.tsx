@@ -1,5 +1,6 @@
 import {
   getLeadsStatsGeralServer,
+  getLeadsStatsByOrigemServer,
   getLeadsStatsServiceServer,
   getTempoMedioPorLojaServer,
   getLeadsLast30DaysServer,
@@ -21,6 +22,7 @@ import {
 } from '@/lib/server-leads-service'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
+import { StatsCardsOrigem } from '@/components/dashboard/stats-cards-origem'
 import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { formatLastCapture } from '@/lib/utils'
 import ChartLeadsContato from '@/components/dashboard/chart-leads-contato'
@@ -50,6 +52,17 @@ export async function StatsSection() {
       totalLeads={statsGeral.total}
       leadsHoje={statsGeral.today}
       ultimaCaptura={formatLastCapture(statsGeral.ultimaCaptura)}
+    />
+  )
+}
+
+export async function StatsByOrigemSection() {
+  const { industria, proprio } = await getLeadsStatsByOrigemServer()
+
+  return (
+    <StatsCardsOrigem
+      industria={{ total: industria.total, today: industria.today }}
+      proprio={{ total: proprio.total, today: proprio.today }}
     />
   )
 }

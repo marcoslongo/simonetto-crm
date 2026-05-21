@@ -83,9 +83,18 @@ export async function getLojasWithStatsServer() {
   return getLojasWithStats(token)
 }
 
-export async function getLeadsStatsGeralServer() {
+export async function getLeadsStatsGeralServer(origem?: 'industria' | 'proprio') {
   const token = await getToken()
-  return getLeadsStatsGeral(token)
+  return getLeadsStatsGeral(token, origem)
+}
+
+export async function getLeadsStatsByOrigemServer() {
+  const token = await getToken()
+  const [industria, proprio] = await Promise.all([
+    getLeadsStatsGeral(token, 'industria'),
+    getLeadsStatsGeral(token, 'proprio'),
+  ])
+  return { industria, proprio }
 }
 
 export async function getLeadsPorInvestimentoServer() {

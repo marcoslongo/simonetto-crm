@@ -8,6 +8,7 @@ import {
   Leads30DaysSection,
   Leads12MonthsSection,
   StatsSection,
+  StatsByOrigemSection,
 } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
@@ -30,6 +31,10 @@ export default async function AdminDashboardPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
+      </Suspense>
+
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <StatsByOrigemSection />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>

@@ -93,9 +93,11 @@ export async function getLojasWithStats(token?: string) {
   return data;
 }
 
-export async function getLeadsStatsGeral(token?: string) {
-  const json = await fetchAPI('leads-stats-geral', 'Erro ao buscar stats gerais', token);
-  
+export async function getLeadsStatsGeral(token?: string, origem?: 'industria' | 'proprio') {
+  let endpoint = 'leads-stats-geral'
+  if (origem) endpoint += `?origem=${encodeURIComponent(origem)}`
+  const json = await fetchAPI(endpoint, 'Erro ao buscar stats gerais', token);
+
   return json.data || {
     total: 0,
     today: 0,
