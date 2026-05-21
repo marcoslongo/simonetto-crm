@@ -200,22 +200,6 @@ function mytheme_download_whatsapp_media(array $msg, string $msg_key, string $wa
 
   $media_obj = $msg[$msg_key] ?? [];
 
-  // Log temporário — captura chaves do objeto de mídia para diagnóstico
-  $log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
-  if (!is_dir($log_dir)) wp_mkdir_p($log_dir);
-  file_put_contents(
-    $log_dir . '/media-keys-' . time() . '.json',
-    wp_json_encode([
-      'msg_key'    => $msg_key,
-      'obj_keys'   => array_keys($media_obj),
-      'has_URL'    => isset($media_obj['URL']),
-      'has_url'    => isset($media_obj['url']),
-      'has_MediaKey' => isset($media_obj['MediaKey']),
-      'has_mediaKey' => isset($media_obj['mediaKey']),
-      'mimetype'   => $media_obj['Mimetype'] ?? ($media_obj['mimetype'] ?? null),
-    ], JSON_PRETTY_PRINT)
-  );
-
   // Suporta PascalCase (Go JSON padrão) e camelCase
   $url      = $media_obj['URL']      ?? ($media_obj['url']      ?? null);
   $b64_key  = $media_obj['MediaKey'] ?? ($media_obj['mediaKey'] ?? null);
