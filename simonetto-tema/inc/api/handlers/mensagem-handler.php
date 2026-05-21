@@ -40,8 +40,12 @@ class Mensagem_Handler
   {
     global $wpdb;
 
-    if (empty($params['lead_id']) || empty($params['conteudo'])) {
+    $has_media = !empty($params['metadata']['media_url']) || !empty($params['media_url']);
+    if (empty($params['lead_id']) || (empty($params['conteudo']) && !$has_media)) {
       return new WP_Error('missing_fields', 'lead_id e conteudo são obrigatórios.', ['status' => 400]);
+    }
+    if (empty($params['conteudo']) && $has_media) {
+      $params['conteudo'] = '[Mídia]';
     }
 
     $direcao_allowed = ['enviada', 'recebida'];

@@ -47,18 +47,26 @@ export async function POST(
   const { leadId } = await params
   const token = await getAuthToken()
   const body = await req.json()
-  const { conteudo, telefone, loja_id } = body
+  const { conteudo, telefone, loja_id, media_url, media_type, caption, filename, mimetype } = body
 
-  if (!conteudo?.trim()) {
+  if (!conteudo?.trim() && !media_url) {
     return NextResponse.json({ success: false, mensagem: 'Mensagem não pode ser vazia.' }, { status: 400 })
   }
 
-  const wpPayload = {
-    conteudo,
+  const wpPayload: Record<string, unknown> = {
+    conteudo: conteudo ?? '',
     telefone,
     direcao: 'enviada',
     canal: 'whatsapp',
     loja_id: loja_id ?? session.user.loja_id,
+  }
+
+  if (media_url) {
+    wpPayload.media_url  = media_url
+    wpPayload.media_type = media_type
+    wpPayload.caption    = caption  ?? ''
+    wpPayload.filename   = filename ?? ''
+    wpPayload.mimetype   = mimetype ?? ''
   }
 
   const wpRes = await fetch(`${WP_API_BASE}/mensagens/${leadId}`, {

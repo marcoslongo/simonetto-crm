@@ -66,14 +66,17 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
   $lead_id = intval($request->get_param('lead_id'));
   $body    = $request->get_json_params();
 
-  $telefone = sanitize_text_field($body['telefone'] ?? '');
-  $loja_id  = !empty($body['loja_id']) ? intval($body['loja_id']) : null;
-  $conteudo = $body['conteudo'] ?? '';
+  $telefone   = sanitize_text_field($body['telefone']   ?? '');
+  $loja_id    = !empty($body['loja_id'])    ? intval($body['loja_id'])    : null;
+  $conteudo   = $body['conteudo']   ?? '';
+  $media_url  = $body['media_url']  ?? null;
+  $media_type = $body['media_type'] ?? null; // 'image' | 'document' | 'audio' | 'video'
+  $caption    = $body['caption']    ?? '';
+  $filename   = $body['filename']   ?? '';
 
   $wamid  = null;
   $status = 'erro';
 
-  // Enviar via Evolution API se a loja tiver credenciais configuradas
   if ($loja_id && $telefone) {
     $evo_url      = get_option('evolution_api_url', '');
     $evo_instance = get_post_meta($loja_id, '_evolution_instance', true);
@@ -85,34 +88,73 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
         $phone_clean = '55' . $phone_clean;
       }
 
-      $evo_response = wp_remote_post(
-        trailingslashit($evo_url) . 'send/text',
-        [
-          'timeout'   => 15,
-          'sslverify' => false,
-          'headers'   => [
-            'apikey'       => $evo_key,
-            'Content-Type' => 'application/json',
-          ],
-          'body' => wp_json_encode([
-            'instanceId' => $evo_instance,
-            'number'     => $phone_clean,
-            'text'       => $conteudo,
-          ]),
-        ]
-      );
+      if ($media_url) {
+        // Enviar mídia via Evolution Go
+        $evo_payload = [
+          'instanceId' => $evo_instance,
+          'number'     => $phone_clean,
+          'type'       => $media_type ?? 'document',
+          'url'        => $media_url,
+        ];
+        if ($caption)  $evo_payload['caption']  = $caption;
+        if ($filename) $evo_payload['filename']  = $filename;
+
+        $evo_response = wp_remote_post(
+          trailingslashit($evo_url) . 'send/media',
+          [
+            'timeout'   => 30,
+            'sslverify' => false,
+            'headers'   => [
+              'apikey'       => $evo_key,
+              'Content-Type' => 'application/json',
+            ],
+            'body' => wp_json_encode($evo_payload),
+          ]
+        );
+      } else {
+        // Enviar texto
+        $evo_response = wp_remote_post(
+          trailingslashit($evo_url) . 'send/text',
+          [
+            'timeout'   => 15,
+            'sslverify' => false,
+            'headers'   => [
+              'apikey'       => $evo_key,
+              'Content-Type' => 'application/json',
+            ],
+            'body' => wp_json_encode([
+              'instanceId' => $evo_instance,
+              'number'     => $phone_clean,
+              'text'       => $conteudo,
+            ]),
+          ]
+        );
+      }
 
       $evo_code = !is_wp_error($evo_response) ? wp_remote_retrieve_response_code($evo_response) : null;
-      $evo_body = !is_wp_error($evo_response) ? wp_remote_retrieve_body($evo_response) : null;
-      $evo_err  = is_wp_error($evo_response)  ? $evo_response->get_error_message()     : null;
+      $evo_body = !is_wp_error($evo_response) ? wp_remote_retrieve_body($evo_response)           : null;
+      $evo_err  = is_wp_error($evo_response)  ? $evo_response->get_error_message()               : null;
 
       if (!is_wp_error($evo_response) && $evo_code < 300) {
         $evo_data = json_decode($evo_body, true);
-        // Evolution Go retorna: { "data": { "Info": { "ID": "..." } }, "message": "success" }
-        $wamid  = $evo_data['data']['Info']['ID'] ?? null;
-        $status = 'enviada';
+        $wamid    = $evo_data['data']['Info']['ID'] ?? null;
+        $status   = 'enviada';
       }
     }
+  }
+
+  $meta = isset($evo_err) || isset($evo_code) ? [
+    'http_code'     => $evo_code ?? null,
+    'error'         => $evo_err  ?? null,
+    'response_body' => $evo_body ?? null,
+  ] : null;
+
+  if ($media_url) {
+    $meta = array_merge($meta ?? [], [
+      'media_type' => $media_type,
+      'media_url'  => $media_url,
+      'mimetype'   => $body['mimetype'] ?? null,
+    ]);
   }
 
   $result = Mensagem_Handler::create(array_merge($body, [
@@ -120,11 +162,7 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
     'usuario_id' => get_current_user_id(),
     'status'     => $status,
     'wamid'      => $wamid,
-    'metadata'   => isset($evo_err) || isset($evo_code) ? [
-      'http_code'     => $evo_code ?? null,
-      'error'         => $evo_err  ?? null,
-      'response_body' => $evo_body ?? null,
-    ] : null,
+    'metadata'   => $meta,
   ]));
 
   if (is_wp_error($result)) {
@@ -190,48 +228,114 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   $timestamp = $info['Timestamp'] ?? '';
   $msg_type  = $info['Type']      ?? '';
 
-  // Ignora grupos e newsletters
-  if (str_contains($chat, '@g.us') || str_contains($chat, '@newsletter') || str_contains($chat, '@lid')) {
+  // Ignora grupos, newsletters e JIDs @lid
+  if (
+    empty($chat) ||
+    str_contains($chat, '@g.us') ||
+    str_contains($chat, '@newsletter') ||
+    str_contains($chat, '@lid')
+  ) {
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
-  // Extrai texto (texto simples ou ExtendedTextMessage)
+  $phone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat));
   $msg   = $data['Message'] ?? [];
+
+  // Texto da mensagem (suporta texto simples e extendido; caption de imagem/doc)
   $texto = $msg['conversation']
         ?? ($msg['extendedTextMessage']['text']
         ?? ($msg['text']
         ?? ($msg['caption'] ?? '')));
 
-  $phone = !empty($chat) ? preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat)) : '';
+  // Detecta tipo de mídia
+  $media_map = [
+    'pttMessage'      => 'audio',
+    'audioMessage'    => 'audio',
+    'imageMessage'    => 'image',
+    'documentMessage' => 'document',
+    'videoMessage'    => 'video',
+    'stickerMessage'  => 'sticker',
+  ];
+  $detected_msg_key    = null;
+  $detected_media_type = null;
+  foreach ($media_map as $mk => $mt) {
+    if (!empty($msg[$mk])) {
+      $detected_msg_key    = $mk;
+      $detected_media_type = $mt;
+      break;
+    }
+  }
 
-  // Log de diagnóstico — captura payload completo + resultado do processamento
-  $log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
-  if (!is_dir($log_dir)) wp_mkdir_p($log_dir);
-  file_put_contents(
-    $log_dir . '/flow-' . time() . '.json',
-    wp_json_encode([
-      'event'       => $event,
-      'instance'    => $instance,
-      'loja_id'     => $loja_id,
-      'chat'        => $chat,
-      'fromMe'      => $info['IsFromMe'] ?? null,
-      'phone'       => $phone,
-      'texto'       => $texto,
-      'chat_empty'  => empty($chat),
-      'texto_empty' => empty($texto),
-      'lead_id'     => $phone ? Mensagem_Handler::find_lead_by_phone($phone) : null,
-      'info_keys'   => array_keys($info),
-      'msg_keys'    => array_keys($data['Message'] ?? []),
-    ], JSON_PRETTY_PRINT)
-  );
-
-  if (empty($chat) || empty($texto)) {
+  // Ignora se não tem texto nem mídia reconhecida
+  if (empty($texto) && !$detected_media_type) {
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
   $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
   if (!$lead_id) {
     return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
+  }
+
+  // Baixa a mídia se houver
+  $media_url  = null;
+  $media_mime = null;
+  if ($detected_media_type) {
+    $evo_url_opt  = get_option('evolution_api_url', '');
+    $evo_inst_opt = get_post_meta($loja_id, '_evolution_instance', true);
+    $evo_key_opt  = get_post_meta($loja_id, '_evolution_api_key', true);
+
+    if ($evo_url_opt && $evo_key_opt) {
+      $dl = wp_remote_post(
+        trailingslashit($evo_url_opt) . 'message/downloadimage',
+        [
+          'timeout'   => 30,
+          'sslverify' => false,
+          'headers'   => [
+            'apikey'       => $evo_key_opt,
+            'Content-Type' => 'application/json',
+          ],
+          'body' => wp_json_encode([
+            'instanceId' => $evo_inst_opt,
+            'message'    => $msg,
+          ]),
+        ]
+      );
+
+      if (!is_wp_error($dl) && wp_remote_retrieve_response_code($dl) < 300) {
+        $dl_data    = json_decode(wp_remote_retrieve_body($dl), true);
+        $b64        = $dl_data['data'] ?? null;
+        $media_mime = $dl_data['mimetype'] ?? 'application/octet-stream';
+
+        if ($b64) {
+          $raw_ext   = strtolower(explode(';', explode('/', $media_mime)[1] ?? '')[0] ?? 'bin');
+          $safe_exts = ['ogg', 'mp3', 'mp4', 'pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'aac', 'webm', 'opus'];
+          $ext       = in_array($raw_ext, $safe_exts, true) ? $raw_ext : 'bin';
+
+          $upload_dir = WP_CONTENT_DIR . '/uploads/whatsapp-media';
+          if (!is_dir($upload_dir)) wp_mkdir_p($upload_dir);
+
+          $safe_wamid = sanitize_key(str_replace(['/', '\\', ':'], '-', $wamid));
+          $filename   = 'wa-' . $safe_wamid . '.' . $ext;
+          $filepath   = $upload_dir . '/' . $filename;
+          file_put_contents($filepath, base64_decode($b64));
+
+          $uploads   = wp_upload_dir();
+          $media_url = $uploads['baseurl'] . '/whatsapp-media/' . $filename;
+        }
+      }
+    }
+
+    // Se não tem caption, usa label padrão como conteúdo
+    if (empty($texto)) {
+      $labels = [
+        'audio'    => '[Áudio]',
+        'image'    => '[Imagem]',
+        'document' => '[Documento]',
+        'video'    => '[Vídeo]',
+        'sticker'  => '[Figurinha]',
+      ];
+      $texto = $labels[$detected_media_type] ?? '[Mídia]';
+    }
   }
 
   Mensagem_Handler::create([
@@ -246,6 +350,9 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
       'timestamp'    => $timestamp,
       'contact_name' => $push_name,
       'type'         => $msg_type,
+      'media_type'   => $detected_media_type,
+      'media_url'    => $media_url,
+      'mimetype'     => $media_mime,
     ],
   ]);
 
