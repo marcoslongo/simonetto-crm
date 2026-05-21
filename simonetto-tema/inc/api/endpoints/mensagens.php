@@ -84,13 +84,13 @@ function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Resp
   global $wpdb;
   $lead_id = intval($request->get_param('lead_id'));
 
-  $wpdb->update(
-    $wpdb->prefix . 'mensagens',
-    ['status' => 'vista', 'atualizado_em' => current_time('mysql')],
-    ['lead_id' => $lead_id, 'direcao' => 'recebida', 'status' => 'recebida'],
-    ['%s', '%s'],
-    ['%d', '%s', '%s']
-  );
+  $wpdb->query($wpdb->prepare(
+    "UPDATE {$wpdb->prefix}mensagens
+     SET status = 'vista', atualizado_em = %s
+     WHERE lead_id = %d AND direcao = 'recebida' AND status != 'vista'",
+    current_time('mysql'),
+    $lead_id
+  ));
 
   return new WP_REST_Response(['success' => true], 200);
 }
@@ -114,7 +114,7 @@ function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_
        FROM {$table_msgs} m
        INNER JOIN {$table_leads} l ON l.id = m.lead_id
        WHERE m.direcao = 'recebida'
-         AND m.status  = 'recebida'
+         AND m.status  != 'vista'
          AND l.loja_id = %d
        GROUP BY m.lead_id",
       $loja_id

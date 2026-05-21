@@ -451,7 +451,7 @@ class Lead_Handler
          (SELECT COUNT(*) FROM {$table_msgs} m
           WHERE m.lead_id = l.id
             AND m.direcao = 'recebida'
-            AND m.status  = 'recebida') AS unread_count
+            AND m.status  != 'vista') AS unread_count
        FROM {$table_name} l
        {$where_sql}
        ORDER BY l.data_criacao DESC
