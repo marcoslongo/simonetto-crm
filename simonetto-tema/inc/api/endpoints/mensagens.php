@@ -96,7 +96,9 @@ function mytheme_api_mark_mensagens_read(WP_REST_Request $request): WP_REST_Resp
 }
 
 // -------------------------------------------------------------------------
-// CONTAR mensagens não lidas por lead (polling do frontend)
+// Timestamp da última mensagem recebida por lead (polling do frontend)
+// O cliente compara com o localStorage para decidir se há não lidas,
+// sem depender do campo status do banco.
 // -------------------------------------------------------------------------
 
 function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_Response
@@ -110,32 +112,30 @@ function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_
 
   if ($loja_id) {
     $rows = $wpdb->get_results($wpdb->prepare(
-      "SELECT m.lead_id, COUNT(*) AS unread_count
+      "SELECT m.lead_id, MAX(m.criado_em) AS latest_at
        FROM {$table_msgs} m
        INNER JOIN {$table_leads} l ON l.id = m.lead_id
        WHERE m.direcao = 'recebida'
-         AND m.status  != 'vista'
          AND l.loja_id = %d
        GROUP BY m.lead_id",
       $loja_id
     ), ARRAY_A);
   } else {
     $rows = $wpdb->get_results(
-      "SELECT lead_id, COUNT(*) AS unread_count
+      "SELECT lead_id, MAX(criado_em) AS latest_at
        FROM {$table_msgs}
        WHERE direcao = 'recebida'
-         AND status  = 'recebida'
        GROUP BY lead_id",
       ARRAY_A
     );
   }
 
-  $counts = [];
+  $latest = [];
   foreach ($rows as $row) {
-    $counts[(string) $row['lead_id']] = (int) $row['unread_count'];
+    $latest[(string) $row['lead_id']] = $row['latest_at'];
   }
 
-  return new WP_REST_Response(['success' => true, 'counts' => $counts], 200);
+  return new WP_REST_Response(['success' => true, 'latest' => $latest], 200);
 }
 
 // -------------------------------------------------------------------------

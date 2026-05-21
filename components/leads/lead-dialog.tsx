@@ -112,9 +112,9 @@ export function LeadDetailsModal({
   // Marca mensagens como lidas quando o dialog abre
   useEffect(() => {
     if (open && lead.id) {
-      fetch(`/api/mensagens/${lead.id}/read`, { method: 'POST' })
-        .then(() => onMessagesRead?.(String(lead.id)))
-        .catch(() => {})
+      localStorage.setItem(`lead_read_${lead.id}`, String(Date.now()))
+      onMessagesRead?.(String(lead.id))
+      fetch(`/api/mensagens/${lead.id}/read`, { method: 'POST' }).catch(() => {})
     }
   }, [open, lead.id])
 
