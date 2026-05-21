@@ -220,17 +220,17 @@ export function WhatsAppConfig({ lojaId, isAdmin = false, siteUrl }: WhatsAppCon
         <div className="rounded-xl bg-white shadow-sm p-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="evolution-instance" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Nome da Instância
+              Instance ID (UUID)
             </Label>
             <Input
               id="evolution-instance"
               value={instance}
               onChange={(e) => setInstance(e.target.value)}
-              placeholder="ex: loja-sp-01"
+              placeholder="ex: 9b768abb-a144-4500-a23a-58b5ca755ca3"
               className="text-sm font-mono"
             />
             <p className="text-xs text-slate-400">
-              Nome exato da instância criada no painel da Evolution API.
+              UUID da instância — encontrado no painel Evolution API (ícone de engrenagem na instância).
             </p>
           </div>
 
