@@ -136,6 +136,10 @@ const POLL_INTERVAL = 30_000
 
 export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
+
+  useEffect(() => {
+    console.log('[kanban] leads iniciais (unread_count):', initialLeads.map(l => ({ id: l.id, nome: l.nome, unread: l.unread_count })))
+  }, [])
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -153,8 +157,12 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
       if (isModalOpenRef.current) return
       try {
         const res = await fetch(`/api/mensagens/unread${qs}`)
-        if (!res.ok) return
+        if (!res.ok) {
+          console.warn('[unread-poll] erro HTTP', res.status)
+          return
+        }
         const data = await res.json()
+        console.log('[unread-poll] resposta', data)
         if (!data.success) return
         const counts: Record<string, number> = data.counts ?? {}
         setLeads(prev =>
@@ -163,9 +171,12 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
             return l.unread_count === c ? l : { ...l, unread_count: c }
           })
         )
-      } catch {}
+      } catch (e) {
+        console.warn('[unread-poll] falha', e)
+      }
     }
 
+    poll()
     const id = setInterval(poll, POLL_INTERVAL)
     return () => clearInterval(id)
   }, [lojaId])
