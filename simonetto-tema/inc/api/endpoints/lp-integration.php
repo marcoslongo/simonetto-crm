@@ -66,6 +66,9 @@ function mytheme_api_lp_receive_lead(WP_REST_Request $request)
   // Injeta loja_id automaticamente — a LP não precisa conhecer o ID interno
   $params['loja_id'] = $loja->ID;
 
+  // Lead que chega via LP do lojista é sempre "próprio" da loja
+  $params['origem'] = 'proprio';
+
   // Captura loja_regiao pelo nome da loja se não vier no payload
   if (empty($params['loja_regiao'])) {
     $params['loja_regiao'] = $loja->post_title;
