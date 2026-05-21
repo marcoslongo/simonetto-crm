@@ -179,6 +179,102 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
 }
 
 // -------------------------------------------------------------------------
+// DOWNLOAD direto de mídia WhatsApp (HKDF + AES-256-CBC)
+// O /message/downloadimage da Evolution Go não está acessível; descriptografamos
+// diretamente usando os campos do webhook (MediaKey, URL, Mimetype).
+// -------------------------------------------------------------------------
+
+function mytheme_download_whatsapp_media(array $msg, string $msg_key, string $wamid): ?array
+{
+  $type_map = [
+    'pttMessage'      => ['info' => 'WhatsApp Audio Keys',    'ext' => 'ogg'],
+    'audioMessage'    => ['info' => 'WhatsApp Audio Keys',    'ext' => 'mp3'],
+    'imageMessage'    => ['info' => 'WhatsApp Image Keys',    'ext' => 'jpg'],
+    'documentMessage' => ['info' => 'WhatsApp Document Keys', 'ext' => 'pdf'],
+    'videoMessage'    => ['info' => 'WhatsApp Video Keys',    'ext' => 'mp4'],
+    'stickerMessage'  => ['info' => 'WhatsApp Image Keys',    'ext' => 'webp'],
+  ];
+
+  $type_info = $type_map[$msg_key] ?? null;
+  if (!$type_info) return null;
+
+  $media_obj = $msg[$msg_key] ?? [];
+
+  // Log temporário — captura chaves do objeto de mídia para diagnóstico
+  $log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
+  if (!is_dir($log_dir)) wp_mkdir_p($log_dir);
+  file_put_contents(
+    $log_dir . '/media-keys-' . time() . '.json',
+    wp_json_encode([
+      'msg_key'    => $msg_key,
+      'obj_keys'   => array_keys($media_obj),
+      'has_URL'    => isset($media_obj['URL']),
+      'has_url'    => isset($media_obj['url']),
+      'has_MediaKey' => isset($media_obj['MediaKey']),
+      'has_mediaKey' => isset($media_obj['mediaKey']),
+      'mimetype'   => $media_obj['Mimetype'] ?? ($media_obj['mimetype'] ?? null),
+    ], JSON_PRETTY_PRINT)
+  );
+
+  // Suporta PascalCase (Go JSON padrão) e camelCase
+  $url      = $media_obj['URL']      ?? ($media_obj['url']      ?? null);
+  $b64_key  = $media_obj['MediaKey'] ?? ($media_obj['mediaKey'] ?? null);
+  $mimetype = $media_obj['Mimetype'] ?? ($media_obj['mimetype'] ?? null);
+
+  if (!$url || !$b64_key) return null;
+
+  // Baixa arquivo criptografado do CDN do WhatsApp
+  $enc_resp = wp_remote_get($url, ['timeout' => 60, 'sslverify' => false]);
+  if (is_wp_error($enc_resp)) return null;
+  $enc_bytes = wp_remote_retrieve_body($enc_resp);
+  if (strlen($enc_bytes) < 11) return null;
+
+  // HKDF-SHA256: deriva iv + cipherKey de 32 bytes do MediaKey
+  $media_key = base64_decode($b64_key);
+  $app_info  = $type_info['info'];
+  $salt      = str_repeat("\x00", 32);
+
+  $prk = hash_hmac('sha256', $media_key, $salt, true); // Extract
+
+  $t = $output = '';
+  for ($i = 1; strlen($output) < 112; $i++) {           // Expand
+    $t       = hash_hmac('sha256', $t . $app_info . chr($i), $prk, true);
+    $output .= $t;
+  }
+
+  $iv         = substr($output, 0, 16);
+  $cipher_key = substr($output, 16, 32);
+
+  // Remove 10 bytes de MAC do final e descriptografa
+  $ciphertext = substr($enc_bytes, 0, -10);
+  $decrypted  = openssl_decrypt($ciphertext, 'aes-256-cbc', $cipher_key, OPENSSL_RAW_DATA, $iv);
+  if ($decrypted === false) return null;
+
+  // Extensão a partir do MIME type
+  $ext = $type_info['ext'];
+  if ($mimetype) {
+    $raw_ext   = strtolower(explode(';', explode('/', $mimetype)[1] ?? '')[0] ?? '');
+    $safe_exts = ['ogg', 'mp3', 'mp4', 'pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'aac', 'webm', 'opus'];
+    if ($raw_ext && in_array($raw_ext, $safe_exts, true)) {
+      $ext = $raw_ext;
+    }
+  }
+
+  $upload_dir = WP_CONTENT_DIR . '/uploads/whatsapp-media';
+  if (!is_dir($upload_dir)) wp_mkdir_p($upload_dir);
+
+  $safe_id  = sanitize_key(str_replace(['/', '\\', ':'], '-', $wamid));
+  $filename = 'wa-' . $safe_id . '.' . $ext;
+  file_put_contents($upload_dir . '/' . $filename, $decrypted);
+
+  $uploads = wp_upload_dir();
+  return [
+    'url'      => $uploads['baseurl'] . '/whatsapp-media/' . $filename,
+    'mimetype' => $mimetype ?? ('audio/' . $ext),
+  ];
+}
+
+// -------------------------------------------------------------------------
 // WEBHOOK — Evolution API (mensagens recebidas e atualizações de status)
 // -------------------------------------------------------------------------
 
@@ -276,67 +372,14 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
   }
 
-  // Baixa a mídia se houver
+  // Baixa e descriptografa a mídia diretamente do WhatsApp CDN
   $media_url  = null;
   $media_mime = null;
   if ($detected_media_type) {
-    $evo_url_opt  = get_option('evolution_api_url', '');
-    $evo_inst_opt = get_post_meta($loja_id, '_evolution_instance', true);
-    $evo_key_opt  = get_post_meta($loja_id, '_evolution_api_key', true);
-
-    if ($evo_url_opt && $evo_key_opt) {
-      $dl = wp_remote_post(
-        trailingslashit($evo_url_opt) . 'message/downloadimage',
-        [
-          'timeout'   => 30,
-          'sslverify' => false,
-          'headers'   => [
-            'apikey'       => $evo_key_opt,
-            'Content-Type' => 'application/json',
-          ],
-          'body' => wp_json_encode(['message' => $msg]),
-        ]
-      );
-
-      // Log temporário do download para diagnóstico
-      $dl_log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
-      if (!is_dir($dl_log_dir)) wp_mkdir_p($dl_log_dir);
-      $dl_code = !is_wp_error($dl) ? wp_remote_retrieve_response_code($dl) : 'wp_error';
-      $dl_body = !is_wp_error($dl) ? wp_remote_retrieve_body($dl) : $dl->get_error_message();
-      file_put_contents(
-        $dl_log_dir . '/download-' . time() . '.json',
-        wp_json_encode([
-          'media_type'     => $detected_media_type,
-          'msg_key'        => $detected_msg_key,
-          'http_code'      => $dl_code,
-          'response_keys'  => array_keys(json_decode($dl_body, true) ?? []),
-          'response_short' => substr($dl_body, 0, 300),
-        ], JSON_PRETTY_PRINT)
-      );
-
-      if (!is_wp_error($dl) && $dl_code < 300) {
-        $dl_data    = json_decode($dl_body, true);
-        // Evolution Go pode retornar 'base64' ou 'data'
-        $b64        = $dl_data['base64'] ?? ($dl_data['data'] ?? null);
-        $media_mime = $dl_data['mimetype'] ?? ($dl_data['mime'] ?? 'application/octet-stream');
-
-        if ($b64) {
-          $raw_ext   = strtolower(explode(';', explode('/', $media_mime)[1] ?? '')[0] ?? 'bin');
-          $safe_exts = ['ogg', 'mp3', 'mp4', 'pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'aac', 'webm', 'opus'];
-          $ext       = in_array($raw_ext, $safe_exts, true) ? $raw_ext : 'bin';
-
-          $upload_dir = WP_CONTENT_DIR . '/uploads/whatsapp-media';
-          if (!is_dir($upload_dir)) wp_mkdir_p($upload_dir);
-
-          $safe_wamid = sanitize_key(str_replace(['/', '\\', ':'], '-', $wamid));
-          $filename   = 'wa-' . $safe_wamid . '.' . $ext;
-          $filepath   = $upload_dir . '/' . $filename;
-          file_put_contents($filepath, base64_decode($b64));
-
-          $uploads   = wp_upload_dir();
-          $media_url = $uploads['baseurl'] . '/whatsapp-media/' . $filename;
-        }
-      }
+    $dl_result = mytheme_download_whatsapp_media($msg, $detected_msg_key, $wamid);
+    if ($dl_result) {
+      $media_url  = $dl_result['url'];
+      $media_mime = $dl_result['mimetype'];
     }
 
     // Se não tem caption, usa label padrão como conteúdo
