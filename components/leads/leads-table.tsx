@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { LeadDetailsModal } from "./lead-dialog";
 import { Lead } from "@/lib/types";
+import { OrigemBadge } from "./origem-badge";
 
 interface LojaOption {
   id: number;
@@ -130,6 +131,9 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                 Lead
               </TableHead>
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Origem
+              </TableHead>
+              <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Classificação
               </TableHead>
               <TableHead className="h-11 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -187,6 +191,10 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, lojas = [] }: Lea
                     </div>
                   </div>
                 </TableCell>
+                <TableCell className="py-3">
+                  <OrigemBadge lead={lead} />
+                </TableCell>
+
                 <TableCell className="py-3">
                   {(() => {
                     const key = lead.classificacao?.toLowerCase().trim() || "";

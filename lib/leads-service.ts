@@ -43,7 +43,8 @@ export async function getLeads(
   search?: string,
   from?: string,
   to?: string,
-  token?: string
+  token?: string,
+  origem?: 'industria' | 'proprio'
 ): Promise<LeadsResponse> {
   let endpoint = `leads?page=${page}&per_page=${perPage}`;
 
@@ -51,6 +52,7 @@ export async function getLeads(
   if (search) endpoint += `&search=${encodeURIComponent(search)}`;
   if (from)   endpoint += `&from=${encodeURIComponent(from)}`;
   if (to)     endpoint += `&to=${encodeURIComponent(to)}`;
+  if (origem) endpoint += `&origem=${encodeURIComponent(origem)}`;
 
   const data = await fetchAPI(endpoint, 'Erro ao buscar leads', token);
 

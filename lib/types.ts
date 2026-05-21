@@ -48,6 +48,8 @@ export interface Loja {
   emails: Array<{ email: string }> | null;
 }
 
+export type LeadOrigem = 'industria' | 'proprio';
+
 // Lead
 export interface Lead {
   id: string;
@@ -62,6 +64,7 @@ export interface Lead {
   mensagem: string;
   pipefy_card_id: string | null;
   loja_id: string | null;
+  origem: LeadOrigem;
   status: LeadStatus;
   data_criacao: string;
   data_atualizacao: string;
@@ -102,6 +105,7 @@ export interface LeadsFilters {
   search?: string;
   from?: string;
   to?: string;
+  origem?: LeadOrigem;
 }
 
 // Estatísticas do dashboard

@@ -247,14 +247,15 @@ function mytheme_api_create_lead($request)
 function mytheme_api_list_leads($request)
 {
   $args = [
-    'page' => $request->get_param('page') ?: 1,
+    'page'     => $request->get_param('page') ?: 1,
     'per_page' => $request->get_param('per_page') ?: 20,
-    'email' => $request->get_param('email'),
-    'loja_id' => $request->get_param('loja_id'),
-    'search' => $request->get_param('search'),
-    'from' => $request->get_param('from'),
-    'to' => $request->get_param('to'),
-    'status' => $request->get_param('status'),
+    'email'    => $request->get_param('email'),
+    'loja_id'  => $request->get_param('loja_id'),
+    'search'   => $request->get_param('search'),
+    'from'     => $request->get_param('from'),
+    'to'       => $request->get_param('to'),
+    'status'   => $request->get_param('status'),
+    'origem'   => $request->get_param('origem'),
   ];
 
   $result = Lead_Handler::list($args);

@@ -150,6 +150,36 @@ add_action('init', 'mytheme_load_custom_post_types', 0);
 // Carregar API
 require_once get_template_directory() . '/inc/api/init.php';
 
+// ===============================
+// Migração: adicionar coluna origem à wp_leads
+// ===============================
+add_action('admin_init', function () {
+  global $wpdb;
+
+  $option_key = 'simonetto_leads_origem_migration_v1';
+  if (get_option($option_key)) {
+    return;
+  }
+
+  $table = $wpdb->prefix . 'leads';
+
+  $col_exists = $wpdb->get_results($wpdb->prepare(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'origem'",
+    DB_NAME, $table
+  ));
+
+  if (empty($col_exists)) {
+    $wpdb->query(
+      "ALTER TABLE `{$table}`
+       ADD COLUMN `origem` ENUM('industria','proprio') NOT NULL DEFAULT 'industria'
+       AFTER `loja_id`"
+    );
+  }
+
+  update_option($option_key, true);
+});
+
 
 // ===============================
 // Remover o post type padrão "post"

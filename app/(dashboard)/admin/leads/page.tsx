@@ -6,6 +6,8 @@ import { getLeadsServer, getLojasServer } from '@/lib/server-leads-service'
 import { LeadsSearch } from '@/components/leads/leads-search'
 import { DateRangeFilter } from '@/components/leads/date-range-filter'
 import { LeadsTable } from '@/components/leads/leads-table'
+import { OrigemFilter } from '@/components/leads/origem-filter'
+import type { LeadOrigem } from '@/lib/types'
 
 export const metadata = {
   title: 'Todos os Leads | Noxus - Lead Ops',
@@ -19,6 +21,7 @@ interface AdminLeadsPageProps {
     search?: string
     from?: string
     to?: string
+    origem?: string
   }>
 }
 
@@ -31,9 +34,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const search = params.search || undefined
   const from = params.from || undefined
   const to = params.to || undefined
+  const origemRaw = params.origem
+  const origem = origemRaw === 'industria' || origemRaw === 'proprio'
+    ? origemRaw as LeadOrigem
+    : undefined
 
   const [leadsResponse, lojasData] = await Promise.all([
-    getLeadsServer(page, 10, lojaId, search, from, to),
+    getLeadsServer(page, 10, lojaId, search, from, to, origem),
     getLojasServer().catch(() => ({ lojas: [] })),
   ])
 
@@ -52,6 +59,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       ? `Até ${to}`
       : null
 
+  const origemLabel =
+    origem === 'industria' ? 'Indústria' : origem === 'proprio' ? 'Próprio' : undefined
+
   const lojas = (lojasData.lojas ?? []).map((l: any) => ({
     id: Number(l.id),
     nome: l.nome ?? l.post_title ?? '',
@@ -69,11 +79,13 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
       <Card className="bg-linear-to-br from-slate-50 to-slate-100">
         <CardHeader>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <CardTitle>Leads</CardTitle>
                 <CardDescription>
-                  {selectedLoja
+                  {origemLabel
+                    ? `Origem: ${origemLabel} — ${leadsResponse.total} lead${leadsResponse.total !== 1 ? 's' : ''}`
+                    : selectedLoja
                     ? `Filtrando por: ${selectedLoja}`
                     : search
                     ? `Resultados para: "${search}"`
@@ -83,9 +95,12 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                 </CardDescription>
               </div>
 
-              {lojasData.lojas?.length > 0 && (
-                <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
-              )}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <OrigemFilter />
+                {lojasData.lojas?.length > 0 && (
+                  <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -114,7 +129,9 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
             </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              {search
+              {origemLabel
+                ? `Nenhum lead de origem "${origemLabel}" encontrado`
+                : search
                 ? `Nenhum lead encontrado para "${search}"`
                 : hasDateFilter
                 ? `Nenhum lead encontrado no período selecionado`

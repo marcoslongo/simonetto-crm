@@ -48,6 +48,7 @@ import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
 import { Lead } from '@/lib/types'
+import { OrigemBadge } from './origem-badge'
 
 export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
 
@@ -316,7 +317,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, visibleCount, onLoad
     <Card
       ref={setNodeRef}
       className={cn(
-        "bg-gradient-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
+        "bg-linear-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
         isOver && `ring-2 ${styles.dropzone}`
       )}
     >
@@ -424,7 +425,9 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
               onClick={onOpen}
               className="min-w-0 flex-1 text-left focus-visible:outline-none cursor-pointer"
             >
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <OrigemBadge lead={lead} size="xs" />
+
                 {lead.classificacao === "quente" && (
                   <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
                     <Flame size={12} />

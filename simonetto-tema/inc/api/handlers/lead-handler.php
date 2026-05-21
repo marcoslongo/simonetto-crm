@@ -24,6 +24,11 @@ class Lead_Handler
     'quente',
   ];
 
+  const ORIGEM_ALLOWED = [
+    'industria',
+    'proprio',
+  ];
+
   // -------------------------------------------------------------------------
   // CLASSIFICAÇÃO
   // -------------------------------------------------------------------------
@@ -316,6 +321,9 @@ class Lead_Handler
 
     $table_name = $wpdb->prefix . 'leads';
 
+    $origem_raw = sanitize_text_field($params['origem'] ?? 'industria');
+    $origem     = in_array($origem_raw, self::ORIGEM_ALLOWED, true) ? $origem_raw : 'industria';
+
     $dados = [
       'nome'                     => sanitize_text_field($params['nome']),
       'email'                    => sanitize_email($params['email']),
@@ -328,6 +336,7 @@ class Lead_Handler
       'mensagem'                 => isset($params['mensagem'])                 ? sanitize_textarea_field($params['mensagem'])   : null,
       'pipefy_card_id'           => isset($params['pipefy_card_id'])           ? sanitize_text_field($params['pipefy_card_id']) : null,
       'loja_id'                  => $loja_id,
+      'origem'                   => $origem,
       'status'                   => 'nao_atendido',
       'classificacao'            => $classificacao_result['classificacao'],
       'score'                    => $classificacao_result['score'],
@@ -381,6 +390,7 @@ class Lead_Handler
     $from     = $args['from'] ?? '';
     $to       = $args['to'] ?? '';
     $status   = $args['status'] ?? '';
+    $origem   = $args['origem'] ?? '';
 
     $where_clauses  = [];
     $prepare_values = [];
@@ -417,6 +427,11 @@ class Lead_Handler
     if ($status && in_array($status, self::STATUS_ALLOWED, true)) {
       $where_clauses[]  = "l.status = %s";
       $prepare_values[] = $status;
+    }
+
+    if ($origem && in_array($origem, self::ORIGEM_ALLOWED, true)) {
+      $where_clauses[]  = "l.origem = %s";
+      $prepare_values[] = $origem;
     }
 
     $where_sql = !empty($where_clauses)
