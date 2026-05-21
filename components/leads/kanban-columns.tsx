@@ -134,6 +134,28 @@ interface KanbanColumnsProps {
 
 const POLL_INTERVAL = 30_000
 
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const gain = ctx.createGain()
+    gain.connect(ctx.destination)
+    gain.gain.setValueAtTime(0, ctx.currentTime)
+
+    const notes = [1046.5, 1318.5] // C6 → E6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      osc.connect(gain)
+      const t = ctx.currentTime + i * 0.18
+      gain.gain.setValueAtTime(0.25, t)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
+      osc.start(t)
+      osc.stop(t + 0.35)
+    })
+  } catch {}
+}
+
 export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
 
@@ -142,6 +164,8 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
   const isModalOpenRef = useRef(isModalOpen)
+  const prevUnreadRef = useRef<Set<string>>(new Set())
+  const isFirstPollRef = useRef(true)
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
@@ -157,11 +181,23 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
         if (!res.ok) return
         const data = await res.json()
         if (!data.success) return
-        // unread: { leadId: 1 } — leads com mensagem recebida após última leitura
         const unread: Record<string, number> = data.unread ?? {}
+        const currentUnreadIds = new Set(
+          Object.keys(unread).filter(id => (unread[id] ?? 0) > 0)
+        )
+
+        // Toca som apenas quando um lead novo fica não lido (ignora primeiro poll)
+        if (!isFirstPollRef.current) {
+          const hasNew = [...currentUnreadIds].some(id => !prevUnreadRef.current.has(id))
+          if (hasNew) playNotificationSound()
+        }
+
+        prevUnreadRef.current = currentUnreadIds
+        isFirstPollRef.current = false
+
         setLeads(prev =>
           prev.map(l => {
-            const next = (unread[String(l.id)] ?? 0) > 0 ? 1 : 0
+            const next = currentUnreadIds.has(String(l.id)) ? 1 : 0
             return l.unread_count === next ? l : { ...l, unread_count: next }
           })
         )
