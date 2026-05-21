@@ -108,8 +108,9 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
 
       if (!is_wp_error($evo_response) && $evo_code < 300) {
         $evo_data = json_decode($evo_body, true);
-        $wamid    = $evo_data['id'] ?? ($evo_data['key']['id'] ?? null);
-        $status   = 'enviada';
+        // Evolution Go retorna: { "data": { "Info": { "ID": "..." } }, "message": "success" }
+        $wamid  = $evo_data['data']['Info']['ID'] ?? null;
+        $status = 'enviada';
       }
     }
   }
@@ -145,89 +146,108 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
 
 function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Response
 {
-  $body = $request->get_json_params();
+  $body  = $request->get_json_params();
+  $event = $body['event'] ?? '';
+  $data  = $body['data']  ?? [];
+  $info  = $data['Info']  ?? [];
 
-  // Log temporário para diagnóstico — remover após confirmar formato
+  // instanceId é UUID — confirmado pelo Evolution Go
+  $instance = $body['instanceId'] ?? ($body['instanceName'] ?? '');
+  $loja_id  = $instance ? Mensagem_Handler::find_loja_by_instance($instance) : null;
+  if (!$loja_id) {
+    $loja_id = Mensagem_Handler::find_any_configured_loja();
+  }
+  if (!$loja_id) {
+    return new WP_REST_Response(['status' => 'no_loja'], 200);
+  }
+
+  // ---- Recibo de leitura / entrega (event = "Receipt") ----
+  if ($event === 'Receipt') {
+    $state_map = [
+      'Delivered' => 'entregue',
+      'Read'      => 'lida',
+      'Played'    => 'lida',
+    ];
+    $state = $body['state'] ?? ($data['Type'] ?? '');
+    if (isset($state_map[$state])) {
+      $ids = $data['MessageIDs'] ?? [];
+      foreach ($ids as $wamid) {
+        if ($wamid) Mensagem_Handler::update_status($wamid, $state_map[$state]);
+      }
+    }
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
+
+  // ---- Mensagem recebida (event = "Message" ou similar) ----
+  // Ignora mensagens enviadas por nós
+  if (!empty($info['IsFromMe'])) {
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
+
+  $chat      = $info['Chat']      ?? ($info['Sender'] ?? '');
+  $wamid     = $info['ID']        ?? '';
+  $push_name = $info['PushName']  ?? '';
+  $timestamp = $info['Timestamp'] ?? '';
+  $msg_type  = $info['Type']      ?? '';
+
+  // Ignora grupos e newsletters
+  if (str_contains($chat, '@g.us') || str_contains($chat, '@newsletter') || str_contains($chat, '@lid')) {
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
+
+  // Extrai texto (texto simples ou ExtendedTextMessage)
+  $msg   = $data['Message'] ?? [];
+  $texto = $msg['conversation']
+        ?? ($msg['extendedTextMessage']['text']
+        ?? ($msg['text']
+        ?? ($msg['caption'] ?? '')));
+
+  $phone = !empty($chat) ? preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat)) : '';
+
+  // Log de diagnóstico — captura payload completo + resultado do processamento
   $log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
   if (!is_dir($log_dir)) wp_mkdir_p($log_dir);
   file_put_contents(
-    $log_dir . '/webhook-' . time() . '.json',
-    wp_json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+    $log_dir . '/flow-' . time() . '.json',
+    wp_json_encode([
+      'event'       => $event,
+      'instance'    => $instance,
+      'loja_id'     => $loja_id,
+      'chat'        => $chat,
+      'fromMe'      => $info['IsFromMe'] ?? null,
+      'phone'       => $phone,
+      'texto'       => $texto,
+      'chat_empty'  => empty($chat),
+      'texto_empty' => empty($texto),
+      'lead_id'     => $phone ? Mensagem_Handler::find_lead_by_phone($phone) : null,
+      'info_keys'   => array_keys($info),
+      'msg_keys'    => array_keys($data['Message'] ?? []),
+    ], JSON_PRETTY_PRINT)
   );
 
-  $event    = $body['event']      ?? ($body['type'] ?? '');
-  // Evolution Go pode mandar 'instanceId' (UUID) ou 'instance' (nome)
-  $instance = $body['instanceId'] ?? ($body['instance'] ?? '');
-
-  if (empty($instance)) {
-    return new WP_REST_Response(['status' => 'ignored'], 200);
-  }
-
-  $loja_id = Mensagem_Handler::find_loja_by_instance($instance);
-  if (!$loja_id) {
-    return new WP_REST_Response(['status' => 'instance_not_found', 'instance' => $instance], 200);
-  }
-
-  // Mensagem recebida
-  if (in_array($event, ['messages.upsert', 'message', 'MESSAGE'], true)) {
-    $data = $body['data'] ?? ($body['message'] ?? []);
-    $key  = $data['key']  ?? [];
-
-    if (!empty($key['fromMe'])) {
-      return new WP_REST_Response(['status' => 'ok'], 200);
-    }
-
-    $remote_jid = $key['remoteJid']         ?? ($data['from'] ?? '');
-    $wamid      = $key['id']                ?? ($data['id']   ?? '');
-    $push_name  = $data['pushName']         ?? ($data['notifyName'] ?? '');
-    $timestamp  = $data['messageTimestamp'] ?? ($data['timestamp']  ?? '');
-    $msg        = $data['message']          ?? [];
-    $texto      = $msg['conversation']      ?? ($msg['extendedTextMessage']['text'] ?? ($data['body'] ?? ''));
-
-    if (empty($remote_jid) || empty($texto)) {
-      return new WP_REST_Response(['status' => 'ok'], 200);
-    }
-
-    $phone = preg_replace('/@.*$/', '', $remote_jid);
-    $phone = preg_replace('/\D/', '', $phone);
-
-    $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
-    if (!$lead_id) {
-      return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
-    }
-
-    Mensagem_Handler::create([
-      'lead_id'  => $lead_id,
-      'loja_id'  => $loja_id,
-      'conteudo' => $texto,
-      'direcao'  => 'recebida',
-      'status'   => 'recebida',
-      'wamid'    => $wamid,
-      'metadata' => [
-        'from'         => $phone,
-        'timestamp'    => $timestamp,
-        'contact_name' => $push_name,
-      ],
-    ]);
-
+  if (empty($chat) || empty($texto)) {
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
-  // Atualização de status (entregue/lido)
-  if (in_array($event, ['messages.update', 'message.update', 'MESSAGE_UPDATE'], true)) {
-    $map     = ['DELIVERY_ACK' => 'entregue', 'READ' => 'lida', 'PLAYED' => 'lida'];
-    $updates = is_array($body['data']) ? $body['data'] : [];
-
-    foreach ($updates as $upd) {
-      $wamid  = $upd['key']['id']        ?? '';
-      $status = $upd['update']['status'] ?? '';
-      if ($wamid && isset($map[$status])) {
-        Mensagem_Handler::update_status($wamid, $map[$status]);
-      }
-    }
-
-    return new WP_REST_Response(['status' => 'ok'], 200);
+  $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
+  if (!$lead_id) {
+    return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
   }
 
-  return new WP_REST_Response(['status' => 'ok', 'event' => $event], 200);
+  Mensagem_Handler::create([
+    'lead_id'  => $lead_id,
+    'loja_id'  => $loja_id,
+    'conteudo' => $texto,
+    'direcao'  => 'recebida',
+    'status'   => 'recebida',
+    'wamid'    => $wamid,
+    'metadata' => [
+      'from'         => $phone,
+      'timestamp'    => $timestamp,
+      'contact_name' => $push_name,
+      'type'         => $msg_type,
+    ],
+  ]);
+
+  return new WP_REST_Response(['status' => 'ok'], 200);
 }

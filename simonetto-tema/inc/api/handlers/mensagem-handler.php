@@ -102,6 +102,23 @@ class Mensagem_Handler
   }
 
   // -------------------------------------------------------------------------
+  // BUSCAR qualquer loja que tenha instância configurada (fallback de webhook)
+  // -------------------------------------------------------------------------
+
+  public static function find_any_configured_loja(): ?int
+  {
+    global $wpdb;
+
+    $loja_id = $wpdb->get_var(
+      "SELECT post_id FROM {$wpdb->postmeta}
+       WHERE meta_key = '_evolution_instance' AND meta_value != ''
+       LIMIT 1"
+    );
+
+    return $loja_id ? intval($loja_id) : null;
+  }
+
+  // -------------------------------------------------------------------------
   // BUSCAR loja_id pelo nome da instância Evolution API
   // -------------------------------------------------------------------------
 
@@ -130,12 +147,35 @@ class Mensagem_Handler
     // Normaliza: mantém só dígitos
     $digits = preg_replace('/\D/', '', $telefone);
 
-    // Tenta com e sem código do país (55)
+    // Gera variações para cobrir diferentes formatos de cadastro
     $variants = [$digits];
-    if (strlen($digits) === 13 && str_starts_with($digits, '55')) {
-      $variants[] = substr($digits, 2); // remove 55
-    } elseif (strlen($digits) === 11) {
-      $variants[] = '55' . $digits;    // adiciona 55
+    $len = strlen($digits);
+
+    if ($len === 13 && str_starts_with($digits, '55')) {
+      $sem55 = substr($digits, 2);          // 11 dígitos: 46 9xxxx-xxxx
+      $variants[] = $sem55;
+      // Sem o 9 extra: 10 dígitos (55 + DDD + 8)
+      if (strlen($sem55) === 11 && $sem55[2] === '9') {
+        $variants[] = substr($sem55, 0, 2) . substr($sem55, 3); // remove o 9
+        $variants[] = '55' . substr($sem55, 0, 2) . substr($sem55, 3);
+      }
+    } elseif ($len === 12 && str_starts_with($digits, '55')) {
+      // 55 + DDD + 8 dígitos (sem 9 extra) — ex: 554691222763
+      $sem55 = substr($digits, 2);          // 10 dígitos
+      $variants[] = $sem55;
+      $variants[] = '55' . substr($sem55, 0, 2) . '9' . substr($sem55, 2); // adiciona 9
+      $variants[] = substr($sem55, 0, 2) . '9' . substr($sem55, 2);        // DDD + 9 + número
+    } elseif ($len === 11) {
+      $variants[] = '55' . $digits;
+      // Sem o 9 extra: 10 dígitos
+      if ($digits[2] === '9') {
+        $variants[] = substr($digits, 0, 2) . substr($digits, 3);
+        $variants[] = '55' . substr($digits, 0, 2) . substr($digits, 3);
+      }
+    } elseif ($len === 10) {
+      $variants[] = '55' . $digits;
+      $variants[] = substr($digits, 0, 2) . '9' . substr($digits, 2);
+      $variants[] = '55' . substr($digits, 0, 2) . '9' . substr($digits, 2);
     }
 
     foreach ($variants as $variant) {
