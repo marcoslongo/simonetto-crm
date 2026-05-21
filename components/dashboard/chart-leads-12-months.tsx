@@ -1,5 +1,6 @@
 "use client"
 
+import React, { useState } from "react"
 import { CartesianGrid, Bar, BarChart, XAxis, YAxis } from "recharts"
 import {
   Card,
@@ -14,7 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { TrendingUp, Calendar } from "lucide-react"
+import { TrendingUp, Calendar, Building2, Store } from "lucide-react"
 
 interface ChartLeads12MonthsProps {
   data: {
@@ -30,42 +31,81 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartLeads12Months({ data }: ChartLeads12MonthsProps) {
+type Origem = 'todos' | 'industria' | 'proprio'
+
+const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] = [
+  { value: 'todos', label: 'Todos', icon: null },
+  { value: 'industria', label: 'Indústria', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { value: 'proprio', label: 'Lojistas', icon: <Store className="h-3.5 w-3.5" /> },
+]
+
+export function ChartLeads12Months({ data: initialData }: ChartLeads12MonthsProps) {
+  const [data, setData] = useState(initialData)
+  const [origem, setOrigem] = useState<Origem>('todos')
+  const [loading, setLoading] = useState(false)
+
+  async function handleOrigemChange(val: Origem) {
+    setOrigem(val)
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (val !== 'todos') params.set('origem', val)
+      const res = await fetch(`/api/leads-12meses?${params.toString()}`)
+      const json = await res.json()
+      setData(json.data ?? [])
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const totalLeads = data.reduce((sum, item) => sum + item.total, 0)
-  const avgLeads = Math.round(totalLeads / data.length)
-  const maxLeads = Math.max(...data.map(item => item.total))
+  const avgLeads = data.length ? Math.round(totalLeads / data.length) : 0
+  const maxLeads = data.length ? Math.max(...data.map(item => item.total)) : 0
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
       <CardHeader className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold text-[#16255c]">
               Leads últimos 12 meses
             </CardTitle>
             <CardDescription className="flex items-center gap-2 text-slate-600">
               <Calendar className="h-4 w-4" />
-              Captação mensal de leads
+              {loading ? 'Buscando dados...' : 'Captação mensal de leads'}
             </CardDescription>
           </div>
 
-          <div className="flex gap-4">
-            <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium">
-                Média mensal
-              </p>
-              <p className="text-2xl font-bold text-[#16255c]">
-                {avgLeads}
-              </p>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Filtro de origem */}
+            <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
+              {origemOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleOrigemChange(opt.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                    origem === opt.value
+                      ? 'bg-[#16255c] text-white'
+                      : 'text-[#16255c]/70 hover:bg-slate-100'
+                  }`}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              ))}
             </div>
 
-            <div className="text-right">
-              <p className="text-xs text-slate-500 font-medium">
-                Pico
-              </p>
-              <p className="text-2xl font-bold text-[#16255c]">
-                {maxLeads}
-              </p>
+            <div className="flex gap-4">
+              <div className="text-right">
+                <p className="text-xs text-slate-500 font-medium">Média mensal</p>
+                <p className="text-2xl font-bold text-[#16255c]">{avgLeads}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-slate-500 font-medium">Pico</p>
+                <p className="text-2xl font-bold text-[#16255c]">{maxLeads}</p>
+              </div>
             </div>
           </div>
         </div>
