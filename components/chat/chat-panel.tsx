@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FaWhatsapp } from "react-icons/fa";
-import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2 } from "lucide-react";
+import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -292,6 +292,92 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
   );
 }
 
+function AudioPlayer({ src, isEnviada }: { src: string; isEnviada: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [ready, setReady] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    playing ? a.pause() : a.play();
+  };
+
+  const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.currentTime = Number(e.target.value);
+  };
+
+  const fmt = (s: number) => {
+    if (!isFinite(s) || s === 0) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const sent = isEnviada;
+
+  return (
+    <div className="flex items-center gap-2.5 w-60 py-1">
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); setReady(true); }}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+      />
+
+      {/* Botão play/pause */}
+      <button
+        onClick={toggle}
+        disabled={!ready}
+        className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+          sent
+            ? "bg-white/25 hover:bg-white/35 text-white"
+            : "bg-emerald-500 hover:bg-emerald-600 text-white"
+        } disabled:opacity-40`}
+      >
+        {!ready ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : playing ? (
+          <Pause className="h-4 w-4" />
+        ) : (
+          <Play className="h-4 w-4 ml-0.5" />
+        )}
+      </button>
+
+      {/* Barra de progresso + tempo */}
+      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+        <input
+          type="range"
+          min={0}
+          max={duration || 0}
+          step={0.05}
+          value={currentTime}
+          onChange={seek}
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+          style={{
+            background: sent
+              ? `linear-gradient(to right, rgba(255,255,255,0.9) ${progress}%, rgba(255,255,255,0.3) ${progress}%)`
+              : `linear-gradient(to right, #10b981 ${progress}%, #d1d5db ${progress}%)`,
+          }}
+        />
+        <div className={`flex justify-between text-[10px] tabular-nums ${sent ? "text-white/70" : "text-muted-foreground"}`}>
+          <span>{fmt(currentTime)}</span>
+          <span>{fmt(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
   const isEnviada = mensagem.direcao === "enviada";
   const hora = format(new Date(mensagem.criado_em), "HH:mm", { locale: ptBR });
@@ -315,7 +401,7 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
 
         {/* Renderização por tipo de mídia */}
         {mediaUrl && mediaType === "audio" && (
-          <audio controls src={mediaUrl} className="w-full max-w-[240px] mb-1" />
+          <AudioPlayer src={mediaUrl} isEnviada={isEnviada} />
         )}
 
         {mediaUrl && mediaType === "image" && (
