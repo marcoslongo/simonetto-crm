@@ -140,7 +140,7 @@ class Mensagem_Handler
 
     foreach ($variants as $variant) {
       $id = $wpdb->get_var($wpdb->prepare(
-        "SELECT id FROM {$wpdb->prefix}leads WHERE REPLACE(REPLACE(REPLACE(telefone,'(',''),')',''),' ','') LIKE %s LIMIT 1",
+        "SELECT id FROM {$wpdb->prefix}leads WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefone,'(',''),')',''),' ',''),'-','') LIKE %s LIMIT 1",
         '%' . $wpdb->esc_like($variant) . '%'
       ));
       if ($id) return intval($id);

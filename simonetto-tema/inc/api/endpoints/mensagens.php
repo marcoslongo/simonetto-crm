@@ -86,23 +86,29 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
       }
 
       $evo_response = wp_remote_post(
-        trailingslashit($evo_url) . 'message/sendText/' . $evo_instance,
+        trailingslashit($evo_url) . 'send/text',
         [
-          'timeout' => 15,
-          'headers' => [
+          'timeout'   => 15,
+          'sslverify' => false,
+          'headers'   => [
             'apikey'       => $evo_key,
             'Content-Type' => 'application/json',
           ],
           'body' => wp_json_encode([
-            'number' => $phone_clean,
-            'text'   => $conteudo,
+            'instanceId' => $evo_instance,
+            'number'     => $phone_clean,
+            'text'       => $conteudo,
           ]),
         ]
       );
 
-      if (!is_wp_error($evo_response) && wp_remote_retrieve_response_code($evo_response) < 300) {
-        $evo_data = json_decode(wp_remote_retrieve_body($evo_response), true);
-        $wamid    = $evo_data['key']['id'] ?? null;
+      $evo_code = !is_wp_error($evo_response) ? wp_remote_retrieve_response_code($evo_response) : null;
+      $evo_body = !is_wp_error($evo_response) ? wp_remote_retrieve_body($evo_response) : null;
+      $evo_err  = is_wp_error($evo_response)  ? $evo_response->get_error_message()     : null;
+
+      if (!is_wp_error($evo_response) && $evo_code < 300) {
+        $evo_data = json_decode($evo_body, true);
+        $wamid    = $evo_data['id'] ?? ($evo_data['key']['id'] ?? null);
         $status   = 'enviada';
       }
     }
@@ -113,6 +119,11 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
     'usuario_id' => get_current_user_id(),
     'status'     => $status,
     'wamid'      => $wamid,
+    'metadata'   => isset($evo_err) || isset($evo_code) ? [
+      'http_code'     => $evo_code ?? null,
+      'error'         => $evo_err  ?? null,
+      'response_body' => $evo_body ?? null,
+    ] : null,
   ]));
 
   if (is_wp_error($result)) {
@@ -134,48 +145,55 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
 
 function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Response
 {
-  $body     = $request->get_json_params();
-  $event    = $body['event']    ?? '';
-  $instance = $body['instance'] ?? '';
+  $body = $request->get_json_params();
+
+  // Log temporário para diagnóstico — remover após confirmar formato
+  $log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
+  if (!is_dir($log_dir)) wp_mkdir_p($log_dir);
+  file_put_contents(
+    $log_dir . '/webhook-' . time() . '.json',
+    wp_json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+  );
+
+  $event    = $body['event']      ?? ($body['type'] ?? '');
+  // Evolution Go pode mandar 'instanceId' (UUID) ou 'instance' (nome)
+  $instance = $body['instanceId'] ?? ($body['instance'] ?? '');
 
   if (empty($instance)) {
     return new WP_REST_Response(['status' => 'ignored'], 200);
   }
 
-  // Busca a loja pelo nome da instância
   $loja_id = Mensagem_Handler::find_loja_by_instance($instance);
   if (!$loja_id) {
-    return new WP_REST_Response(['status' => 'instance_not_found'], 200);
+    return new WP_REST_Response(['status' => 'instance_not_found', 'instance' => $instance], 200);
   }
 
   // Mensagem recebida
-  if ($event === 'messages.upsert') {
-    $data = $body['data'] ?? [];
+  if (in_array($event, ['messages.upsert', 'message', 'MESSAGE'], true)) {
+    $data = $body['data'] ?? ($body['message'] ?? []);
     $key  = $data['key']  ?? [];
 
-    // Ignora mensagens enviadas por nós
     if (!empty($key['fromMe'])) {
       return new WP_REST_Response(['status' => 'ok'], 200);
     }
 
-    $remote_jid = $key['remoteJid']          ?? '';
-    $wamid      = $key['id']                 ?? '';
-    $push_name  = $data['pushName']          ?? '';
-    $timestamp  = $data['messageTimestamp']  ?? '';
-    $msg        = $data['message']           ?? [];
-    $texto      = $msg['conversation']       ?? ($msg['extendedTextMessage']['text'] ?? '');
+    $remote_jid = $key['remoteJid']         ?? ($data['from'] ?? '');
+    $wamid      = $key['id']                ?? ($data['id']   ?? '');
+    $push_name  = $data['pushName']         ?? ($data['notifyName'] ?? '');
+    $timestamp  = $data['messageTimestamp'] ?? ($data['timestamp']  ?? '');
+    $msg        = $data['message']          ?? [];
+    $texto      = $msg['conversation']      ?? ($msg['extendedTextMessage']['text'] ?? ($data['body'] ?? ''));
 
     if (empty($remote_jid) || empty($texto)) {
       return new WP_REST_Response(['status' => 'ok'], 200);
     }
 
-    // Extrai telefone do JID (ex: 5511999999999@s.whatsapp.net)
     $phone = preg_replace('/@.*$/', '', $remote_jid);
     $phone = preg_replace('/\D/', '', $phone);
 
     $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
     if (!$lead_id) {
-      return new WP_REST_Response(['status' => 'ok'], 200);
+      return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
     }
 
     Mensagem_Handler::create([
@@ -196,7 +214,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   }
 
   // Atualização de status (entregue/lido)
-  if ($event === 'messages.update') {
+  if (in_array($event, ['messages.update', 'message.update', 'MESSAGE_UPDATE'], true)) {
     $map     = ['DELIVERY_ACK' => 'entregue', 'READ' => 'lida', 'PLAYED' => 'lida'];
     $updates = is_array($body['data']) ? $body['data'] : [];
 
@@ -211,5 +229,5 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
-  return new WP_REST_Response(['status' => 'ok'], 200);
+  return new WP_REST_Response(['status' => 'ok', 'event' => $event], 200);
 }
