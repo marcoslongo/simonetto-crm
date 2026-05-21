@@ -294,17 +294,31 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
             'apikey'       => $evo_key_opt,
             'Content-Type' => 'application/json',
           ],
-          'body' => wp_json_encode([
-            'instanceId' => $evo_inst_opt,
-            'message'    => $msg,
-          ]),
+          'body' => wp_json_encode(['message' => $msg]),
         ]
       );
 
-      if (!is_wp_error($dl) && wp_remote_retrieve_response_code($dl) < 300) {
-        $dl_data    = json_decode(wp_remote_retrieve_body($dl), true);
-        $b64        = $dl_data['data'] ?? null;
-        $media_mime = $dl_data['mimetype'] ?? 'application/octet-stream';
+      // Log temporário do download para diagnóstico
+      $dl_log_dir = WP_CONTENT_DIR . '/uploads/evo-debug';
+      if (!is_dir($dl_log_dir)) wp_mkdir_p($dl_log_dir);
+      $dl_code = !is_wp_error($dl) ? wp_remote_retrieve_response_code($dl) : 'wp_error';
+      $dl_body = !is_wp_error($dl) ? wp_remote_retrieve_body($dl) : $dl->get_error_message();
+      file_put_contents(
+        $dl_log_dir . '/download-' . time() . '.json',
+        wp_json_encode([
+          'media_type'     => $detected_media_type,
+          'msg_key'        => $detected_msg_key,
+          'http_code'      => $dl_code,
+          'response_keys'  => array_keys(json_decode($dl_body, true) ?? []),
+          'response_short' => substr($dl_body, 0, 300),
+        ], JSON_PRETTY_PRINT)
+      );
+
+      if (!is_wp_error($dl) && $dl_code < 300) {
+        $dl_data    = json_decode($dl_body, true);
+        // Evolution Go pode retornar 'base64' ou 'data'
+        $b64        = $dl_data['base64'] ?? ($dl_data['data'] ?? null);
+        $media_mime = $dl_data['mimetype'] ?? ($dl_data['mime'] ?? 'application/octet-stream');
 
         if ($b64) {
           $raw_ext   = strtolower(explode(';', explode('/', $media_mime)[1] ?? '')[0] ?? 'bin');
