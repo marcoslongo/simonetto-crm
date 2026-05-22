@@ -282,7 +282,6 @@ export function LeadDetailsModal({
   };
 
   const fetchActions = async () => {
-    if (!isAdmin) return;
     try {
       setLoadingActions(true);
       const res = await fetch(`/api/leads/${lead.id}/actions`);
@@ -370,11 +369,9 @@ export function LeadDetailsModal({
                   <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
                 )}
                 <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
-                {isAdmin && (
-                  <TabsTrigger value="historico" onClick={fetchActions}>
-                    Histórico
-                  </TabsTrigger>
-                )}
+                <TabsTrigger value="historico" onClick={fetchActions}>
+                  Histórico
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -734,56 +731,54 @@ export function LeadDetailsModal({
               </TabsContent>
 
               {/* Histórico */}
-              {isAdmin && (
-                <TabsContent value="historico" className="mt-0">
-                  <div className="rounded-xl border border-border bg-card p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                        <Clock className="h-4 w-4 text-primary" />
-                      </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Histórico de Ações
-                      </h3>
+              <TabsContent value="historico" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Clock className="h-4 w-4 text-primary" />
                     </div>
-                    {loadingActions && (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                      </div>
-                    )}
-                    {!loadingActions && actions.length === 0 && (
-                      <div className="py-8 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          Nenhuma ação registrada ainda.
-                        </p>
-                      </div>
-                    )}
-                    {!loadingActions && actions.length > 0 && (
-                      <div className="space-y-3">
-                        {actions.map((action, i) => (
-                          <div
-                            key={i}
-                            className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <Badge variant="outline" className="font-medium">
-                                {action.tipo_contato}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(action.criado_em)}
-                              </span>
-                            </div>
-                            {action.observacao && (
-                              <p className="text-sm text-muted-foreground mt-2">
-                                {action.observacao}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Histórico de Ações
+                    </h3>
                   </div>
-                </TabsContent>
-              )}
+                  {loadingActions && (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  )}
+                  {!loadingActions && actions.length === 0 && (
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma ação registrada ainda.
+                      </p>
+                    </div>
+                  )}
+                  {!loadingActions && actions.length > 0 && (
+                    <div className="space-y-3">
+                      {actions.map((action, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <Badge variant="outline" className="font-medium">
+                              {action.tipo_contato}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(action.criado_em)}
+                            </span>
+                          </div>
+                          {action.observacao && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {action.observacao}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
             </div>
           </Tabs>
         </DialogContent>
