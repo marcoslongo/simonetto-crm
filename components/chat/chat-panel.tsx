@@ -166,6 +166,20 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
         return;
       }
 
+      // Registra evento no histórico do lead (fire-and-forget)
+      const obsMap: Record<string, string> = {
+        audio: "Áudio enviado via WhatsApp",
+        image: "Imagem enviada via WhatsApp",
+        video: "Vídeo enviado via WhatsApp",
+        document: "Documento enviado via WhatsApp",
+      };
+      const observacao = mediaType ? (obsMap[mediaType] ?? "Arquivo enviado via WhatsApp") : "Mensagem enviada via WhatsApp";
+      fetch("/api/lead-contato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead_id: Number(leadId), loja_id: lojaId, tipo_contato: "whatsapp", observacao }),
+      }).catch(() => {});
+
       await buscarMensagens();
       textareaRef.current?.focus();
     } catch {
