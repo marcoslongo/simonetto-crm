@@ -23,11 +23,18 @@ export async function getSession(): Promise<Session | null> {
 
   try {
     const session: Session = JSON.parse(sessionCookie.value)
-    
+
     // Verifica se a sessão expirou
     if (new Date(session.expires) < new Date()) {
       await clearSession()
       return null
+    }
+
+    // Migra sessões no formato antigo (loja_id → loja_ids)
+    const u = session.user as User & { loja_id?: number | null }
+    if (!Array.isArray(u.loja_ids)) {
+      u.loja_ids = u.loja_id ? [u.loja_id] : []
+      delete u.loja_id
     }
 
     return session
