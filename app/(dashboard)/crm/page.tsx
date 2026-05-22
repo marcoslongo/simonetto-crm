@@ -14,7 +14,7 @@ export default async function CrmDashboardPage() {
   const user = await requireAuth()
 
   const isLoja = user.role === 'loja'
-  const lojaId = isLoja ? (user.loja_id ?? undefined) : undefined
+  const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
 
   const [stats, statusFunil, classificacao] = await Promise.all([
     getLojaStats(String(lojaId)),

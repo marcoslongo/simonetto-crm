@@ -167,6 +167,7 @@ export function LeadDetailsModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lead_id: lead.id,
+          loja_id: lead.loja_id ? Number(lead.loja_id) : undefined,
           tipo_contato: tipo,
           observacao: `Contato via ${tipo}`,
         }),

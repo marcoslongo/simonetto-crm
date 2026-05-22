@@ -690,8 +690,11 @@ class Lead_Handler
 
       $is_admin = in_array('administrator', (array) $responsavel->roles, true);
       if (!$is_admin && $lead_row->loja_id) {
-        $user_loja_id = intval(get_field('loja_id', 'user_' . $responsavel->ID));
-        if ($user_loja_id !== intval($lead_row->loja_id)) {
+        $raw      = get_field('loja_id', 'user_' . $responsavel->ID);
+        $user_loja_ids = is_array($raw)
+          ? array_map('intval', $raw)
+          : ($raw ? [intval($raw)] : []);
+        if (!in_array(intval($lead_row->loja_id), $user_loja_ids, true)) {
           return new WP_Error('invalid_assignment', 'Usuário não pertence à loja do lead.', ['status' => 400]);
         }
       }

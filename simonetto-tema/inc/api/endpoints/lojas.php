@@ -426,6 +426,26 @@ function mytheme_api_get_loja_service_stats($request)
 }
 
 /**
+ * Verifica se o usuário atual tem acesso à loja informada.
+ * Suporta loja_id armazenado como valor único ou array serializado (multi-loja).
+ */
+function mytheme_user_can_access_loja(int $loja_id): bool
+{
+  $current_user = wp_get_current_user();
+
+  if (in_array('administrator', (array) $current_user->roles, true)) {
+    return true;
+  }
+
+  $raw      = get_field('loja_id', 'user_' . $current_user->ID);
+  $loja_ids = is_array($raw)
+    ? array_map('intval', $raw)
+    : ($raw ? [intval($raw)] : []);
+
+  return in_array($loja_id, $loja_ids, true);
+}
+
+/**
  * GET /api/v1/lojas/:id/usuarios
  */
 function mytheme_api_get_loja_usuarios(WP_REST_Request $request): WP_REST_Response
@@ -437,12 +457,8 @@ function mytheme_api_get_loja_usuarios(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
   }
 
-  $current_user = wp_get_current_user();
-  if (!in_array('administrator', (array) $current_user->roles, true)) {
-    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
-    if ($user_loja !== $loja_id) {
-      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
-    }
+  if (!mytheme_user_can_access_loja($loja_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
   $usuarios = Loja_Handler::get_usuarios($loja_id);
@@ -470,12 +486,8 @@ function mytheme_api_get_loja_whatsapp_config(WP_REST_Request $request): WP_REST
   }
 
   // Autorização: admin ou própria loja
-  $current_user = wp_get_current_user();
-  if (!in_array('administrator', (array) $current_user->roles, true)) {
-    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
-    if ($user_loja !== $loja_id) {
-      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
-    }
+  if (!mytheme_user_can_access_loja($loja_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
   $instance = get_post_meta($loja_id, '_evolution_instance', true);
@@ -502,12 +514,8 @@ function mytheme_api_save_loja_whatsapp_config(WP_REST_Request $request): WP_RES
   }
 
   // Autorização: admin ou própria loja
-  $current_user = wp_get_current_user();
-  if (!in_array('administrator', (array) $current_user->roles, true)) {
-    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
-    if ($user_loja !== $loja_id) {
-      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
-    }
+  if (!mytheme_user_can_access_loja($loja_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
   $body     = $request->get_json_params();

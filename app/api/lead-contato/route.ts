@@ -6,7 +6,8 @@ export async function POST(req: Request) {
     const user = await requireAuth();
     const body = await req.json();
 
-    const lojaId = user.loja_id;
+    // Usa o loja_id do lead (vindo no body) ou recai para a primeira loja do usuário
+    const lojaId = body.loja_id ?? user.loja_ids[0]
 
     if (!lojaId) {
       return NextResponse.json(

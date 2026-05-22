@@ -12,7 +12,7 @@ export default async function ComportamentoPage() {
   const user = await requireAuth()
 
   const isLoja = user.role === 'loja'
-  const lojaId = isLoja ? (user.loja_id ? Number(user.loja_id) : undefined) : undefined
+  const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
 
   const [deviceData, horarioData] = await Promise.all([
     getLeadsTrackingDeviceServer(undefined, undefined, lojaId),

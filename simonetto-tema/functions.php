@@ -28,18 +28,16 @@ add_filter('jwt_auth_token_before_dispatch', 'add_loja_role_userid_to_jwt', 10, 
 function add_loja_role_userid_to_jwt($data, $user) {
     $user_id = $user->ID;
 
-    // Pega o campo ACF 'loja_id' do usuário
-    $loja_id = get_field('loja_id', 'user_' . $user_id);
+    $raw      = get_field('loja_id', 'user_' . $user_id);
+    $loja_ids = is_array($raw)
+        ? array_values(array_filter(array_map('intval', $raw)))
+        : ($raw ? [intval($raw)] : []);
 
-    // Pega os roles do usuário
-    $roles = $user->roles; // Array de roles, ex: ['administrator']
+    $roles = $user->roles;
 
-    // Adiciona ao retorno do JWT
-    $data['user_id'] = $user_id;   // ID do usuário
-    $data['role']    = $roles;     // Roles do usuário
-    $data['acf']     = array(
-        'loja_id' => $loja_id     // Campo ACF da loja
-    );
+    $data['user_id'] = $user_id;
+    $data['role']    = $roles;
+    $data['acf']     = ['loja_ids' => $loja_ids];
 
     return $data;
 }
@@ -64,22 +62,23 @@ function crm_login_user(WP_REST_Request $request) {
     ], 401);
   }
 
-  // Dados extras
-  $loja_id   = get_user_meta($user->ID, 'loja_id', true);
-  $loja_nome = get_user_meta($user->ID, 'loja_nome', true);
+  $raw      = get_field('loja_id', 'user_' . $user->ID);
+  $loja_ids = is_array($raw)
+    ? array_values(array_filter(array_map('intval', $raw)))
+    : ($raw ? [intval($raw)] : []);
 
-  // Role principal
-  $role = $user->roles[0] ?? 'subscriber';
+  $loja_nome = get_user_meta($user->ID, 'loja_nome', true);
+  $role      = $user->roles[0] ?? 'subscriber';
 
   return new WP_REST_Response([
     'token' => wp_create_nonce('crm_auth_' . $user->ID),
     'user' => [
-      'id'         => $user->ID,
-      'email'      => $user->user_email,
-      'name'       => $user->display_name,
-      'role'       => $role === 'administrator' ? 'administrator' : 'loja',
-      'loja_id'    => $loja_id ? intval($loja_id) : null,
-      'loja_nome'  => $loja_nome ?: null,
+      'id'        => $user->ID,
+      'email'     => $user->user_email,
+      'name'      => $user->display_name,
+      'role'      => $role === 'administrator' ? 'administrator' : 'loja',
+      'loja_ids'  => $loja_ids,
+      'loja_nome' => $loja_nome ?: null,
     ],
     'expires' => date('c', time() + WEEK_IN_SECONDS),
   ]);

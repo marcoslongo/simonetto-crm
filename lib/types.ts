@@ -18,7 +18,7 @@ export interface AuthResponse {
   user_id: number;
   role: string[];
   acf: {
-    loja_id: number | string | null;
+    loja_ids: number[];
   };
 }
 
@@ -28,7 +28,7 @@ export interface User {
   name: string;
   nicename: string;
   role: UserRole;
-  loja_id: number | null;
+  loja_ids: number[];
   loja_nome?: string;
 }
 

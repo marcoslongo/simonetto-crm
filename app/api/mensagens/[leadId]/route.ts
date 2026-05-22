@@ -58,7 +58,7 @@ export async function POST(
     telefone,
     direcao: 'enviada',
     canal: 'whatsapp',
-    loja_id: loja_id ?? session.user.loja_id,
+    loja_id: loja_id ?? session.user.loja_ids[0] ?? null,
   }
 
   if (media_url) {

@@ -10,7 +10,7 @@ export const metadata = {
 export default async function CrmAtendimentoPage() {
   const user = await requireAuth()
 
-  const lojaId = user.loja_id
+  const lojaId = user.loja_ids[0]
 
   if (!lojaId) {
     return (

@@ -17,8 +17,9 @@ const roleLabels: Record<string, string> = {
 export default async function ConfiguracoesPage() {
   const user = await requireAuth()
 
-  const isLoja = user.role === 'loja' && !!user.loja_id
-  const integration = isLoja ? await getLojaIntegration(user.loja_id!) : null
+  const isLoja = user.role === 'loja' && user.loja_ids.length > 0
+  const primaryLojaId = user.loja_ids[0]
+  const integration = isLoja ? await getLojaIntegration(primaryLojaId) : null
 
   return (
     <div className="space-y-6 ">
@@ -88,7 +89,7 @@ export default async function ConfiguracoesPage() {
 
       {isLoja && integration && (
         <IntegracaoLP
-          lojaId={String(user.loja_id!)}
+          lojaId={String(primaryLojaId)}
           initialData={integration}
           isAdmin={false}
         />
@@ -96,7 +97,7 @@ export default async function ConfiguracoesPage() {
 
       {isLoja && (
         <WhatsAppConfig
-          lojaId={String(user.loja_id!)}
+          lojaId={String(primaryLojaId)}
           isAdmin={false}
           siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
         />

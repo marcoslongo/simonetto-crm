@@ -179,9 +179,11 @@ class Loja_Handler
   public static function get_usuarios($loja_id)
   {
     $users = get_users([
-      'meta_key'   => 'loja_id',
-      'meta_value' => $loja_id,
-      'fields'     => 'all',
+      'meta_query' => [[
+        'key'     => 'loja_id',
+        'value'   => '"' . intval($loja_id) . '"',
+        'compare' => 'LIKE',
+      ]],
     ]);
 
     $resultado = [];

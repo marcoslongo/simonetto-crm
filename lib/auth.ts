@@ -110,22 +110,14 @@ export function isAdmin(user: User): boolean {
 }
 
 export function canAccessLoja(user: User, lojaId: number): boolean {
-  // Admin pode acessar qualquer loja
   if (isAdmin(user)) return true
-  
-  // Usuário de loja só pode acessar sua própria loja
-  return user.loja_id === lojaId
+  return user.loja_ids.includes(lojaId)
 }
 
 export function canAccessLead(user: User, leadLojaId: number | null): boolean {
-  // Admin pode acessar qualquer lead
   if (isAdmin(user)) return true
-  
-  // Se o lead não tem loja associada, apenas admin pode ver
   if (!leadLojaId) return false
-  
-  // Usuário de loja só pode acessar leads da sua loja
-  return user.loja_id === leadLojaId
+  return user.loja_ids.includes(leadLojaId)
 }
 
 export function getRedirectPath(user: User): string {

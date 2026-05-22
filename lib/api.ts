@@ -71,13 +71,18 @@ export async function authenticateUser(
   
   const normalizedRole = data.role.includes('administrator') ? 'administrator' : 'loja'
 
+  const rawIds = data.acf?.loja_ids
+  const loja_ids = Array.isArray(rawIds)
+    ? rawIds.map(Number).filter(Boolean)
+    : rawIds ? [Number(rawIds)] : []
+
   const user: User = {
     id: data.user_id,
     email: data.user_email,
     name: data.user_display_name,
     nicename: data.user_nicename,
     role: normalizedRole,
-    loja_id: data.acf?.loja_id ? Number(data.acf.loja_id) : null,
+    loja_ids,
     loja_nome: data.user_display_name
   }
 

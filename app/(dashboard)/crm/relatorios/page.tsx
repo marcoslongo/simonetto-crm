@@ -9,11 +9,11 @@ export const metadata = {
 export default async function CrmRelatoriosPage() {
   const user = await requireAuth()
 
-  if (user.role !== 'loja' || !user.loja_id) {
+  if (user.role !== 'loja' || !user.loja_ids.length) {
     redirect('/crm')
   }
 
-  const lojaId = user.loja_id as number
+  const lojaId = user.loja_ids[0]
 
   return (
     <div className="space-y-6">
