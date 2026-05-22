@@ -85,6 +85,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
+  // Usuários da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/usuarios', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_get_loja_usuarios',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET/POST /api/v1/lojas/{id}/whatsapp-config — configuração Evolution API da loja
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/whatsapp-config', [
     [
@@ -415,6 +422,34 @@ function mytheme_api_get_loja_service_stats($request)
   return new WP_REST_Response([
     'success' => true,
     'data'    => $stats,
+  ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/usuarios
+ */
+function mytheme_api_get_loja_usuarios(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = (int) $request['id'];
+
+  $loja = get_post($loja_id);
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
+  }
+
+  $current_user = wp_get_current_user();
+  if (!in_array('administrator', (array) $current_user->roles, true)) {
+    $user_loja = intval(get_field('loja_id', 'user_' . $current_user->ID));
+    if ($user_loja !== $loja_id) {
+      return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
+    }
+  }
+
+  $usuarios = Loja_Handler::get_usuarios($loja_id);
+
+  return new WP_REST_Response([
+    'success'  => true,
+    'usuarios' => $usuarios,
   ], 200);
 }
 

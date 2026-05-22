@@ -127,6 +127,17 @@ export function LeadDetailsModal({
   const [currentLojaNome, setCurrentLojaNome] = useState(lead.loja_nome ?? "");
   const [savingLoja, setSavingLoja] = useState(false);
 
+  const [editingResponsavel, setEditingResponsavel] = useState(false);
+  const [selectedResponsavelId, setSelectedResponsavelId] = useState<string>(
+    lead.responsavel_id ? String(lead.responsavel_id) : "none"
+  );
+  const [currentResponsavelNome, setCurrentResponsavelNome] = useState(
+    lead.responsavel_nome ?? ""
+  );
+  const [savingResponsavel, setSavingResponsavel] = useState(false);
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string }[]>([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
       day: "2-digit",
@@ -214,6 +225,59 @@ export function LeadDetailsModal({
   const handleCancelEditLoja = () => {
     setSelectedLojaId(lead.loja_id ?? "");
     setEditingLoja(false);
+  };
+
+  const handleEditResponsavel = async () => {
+    setEditingResponsavel(true);
+    if (!lead.loja_id) return;
+    setLoadingUsuarios(true);
+    try {
+      const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`);
+      const data = await res.json();
+      if (res.ok) setUsuarios(data.usuarios || []);
+    } catch {
+      toast.error("Erro ao carregar usuários");
+    } finally {
+      setLoadingUsuarios(false);
+    }
+  };
+
+  const handleSaveResponsavel = async () => {
+    try {
+      setSavingResponsavel(true);
+      const responsavelId =
+        selectedResponsavelId && selectedResponsavelId !== "none"
+          ? Number(selectedResponsavelId)
+          : null;
+      const res = await fetch(`/api/leads/${lead.id}/responsavel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responsavel_id: responsavelId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.mensagem || "Erro ao atualizar responsável");
+        return;
+      }
+      const novoResponsavel = responsavelId
+        ? usuarios.find((u) => u.id === responsavelId)
+        : null;
+      setCurrentResponsavelNome(novoResponsavel?.nome ?? "");
+      setEditingResponsavel(false);
+      toast.success("Responsável atualizado com sucesso");
+      router.refresh();
+    } catch {
+      toast.error("Erro ao atualizar responsável");
+    } finally {
+      setSavingResponsavel(false);
+    }
+  };
+
+  const handleCancelEditResponsavel = () => {
+    setSelectedResponsavelId(
+      lead.responsavel_id ? String(lead.responsavel_id) : "none"
+    );
+    setEditingResponsavel(false);
   };
 
   const fetchActions = async () => {
@@ -531,8 +595,87 @@ export function LeadDetailsModal({
                     )}
                   </div>
 
-                  {/* Registro */}
+                  {/* Responsável */}
                   <div className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                          Responsável
+                        </h3>
+                      </div>
+                      {lead.loja_id && !editingResponsavel && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={handleEditResponsavel}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Alterar responsável</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+
+                    {editingResponsavel ? (
+                      <div className="space-y-3">
+                        {loadingUsuarios ? (
+                          <div className="flex items-center justify-center py-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                          </div>
+                        ) : (
+                          <Select
+                            value={selectedResponsavelId}
+                            onValueChange={setSelectedResponsavelId}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione um responsável..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— Sem responsável —</SelectItem>
+                              {usuarios.map((u) => (
+                                <SelectItem key={u.id} value={String(u.id)}>
+                                  {u.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSaveResponsavel}
+                            disabled={savingResponsavel || loadingUsuarios}
+                            className="gap-1.5 flex-1"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            {savingResponsavel ? "Salvando..." : "Confirmar"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelEditResponsavel}
+                            disabled={savingResponsavel}
+                            className="gap-1.5"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-base font-medium text-card-foreground">
+                        {currentResponsavelNome || "—"}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Registro */}
+                  <div className="rounded-xl border border-border bg-card p-5 md:col-span-2">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <Calendar className="h-4 w-4 text-primary" />

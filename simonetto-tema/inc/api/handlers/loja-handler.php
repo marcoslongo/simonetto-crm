@@ -174,6 +174,29 @@ class Loja_Handler
   }
 
   /**
+   * Retorna usuários vinculados a uma loja (via ACF loja_id no user meta)
+   */
+  public static function get_usuarios($loja_id)
+  {
+    $users = get_users([
+      'meta_key'   => 'loja_id',
+      'meta_value' => $loja_id,
+      'fields'     => 'all',
+    ]);
+
+    $resultado = [];
+    foreach ($users as $user) {
+      $resultado[] = [
+        'id'    => (int) $user->ID,
+        'nome'  => $user->display_name,
+        'email' => $user->user_email,
+      ];
+    }
+
+    return $resultado;
+  }
+
+  /**
    * Estatísticas gerais da loja
    */
   public static function get_stats($loja_id)

@@ -664,6 +664,60 @@ class Lead_Handler
     return self::get_by_id($id);
   }
 
+  /**
+   * Atualizar responsável do lead
+   */
+  public static function update_responsavel($id, $responsavel_id)
+  {
+    global $wpdb;
+
+    $table_leads = $wpdb->prefix . 'leads';
+
+    $lead_row = $wpdb->get_row($wpdb->prepare(
+      "SELECT loja_id FROM {$table_leads} WHERE id = %d",
+      $id
+    ));
+
+    if (!$lead_row) {
+      return new WP_Error('lead_not_found', 'Lead não encontrado.', ['status' => 404]);
+    }
+
+    if ($responsavel_id) {
+      $responsavel = get_userdata(intval($responsavel_id));
+      if (!$responsavel) {
+        return new WP_Error('invalid_user', 'Usuário não encontrado.', ['status' => 400]);
+      }
+
+      $is_admin = in_array('administrator', (array) $responsavel->roles, true);
+      if (!$is_admin && $lead_row->loja_id) {
+        $user_loja_id = intval(get_field('loja_id', 'user_' . $responsavel->ID));
+        if ($user_loja_id !== intval($lead_row->loja_id)) {
+          return new WP_Error('invalid_assignment', 'Usuário não pertence à loja do lead.', ['status' => 400]);
+        }
+      }
+
+      $resultado = $wpdb->update(
+        $table_leads,
+        ['responsavel_id' => intval($responsavel_id), 'data_atualizacao' => current_time('mysql')],
+        ['id' => $id],
+        ['%d', '%s'],
+        ['%d']
+      );
+    } else {
+      $resultado = $wpdb->query($wpdb->prepare(
+        "UPDATE {$table_leads} SET responsavel_id = NULL, data_atualizacao = %s WHERE id = %d",
+        current_time('mysql'),
+        $id
+      ));
+    }
+
+    if ($resultado === false) {
+      return new WP_Error('db_error', 'Erro ao atualizar responsável.', ['status' => 500]);
+    }
+
+    return self::get_by_id($id);
+  }
+
   // -------------------------------------------------------------------------
   // HELPERS PRIVADOS
   // -------------------------------------------------------------------------
@@ -683,6 +737,17 @@ class Lead_Handler
     $lead['classificacao']  = $lead['classificacao']  ?? 'frio';
     $lead['score']          = isset($lead['score']) ? (int) $lead['score'] : 0;
     $lead['unread_count']   = isset($lead['unread_count']) ? (int) $lead['unread_count'] : 0;
+
+    $lead['responsavel_id'] = isset($lead['responsavel_id']) && $lead['responsavel_id']
+      ? (int) $lead['responsavel_id']
+      : null;
+
+    if ($lead['responsavel_id']) {
+      $responsavel = get_userdata($lead['responsavel_id']);
+      $lead['responsavel_nome'] = $responsavel ? $responsavel->display_name : null;
+    } else {
+      $lead['responsavel_nome'] = null;
+    }
 
     if ($lead['loja_id']) {
       $loja_id = intval($lead['loja_id']);

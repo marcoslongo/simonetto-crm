@@ -371,9 +371,27 @@ function mytheme_api_update_lead($request)
     ], 200);
   }
 
+  // Atualiza responsável se vier no body
+  if (array_key_exists('responsavel_id', $params)) {
+    $result = Lead_Handler::update_responsavel($id, $params['responsavel_id']);
+
+    if (is_wp_error($result)) {
+      return new WP_REST_Response([
+        'success'  => false,
+        'mensagem' => $result->get_error_message(),
+      ], $result->get_error_data()['status']);
+    }
+
+    return new WP_REST_Response([
+      'success'  => true,
+      'mensagem' => 'Responsável atualizado com sucesso.',
+      'lead'     => $result,
+    ], 200);
+  }
+
   return new WP_REST_Response([
     'success' => false,
-    'mensagem' => 'Nenhum campo válido para atualizar. Use "status" e/ou "loja_id".',
+    'mensagem' => 'Nenhum campo válido para atualizar. Use "status", "loja_id" ou "responsavel_id".',
   ], 400);
 }
 

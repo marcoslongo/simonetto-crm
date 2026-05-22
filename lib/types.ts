@@ -74,6 +74,8 @@ export interface Lead {
   classificacao?: "quente" | "morno" | "frio";
   score?: number;
   unread_count?: number;
+  responsavel_id?: number | null;
+  responsavel_nome?: string | null;
 }
 
 export interface LeadsResponse {
