@@ -237,7 +237,7 @@ export async function getLeadsTrackingMediumServer(from?: string, to?: string) {
   return getLeadsTrackingMedium(from, to, token)
 }
 
-export async function getLeadsLast12MonthsServer(origem?: 'industria' | 'proprio') {
+export async function getLeadsLast12MonthsServer(origem?: 'industria' | 'proprio', lojaId?: string | number) {
   const token = await getToken()
-  return getLeadsLast12Months(token, origem)
+  return getLeadsLast12Months(token, origem, lojaId)
 }

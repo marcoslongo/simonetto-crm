@@ -671,7 +671,7 @@ export async function getLeadsTrackingMedium(from?: string, to?: string, token?:
   return json.data || []
 }
 
-export async function getLeadsLast12Months(token?: string, origem?: 'industria' | 'proprio'): Promise<{ date: string; total: number }[]> {
+export async function getLeadsLast12Months(token?: string, origem?: 'industria' | 'proprio', lojaId?: string | number): Promise<{ date: string; total: number }[]> {
   const today = new Date()
   const from = new Date(today.getFullYear(), today.getMonth() - 11, 1)
   const fromStr = from.toISOString().split('T')[0]
@@ -679,6 +679,7 @@ export async function getLeadsLast12Months(token?: string, origem?: 'industria' 
 
   let endpoint = `leads/stats?from=${fromStr}&to=${toStr}`
   if (origem) endpoint += `&origem=${encodeURIComponent(origem)}`
+  if (lojaId) endpoint += `&loja_id=${lojaId}`
 
   const json = await fetchAPI(
     endpoint,

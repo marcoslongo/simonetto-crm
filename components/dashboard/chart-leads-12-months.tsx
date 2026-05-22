@@ -22,6 +22,7 @@ interface ChartLeads12MonthsProps {
     date: string
     total: number
   }[]
+  lojaId?: string | number
 }
 
 const chartConfig = {
@@ -39,7 +40,7 @@ const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] =
   { value: 'proprio', label: 'Lojistas', icon: <Store className="h-3.5 w-3.5" /> },
 ]
 
-export function ChartLeads12Months({ data: initialData }: ChartLeads12MonthsProps) {
+export function ChartLeads12Months({ data: initialData, lojaId }: ChartLeads12MonthsProps) {
   const [data, setData] = useState(initialData)
   const [origem, setOrigem] = useState<Origem>('todos')
   const [loading, setLoading] = useState(false)
@@ -50,6 +51,7 @@ export function ChartLeads12Months({ data: initialData }: ChartLeads12MonthsProp
     try {
       const params = new URLSearchParams()
       if (val !== 'todos') params.set('origem', val)
+      if (lojaId) params.set('loja_id', String(lojaId))
       const res = await fetch(`/api/leads-12meses?${params.toString()}`)
       const json = await res.json()
       setData(json.data ?? [])
