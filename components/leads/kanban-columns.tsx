@@ -47,6 +47,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
+import { NovoLeadDialog } from './novo-lead-dialog'
 import { Lead } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
 
@@ -320,8 +321,23 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
     )
   }
 
+  const handleLeadCriado = (lead: Lead) => {
+    setLeads(prev => [lead, ...prev])
+  }
+
+  // Lojas disponíveis para o seletor: filtra pelo lojaIds se fornecido
+  const lojasSeletor = lojaIds?.length
+    ? lojas.filter(l => lojaIds.includes(l.id))
+    : lojas
+
   return (
     <>
+      {lojasSeletor.length > 0 && (
+        <div className="flex justify-end">
+          <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
