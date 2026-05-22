@@ -111,22 +111,27 @@ function mytheme_api_mensagens_unread_counts(WP_REST_Request $request): WP_REST_
   global $wpdb;
 
   $user_id = get_current_user_id();
-  $loja_id = intval($request->get_param('loja_id'));
+  $raw_loja = $request->get_param('loja_id') ?? '';
+  $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw_loja))));
 
   $table_msgs  = $wpdb->prefix . 'mensagens';
   $table_leads = $wpdb->prefix . 'leads';
 
   // Timestamp da mensagem recebida mais recente por lead
-  if ($loja_id) {
-    $rows = $wpdb->get_results($wpdb->prepare(
-      "SELECT m.lead_id, MAX(m.criado_em) AS latest_at
-       FROM {$table_msgs} m
-       INNER JOIN {$table_leads} l ON l.id = m.lead_id
-       WHERE m.direcao = 'recebida'
-         AND l.loja_id = %d
-       GROUP BY m.lead_id",
-      $loja_id
-    ), ARRAY_A);
+  if (!empty($loja_ids)) {
+    $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+    $rows = $wpdb->get_results(
+      $wpdb->prepare(
+        "SELECT m.lead_id, MAX(m.criado_em) AS latest_at
+         FROM {$table_msgs} m
+         INNER JOIN {$table_leads} l ON l.id = m.lead_id
+         WHERE m.direcao = 'recebida'
+           AND l.loja_id IN ({$placeholders})
+         GROUP BY m.lead_id",
+        ...$loja_ids
+      ),
+      ARRAY_A
+    );
   } else {
     $rows = $wpdb->get_results(
       "SELECT lead_id, MAX(criado_em) AS latest_at

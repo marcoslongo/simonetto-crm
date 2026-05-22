@@ -130,6 +130,7 @@ interface KanbanColumnsProps {
   isAdmin?: boolean
   lojas?: Array<{ id: number; nome: string }>
   lojaId?: string | number
+  lojaIds?: number[]
 }
 
 const POLL_INTERVAL = 30_000
@@ -156,7 +157,7 @@ function playNotificationSound() {
   } catch {}
 }
 
-export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
@@ -172,7 +173,8 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   }, [isModalOpen])
 
   useEffect(() => {
-    const qs = lojaId ? `?loja_id=${lojaId}` : ''
+    const ids = lojaIds?.length ? lojaIds : lojaId ? [lojaId] : []
+    const qs = ids.length ? `?loja_id=${ids.join(',')}` : ''
 
     const poll = async () => {
       if (isModalOpenRef.current) return
@@ -207,7 +209,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
     poll()
     const id = setInterval(poll, POLL_INTERVAL)
     return () => clearInterval(id)
-  }, [lojaId])
+  }, [lojaId, lojaIds])
 
   const getVisible = (status: string) => visibleCount[status] ?? INITIAL_VISIBLE
   const loadMore = (status: string) =>

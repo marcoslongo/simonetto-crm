@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/auth'
-import { getLojaLeads30Days, getLojaLeads12Months, getLojaServiceStats } from '@/lib/api-loja'
+import { getMultiLojaLeads30Days, getMultiLojaLeads12Months, getMultiLojaServiceStats } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
@@ -13,12 +13,12 @@ export default async function DesempenhoPage() {
   const user = await requireAuth()
 
   const isLoja = user.role === 'loja'
-  const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
+  const lojaIds = isLoja ? user.loja_ids : []
 
   const [leads30Days, leads12Months, serviceStats] = await Promise.all([
-    getLojaLeads30Days(String(lojaId)),
-    getLojaLeads12Months(String(lojaId)),
-    getLojaServiceStats(String(lojaId)),
+    getMultiLojaLeads30Days(lojaIds),
+    getMultiLojaLeads12Months(lojaIds),
+    getMultiLojaServiceStats(lojaIds),
   ])
 
   return (
@@ -30,9 +30,9 @@ export default async function DesempenhoPage() {
         </p>
       </div>
 
-      <ChartLeads30Days data={leads30Days} lojaId={lojaId} />
+      <ChartLeads30Days data={leads30Days} lojaId={lojaIds[0]} />
 
-      <ChartLeads12Months data={leads12Months} lojaId={lojaId} />
+      <ChartLeads12Months data={leads12Months} lojaId={lojaIds[0]} />
     </div>
   )
 }

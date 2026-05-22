@@ -169,3 +169,110 @@ export async function getLojaLeads(
 
   return { leads: data.leads, total: data.total }
 }
+
+// ============================================================
+// Funções de agregação multi-loja
+// ============================================================
+
+function safeCall<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  return fn().catch(() => fallback)
+}
+
+function mergeDateSeries<T extends { date: string; total: number }>(arrays: T[][]): T[] {
+  const map = new Map<string, number>()
+  for (const arr of arrays) {
+    for (const { date, total } of arr) {
+      map.set(date, (map.get(date) ?? 0) + total)
+    }
+  }
+  return Array.from(map.entries())
+    .map(([date, total]) => ({ date, total } as T))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export async function getMultiLojaStats(lojaIds: number[]): Promise<LojaStats> {
+  if (!lojaIds.length) return { total: 0, hoje: 0, semana: 0, mes: 0 }
+  const results = await Promise.all(
+    lojaIds.map(id => safeCall(() => getLojaStats(id), { total: 0, hoje: 0, semana: 0, mes: 0 }))
+  )
+  return results.reduce((acc, s) => ({
+    total: acc.total + s.total,
+    hoje: acc.hoje + s.hoje,
+    semana: acc.semana + s.semana,
+    mes: acc.mes + s.mes,
+  }))
+}
+
+export async function getMultiLojaStatusFunil(lojaIds: number[]): Promise<LojaStatusFunil> {
+  const zero: LojaStatusFunil = { nao_atendido: 0, em_negociacao: 0, venda_realizada: 0, venda_nao_realizada: 0 }
+  if (!lojaIds.length) return zero
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaStatusFunil(id), zero)))
+  return results.reduce((acc, s) => ({
+    nao_atendido: acc.nao_atendido + s.nao_atendido,
+    em_negociacao: acc.em_negociacao + s.em_negociacao,
+    venda_realizada: acc.venda_realizada + s.venda_realizada,
+    venda_nao_realizada: acc.venda_nao_realizada + s.venda_nao_realizada,
+  }))
+}
+
+export async function getMultiLojaClassificacao(lojaIds: number[]): Promise<LojaClassificacao> {
+  const zero: LojaClassificacao = { frio: 0, morno: 0, quente: 0 }
+  if (!lojaIds.length) return zero
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaClassificacao(id), zero)))
+  return results.reduce((acc, s) => ({
+    frio: acc.frio + s.frio,
+    morno: acc.morno + s.morno,
+    quente: acc.quente + s.quente,
+  }))
+}
+
+export async function getMultiLojaLeads30Days(lojaIds: number[]): Promise<LeadsByDay[]> {
+  if (!lojaIds.length) return []
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaLeads30Days(id), [])))
+  return mergeDateSeries(results)
+}
+
+export async function getMultiLojaLeads12Months(lojaIds: number[]): Promise<LeadsByMonth[]> {
+  if (!lojaIds.length) return []
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaLeads12Months(id), [])))
+  return mergeDateSeries(results)
+}
+
+export async function getMultiLojaServiceStats(lojaIds: number[]): Promise<LojaServiceStats> {
+  const zero: LojaServiceStats = {
+    total_leads: 0, leads_contatados: 0, leads_nao_contatados: 0,
+    perc_contatados: 0, perc_nao_contatados: 0,
+    tempo_medio_minutos: null, tempo_medio_horas: null,
+  }
+  if (!lojaIds.length) return zero
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaServiceStats(id), zero)))
+  const totalLeads = results.reduce((s, r) => s + r.total_leads, 0)
+  const totalContatados = results.reduce((s, r) => s + r.leads_contatados, 0)
+  const totalNaoContatados = results.reduce((s, r) => s + r.leads_nao_contatados, 0)
+  // Média ponderada pelo número de leads contatados
+  const tempoSumMin = results.reduce((s, r) => s + (r.tempo_medio_minutos ?? 0) * r.leads_contatados, 0)
+  const tempoSumHrs = results.reduce((s, r) => s + (r.tempo_medio_horas ?? 0) * r.leads_contatados, 0)
+  return {
+    total_leads: totalLeads,
+    leads_contatados: totalContatados,
+    leads_nao_contatados: totalNaoContatados,
+    perc_contatados: totalLeads ? Math.round(totalContatados * 10000 / totalLeads) / 100 : 0,
+    perc_nao_contatados: totalLeads ? Math.round(totalNaoContatados * 10000 / totalLeads) / 100 : 0,
+    tempo_medio_minutos: totalContatados ? Math.round(tempoSumMin / totalContatados * 100) / 100 : null,
+    tempo_medio_horas: totalContatados ? Math.round(tempoSumHrs / totalContatados * 100) / 100 : null,
+  }
+}
+
+export async function getMultiLojaLeads(
+  lojaIds: number[],
+  perPage = 200
+): Promise<{ leads: Lead[]; total: number }> {
+  if (!lojaIds.length) return { leads: [], total: 0 }
+  const results = await Promise.all(
+    lojaIds.map(id => safeCall(() => getLojaLeads(id, 1, perPage), { leads: [], total: 0 }))
+  )
+  const leads = results
+    .flatMap(r => r.leads)
+    .sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime())
+  return { leads, total: results.reduce((s, r) => s + r.total, 0) }
+}

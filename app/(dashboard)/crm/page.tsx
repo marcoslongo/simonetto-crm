@@ -1,9 +1,11 @@
 import { requireAuth } from '@/lib/auth'
-import { getLojaStats, getLojaStatusFunil, getLojaClassificacao } from '@/lib/api-loja'
+import { getMultiLojaStats, getMultiLojaStatusFunil, getMultiLojaClassificacao } from '@/lib/api-loja'
+import { getLojas } from '@/lib/api'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
 import { FunilStatus } from '@/components/lojas/funil-status'
+import { Store } from 'lucide-react'
 
 export const metadata = {
   title: 'Resumo | Noxus - Lead Ops',
@@ -14,13 +16,18 @@ export default async function CrmDashboardPage() {
   const user = await requireAuth()
 
   const isLoja = user.role === 'loja'
-  const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
+  const lojaIds = isLoja ? user.loja_ids : []
 
-  const [stats, statusFunil, classificacao] = await Promise.all([
-    getLojaStats(String(lojaId)),
-    getLojaStatusFunil(String(lojaId)),
-    getLojaClassificacao(String(lojaId)),
+  const [stats, statusFunil, classificacao, lojasData] = await Promise.all([
+    getMultiLojaStats(lojaIds),
+    getMultiLojaStatusFunil(lojaIds),
+    getMultiLojaClassificacao(lojaIds),
+    isLoja && lojaIds.length > 1
+      ? getLojas().catch(() => ({ success: false, lojas: [] }))
+      : Promise.resolve({ success: false, lojas: [] }),
   ])
+
+  const lojasVinculadas = lojasData.lojas.filter(l => lojaIds.includes(Number(l.id)))
 
   return (
     <div className="space-y-6">
@@ -32,6 +39,23 @@ export default async function CrmDashboardPage() {
             : 'Visão geral de todas as unidades'}
         </p>
       </div>
+
+      {isLoja && lojaIds.length > 1 && (
+        <div
+          className="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm"
+          style={{ borderColor: '#c7cfe8', backgroundColor: '#eef0f8', color: '#16255c' }}
+        >
+          <Store className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <span className="font-medium">Lojas vinculadas ao seu usuário:</span>
+            <span className="ml-1">
+              {lojasVinculadas.length > 0
+                ? lojasVinculadas.map(l => l.nome).join(' · ')
+                : lojaIds.map(id => `#${id}`).join(' · ')}
+            </span>
+          </div>
+        </div>
+      )}
 
       <StatsCards stats={stats} />
 
