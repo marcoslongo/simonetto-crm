@@ -70,11 +70,11 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true',
   ));
 
-  // GET /api/v1/leads/{id}/actions — histórico do lead (admin)
+  // GET /api/v1/leads/{id}/actions — histórico do lead
   register_rest_route('api/v1', '/leads/(?P<id>\d+)/actions', array(
     'methods' => 'GET',
     'callback' => 'mytheme_api_get_lead_actions',
-    'permission_callback' => '__return_true',
+    'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
   // GET /api/v1/leads-por-estado — stats geográficas com filtro opcional por estado
@@ -425,14 +425,15 @@ function mytheme_api_get_lead_actions($request)
   global $wpdb;
 
   $lead_id = intval($request->get_param('id'));
-  $table = $wpdb->prefix . 'leads_actions';
+  $table   = $wpdb->prefix . 'leads_actions';
 
   $actions = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT *
-       FROM {$table}
-       WHERE lead_id = %d
-       ORDER BY criado_em DESC",
+      "SELECT a.*, u.display_name AS usuario_nome
+       FROM {$table} a
+       LEFT JOIN {$wpdb->users} u ON u.ID = a.usuario_id
+       WHERE a.lead_id = %d
+       ORDER BY a.criado_em DESC",
       $lead_id
     ),
     ARRAY_A

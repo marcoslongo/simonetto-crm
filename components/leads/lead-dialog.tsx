@@ -768,6 +768,12 @@ export function LeadDetailsModal({
                               {formatDate(action.criado_em)}
                             </span>
                           </div>
+                          {action.usuario_nome && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <User className="h-3 w-3" />
+                              <span>{action.usuario_nome}</span>
+                            </div>
+                          )}
                           {action.observacao && (
                             <p className="text-sm text-muted-foreground mt-2">
                               {action.observacao}

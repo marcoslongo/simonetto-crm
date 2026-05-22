@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 
 const WP_API_BASE =
   process.env.NEXT_PUBLIC_WP_URL ||
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    await requireAuth()
 
     const { id } = await params
 
