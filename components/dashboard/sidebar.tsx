@@ -86,6 +86,9 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           group: 'Visão Geral',
           items: [
             { name: 'Resumo', href: '/crm', icon: LayoutDashboard },
+            ...(user.loja_ids.length > 1
+              ? [{ name: 'Unidades', href: '/crm/unidades', icon: Building2 }]
+              : []),
           ],
         },
         {
