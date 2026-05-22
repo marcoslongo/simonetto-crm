@@ -30,7 +30,7 @@ export default async function DesempenhoPage() {
         </p>
       </div>
 
-      <ChartLeads30Days data={leads30Days} />
+      <ChartLeads30Days data={leads30Days} lojaId={lojaId} />
 
       <ChartLeads12Months data={leads12Months} lojaId={lojaId} />
     </div>
