@@ -48,7 +48,12 @@ export default async function CrmAtendimentoPage() {
         </p>
       </div>
 
-      <KanbanColumns leads={leads} lojaIds={lojaIds} lojas={lojas} />
+      <KanbanColumns
+        leads={leads}
+        lojaIds={lojaIds}
+        lojas={lojas}
+        currentUser={{ id: user.id, nome: user.name }}
+      />
     </div>
   )
 }

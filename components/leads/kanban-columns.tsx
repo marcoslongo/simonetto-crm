@@ -141,6 +141,7 @@ interface KanbanColumnsProps {
   lojas?: Array<{ id: number; nome: string }>
   lojaId?: string | number
   lojaIds?: number[]
+  currentUser?: { id: number; nome: string }
 }
 
 const POLL_INTERVAL = 30_000
@@ -167,7 +168,7 @@ function playNotificationSound() {
   } catch {}
 }
 
-export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
@@ -284,6 +285,21 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
         "movimentacao",
         `Status alterado de ${statusLabels[statusAnterior]} para ${statusLabels[novoStatus]}`
       )
+
+      if (currentUser) {
+        await fetch(`/api/leads/${lead.id}/responsavel`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ responsavel_id: currentUser.id }),
+        })
+        setLeads(prev =>
+          prev.map(l =>
+            String(l.id) === String(lead.id)
+              ? { ...l, responsavel_id: currentUser.id, responsavel_nome: currentUser.nome }
+              : l
+          )
+        )
+      }
 
       toast.success('Lead movido com sucesso.')
     } catch {
