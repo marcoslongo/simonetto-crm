@@ -77,6 +77,21 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
+  // GET  /api/v1/leads/{id}/venda-nao-realizada — buscar motivos
+  // POST /api/v1/leads/{id}/venda-nao-realizada — salvar/atualizar motivos
+  register_rest_route('api/v1', '/leads/(?P<id>\d+)/venda-nao-realizada', array(
+    array(
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_venda_nao_realizada',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ),
+    array(
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_venda_nao_realizada',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ),
+  ));
+
   // GET /api/v1/leads-por-estado — stats geográficas com filtro opcional por estado
   register_rest_route('api/v1', '/leads-por-estado', [
     'methods' => 'GET',
@@ -1444,4 +1459,140 @@ function mytheme_api_leads_tracking_medium(WP_REST_Request $request)
   }, $rows);
 
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads/{id}/venda-nao-realizada
+ *
+ * Retorna os motivos de não realização registrados para o lead.
+ * Resposta: { success: true, data: { ...campos } | null }
+ */
+function mytheme_api_get_venda_nao_realizada(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $lead_id = intval($request->get_param('id'));
+  $table   = $wpdb->prefix . 'lead_venda_nao_realizada';
+
+  $row = $wpdb->get_row(
+    $wpdb->prepare("SELECT * FROM {$table} WHERE lead_id = %d", $lead_id),
+    ARRAY_A
+  );
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Erro ao consultar banco: ' . $wpdb->last_error,
+    ], 500);
+  }
+
+  if (!$row) {
+    return new WP_REST_Response(['success' => true, 'data' => null], 200);
+  }
+
+  // Tipagem correta dos campos
+  $bool_fields = [
+    'motivo_preco', 'motivo_concorrencia', 'motivo_prazo_entrega',
+    'motivo_pagamento', 'motivo_financiamento', 'motivo_obra_pendente',
+    'motivo_indecisao', 'motivo_produto_inadequado', 'motivo_contato_perdido',
+    'motivo_atendimento', 'motivo_outro',
+  ];
+
+  foreach ($bool_fields as $field) {
+    $row[$field] = (bool) $row[$field];
+  }
+
+  $row['id']           = (int) $row['id'];
+  $row['lead_id']      = (int) $row['lead_id'];
+  $row['atendente_id'] = $row['atendente_id'] ? (int) $row['atendente_id'] : null;
+
+  return new WP_REST_Response(['success' => true, 'data' => $row], 200);
+}
+
+/**
+ * POST /api/v1/leads/{id}/venda-nao-realizada
+ *
+ * Cria ou atualiza (upsert) os motivos de não realização do lead.
+ *
+ * Body JSON:
+ * {
+ *   "motivo_preco": true,
+ *   "motivo_concorrencia": false,
+ *   ...
+ *   "observacao": "texto livre"
+ * }
+ */
+function mytheme_api_save_venda_nao_realizada(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $lead_id = intval($request->get_param('id'));
+  $params  = json_decode($request->get_body(), true);
+
+  if (empty($params)) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'JSON inválido ou vazio.',
+    ], 400);
+  }
+
+  $table       = $wpdb->prefix . 'lead_venda_nao_realizada';
+  $leads_table = $wpdb->prefix . 'leads';
+
+  // Verifica se o lead existe
+  $lead = $wpdb->get_row($wpdb->prepare("SELECT id FROM {$leads_table} WHERE id = %d", $lead_id));
+  if (!$lead) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Lead não encontrado.',
+    ], 404);
+  }
+
+  // Atendente logado
+  $user_id   = get_current_user_id();
+  $user      = $user_id ? get_userdata($user_id) : null;
+  $user_nome = $user ? $user->display_name : null;
+
+  $motivo_fields = [
+    'motivo_preco', 'motivo_concorrencia', 'motivo_prazo_entrega',
+    'motivo_pagamento', 'motivo_financiamento', 'motivo_obra_pendente',
+    'motivo_indecisao', 'motivo_produto_inadequado', 'motivo_contato_perdido',
+    'motivo_atendimento', 'motivo_outro',
+  ];
+
+  $data = [
+    'atendente_id'   => $user_id ?: null,
+    'atendente_nome' => $user_nome,
+    'observacao'     => !empty($params['observacao'])
+      ? sanitize_textarea_field($params['observacao'])
+      : null,
+  ];
+
+  foreach ($motivo_fields as $field) {
+    $data[$field] = !empty($params[$field]) ? 1 : 0;
+  }
+
+  // Upsert: atualiza se já existe, insere se não
+  $existing_id = $wpdb->get_var(
+    $wpdb->prepare("SELECT id FROM {$table} WHERE lead_id = %d", $lead_id)
+  );
+
+  if ($existing_id) {
+    $wpdb->update($table, $data, ['lead_id' => $lead_id]);
+  } else {
+    $data['lead_id'] = $lead_id;
+    $wpdb->insert($table, $data);
+  }
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Erro ao salvar: ' . $wpdb->last_error,
+    ], 500);
+  }
+
+  return new WP_REST_Response([
+    'success'  => true,
+    'mensagem' => 'Motivos registrados com sucesso.',
+  ], 200);
 }
