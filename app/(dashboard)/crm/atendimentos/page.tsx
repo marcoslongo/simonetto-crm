@@ -29,7 +29,7 @@ export default async function CrmAtendimentoPage() {
   }
 
   const [{ leads, total: totalLeads }, lojasData] = await Promise.all([
-    getMultiLojaLeads(lojaIds, 200),
+    getMultiLojaLeads(lojaIds, 100),
     getLojas().catch(() => ({ success: false, lojas: [] })),
   ])
 
