@@ -31,18 +31,20 @@ export default async function DesempenhoPage() {
           Evolução de captação da sua unidade
         </p>
       </div>
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+        <ChartFunilKanban {...statusFunil} />
 
-      <ChartFunilKanban {...statusFunil} />
+        <ChartVnrMotivos
+          initialData={vnrStats}
+          isAdmin={false}
+          lojaIds={lojaIds}
+        />
+      </div>
 
       <ChartLeads30Days data={leads30Days} lojaId={lojaIds[0]} />
 
       <ChartLeads12Months data={leads12Months} lojaId={lojaIds[0]} />
 
-      <ChartVnrMotivos
-        initialData={vnrStats}
-        isAdmin={false}
-        lojaIds={lojaIds}
-      />
     </div>
   )
 }
