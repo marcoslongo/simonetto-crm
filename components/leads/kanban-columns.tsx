@@ -174,6 +174,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
   const [fetchPage, setFetchPage] = useState(1)
+  const [loadingAll, setLoadingAll] = useState(false)
   const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({})
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
@@ -188,6 +189,56 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
   }, [isModalOpen])
+
+  // Busca todas as páginas restantes em background após o carregamento inicial
+  useEffect(() => {
+    const total = initialTotal ?? initialLeads.length
+    if (initialLeads.length >= total) return
+
+    const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
+    if (!ids.length) return
+
+    let cancelled = false
+
+    const fetchAll = async () => {
+      setLoadingAll(true)
+      let page = 2
+      let loaded = initialLeads.length
+      let currentTotal = total
+
+      while (!cancelled && loaded < currentTotal) {
+        try {
+          const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${page}&per_page=${FETCH_PER_PAGE}`)
+          if (!res.ok || cancelled) break
+          const data = await res.json()
+          if (!data.success || cancelled) break
+
+          const newLeads = data.leads as Lead[]
+          if (!newLeads.length) break
+
+          setLeads(prev => {
+            const existingIds = new Set(prev.map(l => String(l.id)))
+            const fresh = newLeads.filter(l => !existingIds.has(String(l.id)))
+            return fresh.length ? [...prev, ...fresh] : prev
+          })
+
+          currentTotal = data.total
+          setTotalLeads(data.total)
+          setFetchPage(page)
+          loaded += newLeads.length
+          page++
+        } catch {
+          break
+        }
+      }
+
+      if (!cancelled) setLoadingAll(false)
+    }
+
+    fetchAll()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const ids = lojaIds?.length ? lojaIds : lojaId ? [lojaId] : []
@@ -404,11 +455,21 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
   return (
     <>
-      {lojasSeletor.length > 0 && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4">
+        {loadingAll && (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            Carregando leads…
+          </span>
+        )}
+        {!loadingAll && <span />}
+        {lojasSeletor.length > 0 && (
           <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
-        </div>
-      )}
+        )}
+      </div>
 
       <DndContext
         sensors={sensors}
