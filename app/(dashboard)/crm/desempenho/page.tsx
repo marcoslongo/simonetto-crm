@@ -1,8 +1,8 @@
 import { requireAuth } from '@/lib/auth'
-import { getMultiLojaLeads30Days, getMultiLojaLeads12Months, getMultiLojaServiceStats } from '@/lib/api-loja'
+import { getMultiLojaLeads30Days, getMultiLojaLeads12Months, getVnrStats } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
-import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
+import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
 
 export const metadata = {
   title: 'Desempenho | Noxus - Lead Ops',
@@ -15,10 +15,10 @@ export default async function DesempenhoPage() {
   const isLoja = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []
 
-  const [leads30Days, leads12Months, serviceStats] = await Promise.all([
+  const [leads30Days, leads12Months, vnrStats] = await Promise.all([
     getMultiLojaLeads30Days(lojaIds),
     getMultiLojaLeads12Months(lojaIds),
-    getMultiLojaServiceStats(lojaIds),
+    getVnrStats(lojaIds),
   ])
 
   return (
@@ -33,6 +33,12 @@ export default async function DesempenhoPage() {
       <ChartLeads30Days data={leads30Days} lojaId={lojaIds[0]} />
 
       <ChartLeads12Months data={leads12Months} lojaId={lojaIds[0]} />
+
+      <ChartVnrMotivos
+        initialData={vnrStats}
+        isAdmin={false}
+        lojaIds={lojaIds}
+      />
     </div>
   )
 }

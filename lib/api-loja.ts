@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaServiceStats, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
 import type { Lead } from './types'
+import type { VnrStatsData } from '@/components/dashboard/chart-vnr-motivos'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
 
@@ -275,4 +276,23 @@ export async function getMultiLojaLeads(
     .flatMap(r => r.leads)
     .sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime())
   return { leads, total: results.reduce((s, r) => s + r.total, 0) }
+}
+
+export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {
+  const qs = new URLSearchParams()
+  if (lojaIds?.length) qs.set('loja_id', lojaIds.join(','))
+
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/leads-vnr-stats${qs.toString() ? `?${qs}` : ''}`,
+      { cache: 'no-store', headers }
+    )
+    if (!res.ok) return { total: 0, motivos: [] }
+    const data = await res.json()
+    if (!data.success) return { total: 0, motivos: [] }
+    return { total: data.total, motivos: data.motivos }
+  } catch {
+    return { total: 0, motivos: [] }
+  }
 }

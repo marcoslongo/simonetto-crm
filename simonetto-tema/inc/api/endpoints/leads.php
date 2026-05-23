@@ -77,6 +77,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_authenticated',
   ));
 
+  // GET /api/v1/leads-vnr-stats — estatísticas agregadas de venda não realizada
+  register_rest_route('api/v1', '/leads-vnr-stats', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_vnr_stats',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET  /api/v1/leads/{id}/venda-nao-realizada — buscar motivos
   // POST /api/v1/leads/{id}/venda-nao-realizada — salvar/atualizar motivos
   register_rest_route('api/v1', '/leads/(?P<id>\d+)/venda-nao-realizada', array(
@@ -1459,6 +1466,125 @@ function mytheme_api_leads_tracking_medium(WP_REST_Request $request)
   }, $rows);
 
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/leads-vnr-stats
+ *
+ * Agrega totais de cada motivo de venda não realizada.
+ *
+ * Query params opcionais:
+ *   loja_id  — filtra por loja (aceita múltiplos separados por vírgula)
+ *   from     — yyyy-MM-dd
+ *   to       — yyyy-MM-dd
+ *
+ * Resposta:
+ * {
+ *   success: true,
+ *   total: 42,
+ *   motivos: [
+ *     { key: "motivo_preco", label: "Preço acima do orçamento", total: 18, pct: 42.8 },
+ *     ...
+ *   ]
+ * }
+ */
+function mytheme_api_leads_vnr_stats(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_vnr   = $wpdb->prefix . 'lead_venda_nao_realizada';
+  $table_leads = $wpdb->prefix . 'leads';
+
+  // Filtros
+  $loja_id_raw = sanitize_text_field($request->get_param('loja_id') ?? '');
+  $from        = sanitize_text_field($request->get_param('from')    ?? '');
+  $to          = sanitize_text_field($request->get_param('to')      ?? '');
+
+  $loja_ids = array_filter(
+    array_map('intval', explode(',', $loja_id_raw)),
+    fn($v) => $v > 0
+  );
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  if (!empty($loja_ids)) {
+    $placeholders   = implode(',', array_fill(0, count($loja_ids), '%d'));
+    $where_clauses[] = "l.loja_id IN ({$placeholders})";
+    $prepare_values  = array_merge($prepare_values, $loja_ids);
+  }
+
+  if ($from) {
+    $where_clauses[]  = "l.data_criacao >= %s";
+    $prepare_values[] = $from . ' 00:00:00';
+  }
+
+  if ($to) {
+    $where_clauses[]  = "l.data_criacao <= %s";
+    $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  $where_sql = !empty($where_clauses)
+    ? 'WHERE ' . implode(' AND ', $where_clauses)
+    : '';
+
+  $motivo_cols = [
+    'motivo_preco'              => 'Preço acima do orçamento',
+    'motivo_concorrencia'       => 'Perdeu para a concorrência',
+    'motivo_prazo_entrega'      => 'Prazo de entrega muito longo',
+    'motivo_pagamento'          => 'Condições de pagamento inadequadas',
+    'motivo_financiamento'      => 'Cliente não conseguiu financiamento',
+    'motivo_obra_pendente'      => 'Obra / imóvel não finalizado',
+    'motivo_indecisao'          => 'Cliente indeciso / adiou a decisão',
+    'motivo_produto_inadequado' => 'Produto não atendeu a necessidade',
+    'motivo_contato_perdido'    => 'Contato perdido / cliente sumiu',
+    'motivo_atendimento'        => 'Problema no atendimento',
+    'motivo_outro'              => 'Outro motivo',
+  ];
+
+  $sum_cols = implode(', ', array_map(
+    fn($col) => "SUM(vnr.{$col}) AS {$col}",
+    array_keys($motivo_cols)
+  ));
+
+  $query = "
+    SELECT COUNT(vnr.id) AS total, {$sum_cols}
+    FROM {$table_vnr} vnr
+    INNER JOIN {$table_leads} l ON l.id = vnr.lead_id
+    {$where_sql}
+  ";
+
+  $row = empty($prepare_values)
+    ? $wpdb->get_row($query, ARRAY_A)
+    : $wpdb->get_row($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Erro ao consultar banco: ' . $wpdb->last_error,
+    ], 500);
+  }
+
+  $total = (int) ($row['total'] ?? 0);
+
+  $motivos = [];
+  foreach ($motivo_cols as $key => $label) {
+    $count     = (int) ($row[$key] ?? 0);
+    $motivos[] = [
+      'key'   => $key,
+      'label' => $label,
+      'total' => $count,
+      'pct'   => $total > 0 ? round($count / $total * 100, 1) : 0,
+    ];
+  }
+
+  usort($motivos, fn($a, $b) => $b['total'] - $a['total']);
+
+  return new WP_REST_Response([
+    'success' => true,
+    'total'   => $total,
+    'motivos' => $motivos,
+  ], 200);
 }
 
 /**
