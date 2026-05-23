@@ -43,6 +43,7 @@ import {
   ChevronDown,
   UserPlus,
   Check,
+  User,
 } from 'lucide-react'
 import {
   Popover,
@@ -568,63 +569,136 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
           <GripVertical className="h-4 w-4" />
         </button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onOpen}
-              className="min-w-0 flex-1 text-left focus-visible:outline-none cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                <OrigemBadge lead={lead} size="xs" />
+        <div className="min-w-0 flex-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onOpen}
+                className="w-full text-left focus-visible:outline-none cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <OrigemBadge lead={lead} size="xs" />
 
-                {lead.classificacao === "quente" && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
-                    <Flame size={12} />
-                    Quente
-                  </span>
+                  {lead.classificacao === "quente" && (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                      <Flame size={12} />
+                      Quente
+                    </span>
+                  )}
+
+                  {lead.classificacao === "morno" && (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                      <Thermometer size={12} />
+                      Morno
+                    </span>
+                  )}
+
+                  {lead.classificacao === "frio" && (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                      <Snowflake size={12} />
+                      Frio
+                    </span>
+                  )}
+                </div>
+
+                <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
+
+                {lead.email && (
+                  <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
                 )}
 
-                {lead.classificacao === "morno" && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
-                    <Thermometer size={12} />
-                    Morno
-                  </span>
+                {lead.cidade && (
+                  <p className="text-xs text-muted-foreground">
+                    {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
+                  </p>
                 )}
 
-                {lead.classificacao === "frio" && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
-                    <Snowflake size={12} />
-                    Frio
-                  </span>
-                )}
-              </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  {lead.expectativa_investimento && (
+                    <span className="text-xs font-medium text-emerald-600">
+                      {lead.expectativa_investimento}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground">{criado}</span>
+                </div>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Ver informações completas
+            </TooltipContent>
+          </Tooltip>
 
-              <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
-
-              {lead.email && (
-                <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
-              )}
-
-              {lead.cidade && (
-                <p className="text-xs text-muted-foreground">
-                  {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
-                </p>
-              )}
-
-              <div className="mt-1.5 flex items-center gap-2">
-                {lead.expectativa_investimento && (
-                  <span className="text-xs font-medium text-emerald-600">
-                    {lead.expectativa_investimento}
-                  </span>
-                )}
-                <span className="text-[10px] text-muted-foreground">{criado}</span>
-              </div>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Ver informações completas
-          </TooltipContent>
-        </Tooltip>
+          <div className="mt-2">
+            {lead.loja_id ? (
+              <Popover open={popoverOpen} onOpenChange={handlePopoverOpen}>
+                <PopoverTrigger asChild>
+                  {lead.responsavel_nome ? (
+                    <button className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                      <User className="h-3 w-3 shrink-0" />
+                      {lead.responsavel_nome}
+                    </button>
+                  ) : (
+                    <button className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60 hover:border-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer">
+                      <UserPlus className="h-3 w-3 shrink-0" />
+                      Sem atendente
+                    </button>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent className="w-52 p-1.5" side="bottom" align="start">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">
+                    Atendente
+                  </p>
+                  {loadingUsuarios || saving ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => handleSelectAtendente(null)}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
+                          !lead.responsavel_id && "font-medium text-foreground"
+                        )}
+                      >
+                        {!lead.responsavel_id && <Check className="h-3 w-3 shrink-0" />}
+                        <span className={lead.responsavel_id ? "ml-5" : ""}>— Sem atendente —</span>
+                      </button>
+                      {usuarios.map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => handleSelectAtendente(u.id)}
+                          className={cn(
+                            "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
+                            lead.responsavel_id === u.id && "font-medium text-foreground"
+                          )}
+                        >
+                          {lead.responsavel_id === u.id
+                            ? <Check className="h-3 w-3 shrink-0" />
+                            : <span className="w-3 shrink-0" />
+                          }
+                          {u.nome}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            ) : (
+              lead.responsavel_nome ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                  <User className="h-3 w-3 shrink-0" />
+                  {lead.responsavel_nome}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60">
+                  <UserPlus className="h-3 w-3 shrink-0" />
+                  Sem atendente
+                </span>
+              )
+            )}
+          </div>
+        </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {(lead.unread_count ?? 0) > 0 && (
@@ -643,64 +717,6 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-
-          {lead.loja_id && (
-            <Popover open={popoverOpen} onOpenChange={handlePopoverOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  title={lead.responsavel_nome ? `Atendente: ${lead.responsavel_nome}` : 'Adicionar atendente'}
-                  className={cn(
-                    "rounded-md p-1 transition-colors cursor-pointer",
-                    lead.responsavel_nome
-                      ? "text-primary hover:bg-muted"
-                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-muted"
-                  )}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-52 p-1.5" side="left" align="start">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">
-                  Atendente
-                </p>
-                {loadingUsuarios || saving ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-                  </div>
-                ) : (
-                  <div className="space-y-0.5">
-                    <button
-                      onClick={() => handleSelectAtendente(null)}
-                      className={cn(
-                        "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
-                        !lead.responsavel_id && "font-medium text-foreground"
-                      )}
-                    >
-                      {!lead.responsavel_id && <Check className="h-3 w-3 shrink-0" />}
-                      <span className={lead.responsavel_id ? "ml-5" : ""}>— Sem atendente —</span>
-                    </button>
-                    {usuarios.map(u => (
-                      <button
-                        key={u.id}
-                        onClick={() => handleSelectAtendente(u.id)}
-                        className={cn(
-                          "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
-                          lead.responsavel_id === u.id && "font-medium text-foreground"
-                        )}
-                      >
-                        {lead.responsavel_id === u.id
-                          ? <Check className="h-3 w-3 shrink-0" />
-                          : <span className="w-3 shrink-0" />
-                        }
-                        {u.nome}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-          )}
         </div>
       </div>
     </TooltipProvider>
