@@ -27,15 +27,17 @@ export async function GET(req: Request) {
     await Promise.all(
       lojaIds.map(async id => {
         let page = 1
+        let fetched = 0
         while (true) {
-          const { leads, total } = await getLojaLeads(id, page, 200, from, to)
+          const { leads, total } = await getLojaLeads(id, page, 200, from, to).catch(() => ({ leads: [] as Lead[], total: 0 }))
           for (const lead of leads) {
             if (!seenIds.has(lead.id)) {
               seenIds.add(lead.id)
               allLeads.push(lead)
             }
           }
-          if (allLeads.length >= total || leads.length < 200) break
+          fetched += leads.length
+          if (leads.length < 200 || fetched >= total) break
           page++
         }
       })

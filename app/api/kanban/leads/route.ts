@@ -25,7 +25,10 @@ export async function GET(req: Request) {
   try {
     const results = await Promise.all(
       lojaIds.map(id =>
-        getLojaLeads(id, page, perPage, from, to).catch(() => ({ leads: [] as Lead[], total: 0 }))
+        getLojaLeads(id, page, perPage, from, to).catch(err => {
+          console.error(`[kanban/leads] loja ${id} falhou:`, err)
+          return { leads: [] as Lead[], total: 0 }
+        })
       )
     )
     const leads = results
