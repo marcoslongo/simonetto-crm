@@ -28,7 +28,7 @@ async function VnrChart({ lojaIds }: { lojaIds: number[] }) {
 
 async function Leads30DaysChart({ lojaIds }: { lojaIds: number[] }) {
   const data = await getMultiLojaLeads30Days(lojaIds)
-  return <ChartLeads30Days data={data} lojaId={lojaIds[0]} />
+  return <ChartLeads30Days data={data} lojaIds={lojaIds} />
 }
 
 async function Leads12MonthsChart({ lojaIds }: { lojaIds: number[] }) {

@@ -59,7 +59,7 @@ async function LojaTemperaturaWrapper({ id }: { id: string }) {
 
 async function Leads30DaysWrapper({ id }: { id: string }) {
   const data = await getLojaLeads30Days(id)
-  return <ChartLeads30Days data={data} />
+  return <ChartLeads30Days data={data} lojaIds={[id]} />
 }
 
 async function Leads12MonthsWrapper({ id }: { id: string }) {

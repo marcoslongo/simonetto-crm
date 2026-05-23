@@ -34,7 +34,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-import { getLeadsStatsFilterDateStats } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -70,10 +69,10 @@ function normalizeLeads(data: any[], from: string, to: string) {
 
 export function ChartLeads30Days({
   data: initialData,
-  lojaId,
+  lojaIds,
 }: {
   data: LeadChart[]
-  lojaId?: string | number
+  lojaIds?: (string | number)[]
 }) {
   const [data, setData] = useState(initialData)
   const [from, setFrom] = useState<Date | undefined>()
@@ -93,18 +92,14 @@ export function ChartLeads30Days({
     setLoading(true)
 
     try {
-      const res = await getLeadsStatsFilterDateStats(
-        format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd"),
-        lojaId,
-      )
+      const fromStr = format(from, "yyyy-MM-dd")
+      const toStr = format(to, "yyyy-MM-dd")
+      const qs = new URLSearchParams({ from: fromStr, to: toStr })
+      if (lojaIds?.length) qs.set('loja_ids', lojaIds.join(','))
+      const res = await fetch(`/api/kanban/leads-by-day?${qs}`)
+      const json = await res.json()
 
-      const normalized = normalizeLeads(
-        res.data,
-        format(from, "yyyy-MM-dd"),
-        format(to, "yyyy-MM-dd")
-      )
-
+      const normalized = normalizeLeads(json.data ?? [], fromStr, toStr)
       setData(normalized)
     } catch (error) {
       console.error(error)
@@ -129,7 +124,7 @@ export function ChartLeads30Days({
 
       try {
         const qs = new URLSearchParams({ from: clickedDate, to: clickedDate, per_page: '200' })
-        if (lojaId) qs.set('loja_ids', String(lojaId))
+        if (lojaIds?.length) qs.set('loja_ids', lojaIds.join(','))
         const res = await fetch(`/api/kanban/leads?${qs}`)
         const json = await res.json()
         if (json.success) {
