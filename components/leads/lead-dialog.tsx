@@ -138,6 +138,16 @@ export function LeadDetailsModal({
   const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string }[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
 
+  useEffect(() => {
+    setSelectedLojaId(lead.loja_id ?? "");
+    setCurrentLojaNome(lead.loja_nome ?? "");
+    setEditingLoja(false);
+    setSelectedResponsavelId(lead.responsavel_id ? String(lead.responsavel_id) : "none");
+    setCurrentResponsavelNome(lead.responsavel_nome ?? "");
+    setEditingResponsavel(false);
+    setUsuarios([]);
+  }, [lead.id]);
+
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
       day: "2-digit",
