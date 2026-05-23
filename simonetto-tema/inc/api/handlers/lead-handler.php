@@ -661,6 +661,15 @@ class Lead_Handler
       return new WP_Error('db_error', 'Erro ao atualizar status do lead.', ['status' => 500]);
     }
 
+    // Se saiu de venda_nao_realizada, apaga os motivos registrados (cliente mudou de ideia)
+    if ($status !== 'venda_nao_realizada') {
+      $wpdb->delete(
+        $wpdb->prefix . 'lead_venda_nao_realizada',
+        ['lead_id' => $id],
+        ['%d']
+      );
+    }
+
     return self::get_by_id($id);
   }
 
