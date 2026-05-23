@@ -100,8 +100,9 @@ const COLUNAS = [
   },
 ] as const
 
-const INITIAL_VISIBLE = 10
-const LOAD_MORE_STEP = 3
+const INITIAL_VISIBLE = 20
+const LOAD_MORE_STEP = 20
+const FETCH_PER_PAGE = 200
 
 const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string; loadMore: string }> = {
   amber: {
@@ -246,7 +247,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     setColumnLoading(prev => ({ ...prev, [status]: true }))
     try {
       const nextPage = fetchPage + 1
-      const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${nextPage}&per_page=100`)
+      const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${nextPage}&per_page=${FETCH_PER_PAGE}`)
       if (!res.ok) return
       const data = await res.json()
       if (!data.success) return
