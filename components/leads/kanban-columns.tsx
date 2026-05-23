@@ -136,6 +136,7 @@ const colorStyles: Record<string, { icon: string; badge: string; empty: string; 
 
 interface KanbanColumnsProps {
   leads: Lead[]
+  initialTotal?: number
   onLeadClick?: (lead: Lead) => void
   isAdmin?: boolean
   lojas?: Array<{ id: number; nome: string }>
@@ -168,8 +169,11 @@ function playNotificationSound() {
   } catch {}
 }
 
-export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
+  const [fetchPage, setFetchPage] = useState(1)
+  const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({})
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -224,8 +228,41 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   }, [lojaId, lojaIds])
 
   const getVisible = (status: string) => visibleCount[status] ?? INITIAL_VISIBLE
-  const loadMore = (status: string) =>
-    setVisibleCount(prev => ({ ...prev, [status]: (prev[status] ?? INITIAL_VISIBLE) + LOAD_MORE_STEP }))
+
+  const loadMore = async (status: string) => {
+    const currentVisible = visibleCount[status] ?? INITIAL_VISIBLE
+    const colLeads = leads.filter(l => (l.status ?? 'nao_atendido') === status)
+
+    if (currentVisible < colLeads.length) {
+      setVisibleCount(prev => ({ ...prev, [status]: currentVisible + LOAD_MORE_STEP }))
+      return
+    }
+
+    if (leads.length >= totalLeads) return
+
+    const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
+    if (!ids.length) return
+
+    setColumnLoading(prev => ({ ...prev, [status]: true }))
+    try {
+      const nextPage = fetchPage + 1
+      const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${nextPage}&per_page=100`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (!data.success) return
+
+      setLeads(prev => {
+        const existingIds = new Set(prev.map(l => String(l.id)))
+        const fresh = (data.leads as Lead[]).filter(l => !existingIds.has(String(l.id)))
+        return [...prev, ...fresh]
+      })
+      setTotalLeads(data.total)
+      setFetchPage(nextPage)
+      setVisibleCount(prev => ({ ...prev, [status]: currentVisible + LOAD_MORE_STEP }))
+    } finally {
+      setColumnLoading(prev => ({ ...prev, [status]: false }))
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -393,6 +430,8 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
                 onLeadUpdate={handleLeadUpdate}
                 visibleCount={getVisible(coluna.key)}
                 onLoadMore={() => loadMore(coluna.key)}
+                isLoadingMore={columnLoading[coluna.key] ?? false}
+                hasMoreGlobal={leads.length < totalLeads}
               />
             )
           })}
@@ -445,16 +484,18 @@ interface KanbanColumnProps {
   onLeadUpdate: (updated: Lead) => void
   visibleCount: number
   onLoadMore: () => void
+  isLoadingMore?: boolean
+  hasMoreGlobal?: boolean
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore }: KanbanColumnProps) {
+function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
 
   const visibleItems = items.slice(0, visibleCount)
   const remaining = items.length - visibleCount
-  const hasMore = remaining > 0
+  const hasMore = remaining > 0 || (hasMoreGlobal ?? false)
 
   return (
     <Card
@@ -501,13 +542,25 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibl
                 <div className="px-5 py-3">
                   <button
                     onClick={onLoadMore}
+                    disabled={isLoadingMore}
                     className={cn(
-                      "w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md transition-colors cursor-pointer",
+                      "w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
                       styles.loadMore
                     )}
                   >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                    Ver mais ({remaining} restante{remaining !== 1 ? 's' : ''})
+                    {isLoadingMore ? (
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    {isLoadingMore
+                      ? 'Carregando...'
+                      : remaining > 0
+                        ? `Ver mais (${remaining} restante${remaining !== 1 ? 's' : ''})`
+                        : 'Ver mais'}
                   </button>
                 </div>
               )}

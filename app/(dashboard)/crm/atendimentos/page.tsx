@@ -28,7 +28,7 @@ export default async function CrmAtendimentoPage() {
     )
   }
 
-  const [{ leads }, lojasData] = await Promise.all([
+  const [{ leads, total: totalLeads }, lojasData] = await Promise.all([
     getMultiLojaLeads(lojaIds, 200),
     getLojas().catch(() => ({ success: false, lojas: [] })),
   ])
@@ -50,6 +50,7 @@ export default async function CrmAtendimentoPage() {
 
       <KanbanColumns
         leads={leads}
+        initialTotal={totalLeads}
         lojaIds={lojaIds}
         lojas={lojas}
         currentUser={{ id: user.id, nome: user.name }}
