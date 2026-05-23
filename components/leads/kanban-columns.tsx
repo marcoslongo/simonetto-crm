@@ -173,7 +173,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [quizLead, setQuizLead] = useState<Lead | null>(null)
+  const [pendingQuiz, setPendingQuiz] = useState<Lead | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
@@ -286,9 +286,6 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
       )
 
       toast.success('Lead movido com sucesso.')
-      if (novoStatus === 'venda_nao_realizada') {
-        setQuizLead({ ...lead, status: novoStatus })
-      }
     } catch {
       setLeads((prev) =>
         prev.map((l) =>
@@ -317,7 +314,11 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
     const novoStatus = over.id as LeadStatus
 
     const lead = leads.find((l) => String(l.id) === String(leadId))
-    if (lead && novoStatus !== (lead.status ?? 'nao_atendido')) {
+    if (!lead || novoStatus === (lead.status ?? 'nao_atendido')) return
+
+    if (novoStatus === 'venda_nao_realizada') {
+      setPendingQuiz(lead)
+    } else {
       moverLead(lead, novoStatus)
     }
   }
@@ -404,13 +405,16 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
         />
       )}
 
-      {quizLead && (
+      {pendingQuiz && (
         <VendaNaoRealizadaDialog
-          open={!!quizLead}
-          leadId={String(quizLead.id)}
-          leadNome={quizLead.nome}
-          onClose={() => setQuizLead(null)}
-          onSaved={() => setQuizLead(null)}
+          open={!!pendingQuiz}
+          leadId={String(pendingQuiz.id)}
+          leadNome={pendingQuiz.nome}
+          onClose={() => setPendingQuiz(null)}
+          onSaved={() => {
+            moverLead(pendingQuiz, 'venda_nao_realizada')
+            setPendingQuiz(null)
+          }}
         />
       )}
     </>

@@ -81,12 +81,8 @@ export function VendaNaoRealizadaDialog({
     }
   }
 
-  const handleSkip = () => {
-    onClose()
-  }
-
   return (
-    <Dialog open={open} onOpenChange={open => { if (!open) onClose() }}>
+    <Dialog open={open} onOpenChange={open => { if (!open && !saving) onClose() }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
@@ -96,7 +92,7 @@ export function VendaNaoRealizadaDialog({
             <div>
               <DialogTitle>Por que a venda não foi realizada?</DialogTitle>
               <DialogDescription className="mt-0.5">
-                {leadNome}
+                {leadNome} · Obrigatório para mover o lead
               </DialogDescription>
             </div>
           </div>
@@ -158,21 +154,20 @@ export function VendaNaoRealizadaDialog({
               disabled={saving || !canSave}
               className="flex-1"
             >
-              {saving ? "Salvando..." : "Salvar motivos"}
+              {saving ? "Salvando..." : "Confirmar e mover lead"}
             </Button>
             <Button
-              variant="ghost"
-              onClick={handleSkip}
+              variant="outline"
+              onClick={onClose}
               disabled={saving}
-              className="text-muted-foreground"
             >
-              Pular
+              Cancelar
             </Button>
           </div>
 
           {!canSave && (
             <p className="text-xs text-muted-foreground text-center -mt-2">
-              Selecione ao menos um motivo ou preencha as observações para salvar.
+              Selecione ao menos um motivo ou preencha as observações para confirmar.
             </p>
           )}
         </div>
