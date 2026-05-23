@@ -202,8 +202,11 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
     const fetchAll = async () => {
       setLoadingAll(true)
-      let page = 2
-      let loaded = initialLeads.length
+      // Começa da página 1 com FETCH_PER_PAGE para não pular leads entre
+      // a carga inicial (per_page=100) e o background (per_page=200).
+      // Os leads já carregados são removidos pelo dedup.
+      let page = 1
+      let loaded = 0
       let currentTotal = total
 
       while (!cancelled && loaded < currentTotal) {
