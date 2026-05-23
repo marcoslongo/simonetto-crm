@@ -257,7 +257,7 @@ export function LeadDetailsModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data?.mensagem || "Erro ao atualizar responsável");
+        toast.error(data?.mensagem || "Erro ao atualizar atendente");
         return;
       }
       const novoResponsavel = responsavelId
@@ -265,10 +265,10 @@ export function LeadDetailsModal({
         : null;
       setCurrentResponsavelNome(novoResponsavel?.nome ?? "");
       setEditingResponsavel(false);
-      toast.success("Responsável atualizado com sucesso");
+      toast.success("Atendente atualizado com sucesso");
       router.refresh();
     } catch {
-      toast.error("Erro ao atualizar responsável");
+      toast.error("Erro ao atualizar atendente");
     } finally {
       setSavingResponsavel(false);
     }
@@ -593,7 +593,7 @@ export function LeadDetailsModal({
                     )}
                   </div>
 
-                  {/* Responsável */}
+                  {/* Atendente */}
                   <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
@@ -601,7 +601,7 @@ export function LeadDetailsModal({
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                          Responsável
+                          Atendente
                         </h3>
                       </div>
                       {lead.loja_id && !editingResponsavel && (
@@ -614,7 +614,7 @@ export function LeadDetailsModal({
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Alterar responsável</TooltipContent>
+                          <TooltipContent>Alterar atendente</TooltipContent>
                         </Tooltip>
                       )}
                     </div>
@@ -631,10 +631,10 @@ export function LeadDetailsModal({
                             onValueChange={setSelectedResponsavelId}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecione um responsável..." />
+                              <SelectValue placeholder="Selecione um atendente..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">— Sem responsável —</SelectItem>
+                              <SelectItem value="none">— Sem atendente —</SelectItem>
                               {usuarios.map((u) => (
                                 <SelectItem key={u.id} value={String(u.id)}>
                                   {u.nome}

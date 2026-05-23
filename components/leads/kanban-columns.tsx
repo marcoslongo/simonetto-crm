@@ -41,7 +41,14 @@ import {
   Thermometer,
   Flame,
   ChevronDown,
+  UserPlus,
+  Check,
 } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -325,6 +332,10 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
     setLeads(prev => [lead, ...prev])
   }
 
+  const handleLeadUpdate = (updated: Lead) => {
+    setLeads(prev => prev.map(l => String(l.id) === String(updated.id) ? updated : l))
+  }
+
   // Lojas disponíveis para o seletor: filtra pelo lojaIds se fornecido
   const lojasSeletor = lojaIds?.length
     ? lojas.filter(l => lojaIds.includes(l.id))
@@ -356,6 +367,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
                 items={items}
                 styles={styles}
                 onLeadClick={handleLeadClick}
+                onLeadUpdate={handleLeadUpdate}
                 visibleCount={getVisible(coluna.key)}
                 onLoadMore={() => loadMore(coluna.key)}
               />
@@ -394,11 +406,12 @@ interface KanbanColumnProps {
   items: Lead[]
   styles: typeof colorStyles[string]
   onLeadClick?: (lead: Lead) => void
+  onLeadUpdate: (updated: Lead) => void
   visibleCount: number
   onLoadMore: () => void
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick, visibleCount, onLoadMore }: KanbanColumnProps) {
+function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
@@ -444,6 +457,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, visibleCount, onLoad
                   key={lead.id}
                   lead={lead}
                   onOpen={() => onLeadClick?.(lead)}
+                  onLeadUpdate={onLeadUpdate}
                 />
               ))}
 
@@ -472,9 +486,10 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, visibleCount, onLoad
 interface DraggableLeadRowProps {
   lead: Lead
   onOpen: () => void
+  onLeadUpdate: (updated: Lead) => void
 }
 
-function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
+function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -484,6 +499,46 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
   } = useDraggable({
     id: String(lead.id),
   })
+
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([])
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const handlePopoverOpen = async (open: boolean) => {
+    setPopoverOpen(open)
+    if (open && lead.loja_id && usuarios.length === 0) {
+      setLoadingUsuarios(true)
+      try {
+        const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`)
+        const data = await res.json()
+        if (res.ok) setUsuarios(data.usuarios || [])
+      } catch {
+        toast.error('Erro ao carregar usuários')
+      } finally {
+        setLoadingUsuarios(false)
+      }
+    }
+  }
+
+  const handleSelectAtendente = async (userId: number | null) => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/responsavel`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsavel_id: userId }),
+      })
+      if (!res.ok) { toast.error('Erro ao atualizar atendente'); return }
+      const nome = userId ? (usuarios.find(u => u.id === userId)?.nome ?? '') : null
+      onLeadUpdate({ ...lead, responsavel_id: userId, responsavel_nome: nome })
+      setPopoverOpen(false)
+    } catch {
+      toast.error('Erro ao atualizar atendente')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -571,13 +626,14 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
           </TooltipContent>
         </Tooltip>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           {(lead.unread_count ?? 0) > 0 && (
-            <span className="relative flex h-2.5 w-2.5">
+            <span className="relative flex h-2.5 w-2.5 mt-1">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </span>
           )}
+
           <div className="opacity-0 transition-opacity group-hover:opacity-100">
             <button
               onClick={onOpen}
@@ -587,6 +643,64 @@ function DraggableLeadRow({ lead, onOpen }: DraggableLeadRowProps) {
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
+
+          {lead.loja_id && (
+            <Popover open={popoverOpen} onOpenChange={handlePopoverOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  title={lead.responsavel_nome ? `Atendente: ${lead.responsavel_nome}` : 'Adicionar atendente'}
+                  className={cn(
+                    "rounded-md p-1 transition-colors cursor-pointer",
+                    lead.responsavel_nome
+                      ? "text-primary hover:bg-muted"
+                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-muted"
+                  )}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-1.5" side="left" align="start">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">
+                  Atendente
+                </p>
+                {loadingUsuarios || saving ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => handleSelectAtendente(null)}
+                      className={cn(
+                        "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
+                        !lead.responsavel_id && "font-medium text-foreground"
+                      )}
+                    >
+                      {!lead.responsavel_id && <Check className="h-3 w-3 shrink-0" />}
+                      <span className={lead.responsavel_id ? "ml-5" : ""}>— Sem atendente —</span>
+                    </button>
+                    {usuarios.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleSelectAtendente(u.id)}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted",
+                          lead.responsavel_id === u.id && "font-medium text-foreground"
+                        )}
+                      >
+                        {lead.responsavel_id === u.id
+                          ? <Check className="h-3 w-3 shrink-0" />
+                          : <span className="w-3 shrink-0" />
+                        }
+                        {u.nome}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       </div>
     </TooltipProvider>
