@@ -475,7 +475,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         ) : (
           <Button
             onClick={handleRefresh}
-            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2"
+            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
           >
             <RefreshCw className="h-4 w-4" />
             Atualizar

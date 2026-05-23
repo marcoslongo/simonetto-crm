@@ -195,7 +195,7 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2">
+        <Button className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer">
           <Plus className="h-4 w-4" />
           Novo Lead
         </Button>
