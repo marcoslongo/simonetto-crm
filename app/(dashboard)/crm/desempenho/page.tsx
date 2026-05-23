@@ -1,8 +1,9 @@
 import { requireAuth } from '@/lib/auth'
-import { getMultiLojaLeads30Days, getMultiLojaLeads12Months, getVnrStats } from '@/lib/api-loja'
+import { getMultiLojaLeads30Days, getMultiLojaLeads12Months, getVnrStats, getMultiLojaStatusFunil } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
+import { ChartFunilKanban } from '@/components/dashboard/chart-funil-kanban'
 
 export const metadata = {
   title: 'Desempenho | Noxus - Lead Ops',
@@ -15,10 +16,11 @@ export default async function DesempenhoPage() {
   const isLoja = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []
 
-  const [leads30Days, leads12Months, vnrStats] = await Promise.all([
+  const [leads30Days, leads12Months, vnrStats, statusFunil] = await Promise.all([
     getMultiLojaLeads30Days(lojaIds),
     getMultiLojaLeads12Months(lojaIds),
     getVnrStats(lojaIds),
+    getMultiLojaStatusFunil(lojaIds),
   ])
 
   return (
@@ -29,6 +31,8 @@ export default async function DesempenhoPage() {
           Evolução de captação da sua unidade
         </p>
       </div>
+
+      <ChartFunilKanban {...statusFunil} />
 
       <ChartLeads30Days data={leads30Days} lojaId={lojaIds[0]} />
 
