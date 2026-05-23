@@ -148,10 +148,15 @@ export async function getLojaIntegration(lojaId: string | number): Promise<LojaI
 export async function getLojaLeads(
   lojaId: string | number,
   page = 1,
-  perPage = 100
+  perPage = 100,
+  from?: string,
+  to?: string
 ): Promise<{ leads: Lead[]; total: number }> {
+  let url = `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`
+  if (from) url += `&from=${encodeURIComponent(from)}`
+  if (to)   url += `&to=${encodeURIComponent(to)}`
   const response = await fetch(
-    `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`,
+    url,
     {
       cache: 'no-store',
       headers: await getAuthHeaders(),

@@ -15,6 +15,8 @@ export async function GET(req: Request) {
     .map(Number)
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const perPage = Math.min(200, Math.max(1, Number(searchParams.get('per_page') ?? '100')))
+  const from = searchParams.get('from') ?? undefined
+  const to = searchParams.get('to') ?? undefined
 
   if (!lojaIds.length) {
     return NextResponse.json({ success: true, leads: [], total: 0 })
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
   try {
     const results = await Promise.all(
       lojaIds.map(id =>
-        getLojaLeads(id, page, perPage).catch(() => ({ leads: [] as Lead[], total: 0 }))
+        getLojaLeads(id, page, perPage, from, to).catch(() => ({ leads: [] as Lead[], total: 0 }))
       )
     )
     const leads = results

@@ -34,7 +34,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-import { getLeadsStatsFilterDateStats, getLeadsByDate } from "@/lib/leads-service"
+import { getLeadsStatsFilterDateStats } from "@/lib/leads-service"
 
 interface LeadChart {
   date: string
@@ -128,9 +128,12 @@ export function ChartLeads30Days({
       setLeadsDay([])
 
       try {
-        const res = await getLeadsByDate(lojaId ? String(lojaId) : undefined, clickedDate)
-        if (res && res.data) {
-          setLeadsDay(res.data)
+        const qs = new URLSearchParams({ from: clickedDate, to: clickedDate, per_page: '200' })
+        if (lojaId) qs.set('loja_ids', String(lojaId))
+        const res = await fetch(`/api/kanban/leads?${qs}`)
+        const json = await res.json()
+        if (json.success) {
+          setLeadsDay(json.leads ?? [])
         }
       } catch (error) {
         console.error("Erro ao buscar leads do dia", error)
