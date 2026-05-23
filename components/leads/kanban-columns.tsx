@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
@@ -472,13 +473,13 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
             Carregando leads…
           </span>
         ) : (
-          <button
+          <Button
             onClick={handleRefresh}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-4 w-4" />
             Atualizar
-          </button>
+          </Button>
         )}
         {lojasSeletor.length > 0 && (
           <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
