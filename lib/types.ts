@@ -126,6 +126,27 @@ export interface ApiError {
   erro?: string;
 }
 
+export interface VendaNaoRealizada {
+  id: number;
+  lead_id: string;
+  atendente_id: number | null;
+  atendente_nome: string | null;
+  motivo_preco: boolean;
+  motivo_concorrencia: boolean;
+  motivo_prazo_entrega: boolean;
+  motivo_pagamento: boolean;
+  motivo_financiamento: boolean;
+  motivo_obra_pendente: boolean;
+  motivo_indecisao: boolean;
+  motivo_produto_inadequado: boolean;
+  motivo_contato_perdido: boolean;
+  motivo_atendimento: boolean;
+  motivo_outro: boolean;
+  observacao: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface StoreTimeRanking {
   loja_id: string;
   loja_nome: string;

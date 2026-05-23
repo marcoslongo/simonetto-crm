@@ -30,8 +30,9 @@ import {
   Pencil,
   Check,
   X,
+  XCircle,
 } from "lucide-react";
-import { Lead } from "@/lib/types";
+import { Lead, VendaNaoRealizada } from "@/lib/types";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FaWhatsapp } from "react-icons/fa";
@@ -138,6 +139,9 @@ export function LeadDetailsModal({
   const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string }[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
 
+  const [vendaNaoRealizada, setVendaNaoRealizada] = useState<VendaNaoRealizada | null>(null);
+  const [loadingVnr, setLoadingVnr] = useState(false);
+
   useEffect(() => {
     setSelectedLojaId(lead.loja_id ?? "");
     setCurrentLojaNome(lead.loja_nome ?? "");
@@ -146,7 +150,18 @@ export function LeadDetailsModal({
     setCurrentResponsavelNome(lead.responsavel_nome ?? "");
     setEditingResponsavel(false);
     setUsuarios([]);
+    setVendaNaoRealizada(null);
   }, [lead.id]);
+
+  useEffect(() => {
+    if (lead.status !== "venda_nao_realizada" || !open) return;
+    setLoadingVnr(true);
+    fetch(`/api/leads/${lead.id}/venda-nao-realizada`)
+      .then(r => r.json())
+      .then(d => setVendaNaoRealizada(d.data ?? null))
+      .catch(() => {})
+      .finally(() => setLoadingVnr(false));
+  }, [lead.id, lead.status, open]);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleString("pt-BR", {
@@ -708,6 +723,94 @@ export function LeadDetailsModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Motivos de Venda Não Realizada */}
+                {lead.status === "venda_nao_realizada" && (
+                  <div className="rounded-xl border border-red-200 bg-red-50/50 p-5 mt-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100">
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-red-700">
+                        Motivos da Não Realização
+                      </h3>
+                    </div>
+
+                    {loadingVnr ? (
+                      <div className="flex items-center justify-center py-6">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500" />
+                      </div>
+                    ) : !vendaNaoRealizada ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        Nenhum motivo registrado para este lead.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Chips dos motivos selecionados */}
+                        {(() => {
+                          const LABELS: Record<string, string> = {
+                            motivo_preco:              "Preço acima do orçamento",
+                            motivo_concorrencia:       "Perdeu para a concorrência",
+                            motivo_prazo_entrega:      "Prazo de entrega muito longo",
+                            motivo_pagamento:          "Condições de pagamento inadequadas",
+                            motivo_financiamento:      "Cliente não conseguiu financiamento",
+                            motivo_obra_pendente:      "Obra / imóvel ainda não finalizado",
+                            motivo_indecisao:          "Cliente indeciso / adiou a decisão",
+                            motivo_produto_inadequado: "Produto não atendeu a necessidade",
+                            motivo_contato_perdido:    "Contato perdido / cliente sumiu",
+                            motivo_atendimento:        "Problema no atendimento",
+                            motivo_outro:              "Outro motivo",
+                          };
+                          const ativos = Object.entries(LABELS).filter(
+                            ([key]) => vendaNaoRealizada[key as keyof VendaNaoRealizada]
+                          );
+                          return ativos.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {ativos.map(([key, label]) => (
+                                <span
+                                  key={key}
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800"
+                                >
+                                  <X className="h-3 w-3" />
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
+
+                        {/* Observação */}
+                        {vendaNaoRealizada.observacao && (
+                          <div className="rounded-lg bg-white border border-red-100 p-3">
+                            <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                              Observações do atendente
+                            </p>
+                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                              {vendaNaoRealizada.observacao}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Rodapé com atendente e data */}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-red-100">
+                          {vendaNaoRealizada.atendente_nome && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {vendaNaoRealizada.atendente_nome}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(vendaNaoRealizada.created_at).toLocaleString("pt-BR", {
+                              day: "2-digit", month: "2-digit", year: "numeric",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </TabsContent>
 
               {/* Mensagem */}

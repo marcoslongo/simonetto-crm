@@ -56,6 +56,7 @@ import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
 import { NovoLeadDialog } from './novo-lead-dialog'
+import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
 import { Lead } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
 
@@ -172,6 +173,7 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [quizLead, setQuizLead] = useState<Lead | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
@@ -284,6 +286,9 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
       )
 
       toast.success('Lead movido com sucesso.')
+      if (novoStatus === 'venda_nao_realizada') {
+        setQuizLead({ ...lead, status: novoStatus })
+      }
     } catch {
       setLeads((prev) =>
         prev.map((l) =>
@@ -396,6 +401,16 @@ export function KanbanColumns({ leads: initialLeads, onLeadClick, isAdmin, lojas
           onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
           lojas={lojas}
+        />
+      )}
+
+      {quizLead && (
+        <VendaNaoRealizadaDialog
+          open={!!quizLead}
+          leadId={String(quizLead.id)}
+          leadNome={quizLead.nome}
+          onClose={() => setQuizLead(null)}
+          onSaved={() => setQuizLead(null)}
         />
       )}
     </>
