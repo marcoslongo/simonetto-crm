@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -44,6 +44,7 @@ import {
   UserPlus,
   Check,
   User,
+  RefreshCw,
 } from 'lucide-react'
 import {
   Popover,
@@ -175,6 +176,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
   const [fetchPage, setFetchPage] = useState(1)
   const [loadingAll, setLoadingAll] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({})
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
@@ -190,58 +192,60 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     isModalOpenRef.current = isModalOpen
   }, [isModalOpen])
 
-  // Busca todas as páginas restantes em background após o carregamento inicial
-  useEffect(() => {
-    const total = initialTotal ?? initialLeads.length
-    if (initialLeads.length >= total) return
+  const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
 
-    const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
+  const fetchAllLeads = useCallback(async (isManualRefresh = false) => {
     if (!ids.length) return
+    const total = initialTotal ?? initialLeads.length
+    if (!isManualRefresh && initialLeads.length >= total) return
 
-    let cancelled = false
+    setLoadingAll(true)
+    let page = 1
+    let loaded = 0
+    let currentTotal = isManualRefresh ? Infinity : total
 
-    const fetchAll = async () => {
-      setLoadingAll(true)
-      // Começa da página 1 com FETCH_PER_PAGE para não pular leads entre
-      // a carga inicial (per_page=100) e o background (per_page=200).
-      // Os leads já carregados são removidos pelo dedup.
-      let page = 1
-      let loaded = 0
-      let currentTotal = total
+    while (loaded < currentTotal) {
+      try {
+        const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${page}&per_page=${FETCH_PER_PAGE}`)
+        if (!res.ok) break
+        const data = await res.json()
+        if (!data.success) break
 
-      while (!cancelled && loaded < currentTotal) {
-        try {
-          const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=${page}&per_page=${FETCH_PER_PAGE}`)
-          if (!res.ok || cancelled) break
-          const data = await res.json()
-          if (!data.success || cancelled) break
+        const newLeads = data.leads as Lead[]
+        if (!newLeads.length) break
 
-          const newLeads = data.leads as Lead[]
-          if (!newLeads.length) break
+        setLeads(prev => {
+          const existingIds = new Set(prev.map(l => String(l.id)))
+          const fresh = newLeads.filter(l => !existingIds.has(String(l.id)))
+          return fresh.length ? [...prev, ...fresh] : prev
+        })
 
-          setLeads(prev => {
-            const existingIds = new Set(prev.map(l => String(l.id)))
-            const fresh = newLeads.filter(l => !existingIds.has(String(l.id)))
-            return fresh.length ? [...prev, ...fresh] : prev
-          })
-
-          currentTotal = data.total
-          setTotalLeads(data.total)
-          setFetchPage(page)
-          loaded += newLeads.length
-          page++
-        } catch {
-          break
-        }
+        currentTotal = data.total
+        setTotalLeads(data.total)
+        setFetchPage(page)
+        loaded += newLeads.length
+        page++
+      } catch {
+        break
       }
-
-      if (!cancelled) setLoadingAll(false)
     }
 
-    fetchAll()
-    return () => { cancelled = true }
+    setLoadingAll(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(',')])
+
+  useEffect(() => {
+    fetchAllLeads(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleRefresh = useCallback(() => {
+    setLeads([])
+    setFetchPage(1)
+    setTotalLeads(0)
+    setRefreshKey(k => k + 1)
+    fetchAllLeads(true)
+  }, [fetchAllLeads])
 
   useEffect(() => {
     const ids = lojaIds?.length ? lojaIds : lojaId ? [lojaId] : []
@@ -459,7 +463,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   return (
     <>
       <div className="flex items-center justify-between gap-4">
-        {loadingAll && (
+        {loadingAll ? (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -467,8 +471,15 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
             </svg>
             Carregando leads…
           </span>
+        ) : (
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Atualizar
+          </button>
         )}
-        {!loadingAll && <span />}
         {lojasSeletor.length > 0 && (
           <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
         )}
