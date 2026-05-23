@@ -494,6 +494,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                 onLoadMore={() => loadMore(coluna.key)}
                 isLoadingMore={columnLoading[coluna.key] ?? false}
                 hasMoreGlobal={leads.length < totalLeads}
+                isLoadingAll={loadingAll}
               />
             )
           })}
@@ -548,9 +549,10 @@ interface KanbanColumnProps {
   onLoadMore: () => void
   isLoadingMore?: boolean
   hasMoreGlobal?: boolean
+  isLoadingAll?: boolean
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal }: KanbanColumnProps) {
+function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
@@ -574,7 +576,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibl
             <CardTitle className="text-base">{coluna.label}</CardTitle>
           </div>
           <Badge variant="secondary" className={styles.badge}>
-            {items.length}
+            {items.length}{isLoadingAll ? '+' : ''}
           </Badge>
         </div>
         <CardDescription>{coluna.description}</CardDescription>
