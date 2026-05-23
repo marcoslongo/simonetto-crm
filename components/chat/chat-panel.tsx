@@ -398,13 +398,19 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
   const mediaType = mensagem.metadata?.media_type;
   const mediaUrl  = mensagem.metadata?.media_url;
 
+  const isSticker = mediaType === "sticker";
+
   return (
     <div className={`flex ${isEnviada ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[78%] px-3.5 py-2 rounded-2xl text-sm shadow-sm ${
-          isEnviada
-            ? "bg-emerald-500 text-white rounded-br-sm"
-            : "bg-muted text-card-foreground rounded-bl-sm border border-border"
+        className={`max-w-[78%] text-sm ${
+          isSticker
+            ? "p-0"
+            : `px-3.5 py-2 rounded-2xl shadow-sm ${
+                isEnviada
+                  ? "bg-emerald-500 text-white rounded-br-sm"
+                  : "bg-muted text-card-foreground rounded-bl-sm border border-border"
+              }`
         }`}
       >
         {!isEnviada && mensagem.metadata?.contact_name && (
@@ -433,7 +439,16 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
           <video controls src={mediaUrl} className="w-full max-w-[240px] rounded-lg mb-1" />
         )}
 
-        {mediaUrl && (mediaType === "document" || mediaType === "sticker") && (
+        {mediaUrl && mediaType === "sticker" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={mediaUrl}
+            alt="Figurinha"
+            className="w-32 h-32 object-contain"
+          />
+        )}
+
+        {mediaUrl && mediaType === "document" && (
           <a
             href={mediaUrl}
             target="_blank"
