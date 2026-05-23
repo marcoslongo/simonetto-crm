@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
-import { StatsCardsSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { StatsCardsSkeleton, ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 import { StatusStatsSection } from '@/components/dashboard/dashboard-sections'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
 import { getLojasServer } from '@/lib/server-lojas-service'
@@ -13,14 +13,20 @@ interface ConversaoPageProps {
   searchParams: Promise<{ from?: string; to?: string }>
 }
 
+async function VnrMotivosWrapper() {
+  const [vnrStats, lojas] = await Promise.all([getVnrStats(), getLojasServer()])
+  return (
+    <ChartVnrMotivos
+      initialData={vnrStats}
+      isAdmin={true}
+      lojas={lojas.map(l => ({ id: Number(l.id), nome: l.nome }))}
+    />
+  )
+}
+
 export default async function ConversaoPage({ searchParams }: ConversaoPageProps) {
   await requireAdmin()
   const { from, to } = await searchParams
-
-  const [vnrStats, lojas] = await Promise.all([
-    getVnrStats(),
-    getLojasServer(),
-  ])
 
   return (
     <div className="space-y-6">
@@ -35,11 +41,9 @@ export default async function ConversaoPage({ searchParams }: ConversaoPageProps
         <StatusStatsSection from={from} to={to} />
       </Suspense>
 
-      <ChartVnrMotivos
-        initialData={vnrStats}
-        isAdmin={true}
-        lojas={lojas.map(l => ({ id: l.id, nome: l.nome }))}
-      />
+      <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+        <VnrMotivosWrapper />
+      </Suspense>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
 import {
@@ -21,6 +22,11 @@ import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
+import {
+  StatsCardsSkeleton,
+  ChartCardSkeleton,
+  TripleChartSkeleton,
+} from '@/components/dashboard/dashboard-skeletons'
 
 interface LojaPageProps {
   params: Promise<{ id: string }>
@@ -29,6 +35,41 @@ interface LojaPageProps {
 export const metadata = {
   title: 'Loja | Admin CRM',
   description: 'Detalhes da loja',
+}
+
+async function LojaStatsWrapper({ id }: { id: string }) {
+  const stats = await getLojaStats(id)
+  return <StatsCards stats={stats} />
+}
+
+async function LojaMetricasWrapper({ id }: { id: string }) {
+  const data = await getLojaServiceStats(id)
+  return <MetricasAtendimento data={data} />
+}
+
+async function LojaFunilWrapper({ id }: { id: string }) {
+  const data = await getLojaStatusFunil(id)
+  return <FunilStatus data={data} />
+}
+
+async function LojaTemperaturaWrapper({ id }: { id: string }) {
+  const data = await getLojaClassificacao(id)
+  return <TemperaturaLeads data={data} />
+}
+
+async function Leads30DaysWrapper({ id }: { id: string }) {
+  const data = await getLojaLeads30Days(id)
+  return <ChartLeads30Days data={data} />
+}
+
+async function Leads12MonthsWrapper({ id }: { id: string }) {
+  const data = await getLojaLeads12Months(id)
+  return <ChartLeads12Months data={data} />
+}
+
+async function IntegracaoWrapper({ id }: { id: string }) {
+  const data = await getLojaIntegration(id)
+  return <IntegracaoLP lojaId={id} initialData={data} isAdmin />
 }
 
 export default async function LojaPage({ params }: LojaPageProps) {
@@ -57,17 +98,6 @@ export default async function LojaPage({ params }: LojaPageProps) {
     )
   }
 
-  const [stats, leads30Days, leads12Months, statusFunil, classificacao, serviceStats, integration] =
-    await Promise.all([
-      getLojaStats(id),
-      getLojaLeads30Days(id),
-      getLojaLeads12Months(id),
-      getLojaStatusFunil(id),
-      getLojaClassificacao(id),
-      getLojaServiceStats(id),
-      getLojaIntegration(id),
-    ])
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -85,32 +115,40 @@ export default async function LojaPage({ params }: LojaPageProps) {
         </Link>
       </div>
 
-      <div>
-        <LojaInfoCard loja={loja} />
-      </div>
+      <LojaInfoCard loja={loja} />
 
-      <div>
-        <StatsCards stats={stats} />
-      </div>
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <LojaStatsWrapper id={id} />
+      </Suspense>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <MetricasAtendimento data={serviceStats} />
-        <FunilStatus data={statusFunil} />
-        <TemperaturaLeads data={classificacao} />
-      </div>
+      <Suspense fallback={<TripleChartSkeleton height="h-56" />}>
+        <div className="grid gap-6 md:grid-cols-3">
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <LojaMetricasWrapper id={id} />
+          </Suspense>
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <LojaFunilWrapper id={id} />
+          </Suspense>
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <LojaTemperaturaWrapper id={id} />
+          </Suspense>
+        </div>
+      </Suspense>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <ChartLeads30Days data={leads30Days} />
-        <ChartLeads12Months data={leads12Months} />
+        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+          <Leads30DaysWrapper id={id} />
+        </Suspense>
+        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+          <Leads12MonthsWrapper id={id} />
+        </Suspense>
       </div>
 
-      <div>
-        <IntegracaoLP lojaId={id} initialData={integration} isAdmin />
-      </div>
+      <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
+        <IntegracaoWrapper id={id} />
+      </Suspense>
 
-      <div>
-        <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
-      </div>
+      <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
     </div>
   )
 }

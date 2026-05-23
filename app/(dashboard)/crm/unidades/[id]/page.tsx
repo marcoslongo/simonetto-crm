@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { requireLoja, canAccessLoja } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
 import {
@@ -19,9 +20,44 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
+import {
+  StatsCardsSkeleton,
+  ChartCardSkeleton,
+  TripleChartSkeleton,
+} from '@/components/dashboard/dashboard-skeletons'
 
 interface UnidadePageProps {
   params: Promise<{ id: string }>
+}
+
+async function UnidadeStatsWrapper({ id }: { id: string }) {
+  const stats = await getLojaStats(id)
+  return <StatsCards stats={stats} />
+}
+
+async function UnidadeMetricasWrapper({ id }: { id: string }) {
+  const data = await getLojaServiceStats(id)
+  return <MetricasAtendimento data={data} />
+}
+
+async function UnidadeFunilWrapper({ id }: { id: string }) {
+  const data = await getLojaStatusFunil(id)
+  return <FunilStatus data={data} />
+}
+
+async function UnidadeTemperaturaWrapper({ id }: { id: string }) {
+  const data = await getLojaClassificacao(id)
+  return <TemperaturaLeads data={data} />
+}
+
+async function Leads30DaysWrapper({ id }: { id: string }) {
+  const data = await getLojaLeads30Days(id)
+  return <ChartLeads30Days data={data} lojaId={id} />
+}
+
+async function Leads12MonthsWrapper({ id }: { id: string }) {
+  const data = await getLojaLeads12Months(id)
+  return <ChartLeads12Months data={data} lojaId={id} />
 }
 
 export default async function CrmUnidadePage({ params }: UnidadePageProps) {
@@ -37,16 +73,6 @@ export default async function CrmUnidadePage({ params }: UnidadePageProps) {
   const loja = lojasData.lojas.find(l => l.id === id)
 
   if (!loja) notFound()
-
-  const [stats, leads30Days, leads12Months, statusFunil, classificacao, serviceStats] =
-    await Promise.all([
-      getLojaStats(id),
-      getLojaLeads30Days(id),
-      getLojaLeads12Months(id),
-      getLojaStatusFunil(id),
-      getLojaClassificacao(id),
-      getLojaServiceStats(id),
-    ])
 
   return (
     <div className="space-y-6">
@@ -65,17 +91,31 @@ export default async function CrmUnidadePage({ params }: UnidadePageProps) {
 
       <LojaInfoCard loja={loja} />
 
-      <StatsCards stats={stats} />
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <UnidadeStatsWrapper id={id} />
+      </Suspense>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <MetricasAtendimento data={serviceStats} />
-        <FunilStatus data={statusFunil} />
-        <TemperaturaLeads data={classificacao} />
-      </div>
+      <Suspense fallback={<TripleChartSkeleton height="h-56" />}>
+        <div className="grid gap-6 md:grid-cols-3">
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <UnidadeMetricasWrapper id={id} />
+          </Suspense>
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <UnidadeFunilWrapper id={id} />
+          </Suspense>
+          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+            <UnidadeTemperaturaWrapper id={id} />
+          </Suspense>
+        </div>
+      </Suspense>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <ChartLeads30Days data={leads30Days} lojaId={id} />
-        <ChartLeads12Months data={leads12Months} lojaId={id} />
+        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+          <Leads30DaysWrapper id={id} />
+        </Suspense>
+        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+          <Leads12MonthsWrapper id={id} />
+        </Suspense>
       </div>
     </div>
   )

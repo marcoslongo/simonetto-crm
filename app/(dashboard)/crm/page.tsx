@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { requireAuth } from '@/lib/auth'
 import { getMultiLojaStats, getMultiLojaStatusFunil, getMultiLojaClassificacao } from '@/lib/api-loja'
 import { getLojas } from '@/lib/api'
@@ -6,10 +7,42 @@ import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
 import { FunilStatus } from '@/components/lojas/funil-status'
 import { Store } from 'lucide-react'
+import { StatsCardsSkeleton, KanbanStatsCardsSkeleton, ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 
 export const metadata = {
   title: 'Resumo | Noxus - Lead Ops',
   description: 'Visão geral da sua unidade',
+}
+
+async function StatsCardsWrapper({ lojaIds }: { lojaIds: number[] }) {
+  const stats = await getMultiLojaStats(lojaIds)
+  return <StatsCards stats={stats} />
+}
+
+async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
+  const statusFunil = await getMultiLojaStatusFunil(lojaIds)
+  return (
+    <KanbanStatsCards
+      data={statusFunil}
+      description="Acompanhamento da jornada de vendas da sua unidade"
+    />
+  )
+}
+
+async function FunilStatusWrapper({ lojaIds }: { lojaIds: number[] }) {
+  const statusFunil = await getMultiLojaStatusFunil(lojaIds)
+  return <FunilStatus data={statusFunil} />
+}
+
+async function LeadsTemperatureWrapper({ lojaIds }: { lojaIds: number[] }) {
+  const classificacao = await getMultiLojaClassificacao(lojaIds)
+  return (
+    <LeadsTemperature
+      quentes={classificacao.quente}
+      mornos={classificacao.morno}
+      frios={classificacao.frio}
+    />
+  )
 }
 
 export default async function CrmDashboardPage() {
@@ -18,16 +51,12 @@ export default async function CrmDashboardPage() {
   const isLoja = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []
 
-  const [stats, statusFunil, classificacao, lojasData] = await Promise.all([
-    getMultiLojaStats(lojaIds),
-    getMultiLojaStatusFunil(lojaIds),
-    getMultiLojaClassificacao(lojaIds),
+  const lojasVinculadas =
     isLoja && lojaIds.length > 1
-      ? getLojas().catch(() => ({ success: false, lojas: [] }))
-      : Promise.resolve({ success: false, lojas: [] }),
-  ])
-
-  const lojasVinculadas = lojasData.lojas.filter(l => lojaIds.includes(Number(l.id)))
+      ? await getLojas()
+          .then(r => r.lojas.filter(l => lojaIds.includes(Number(l.id))))
+          .catch(() => [])
+      : []
 
   return (
     <div className="space-y-6">
@@ -57,20 +86,21 @@ export default async function CrmDashboardPage() {
         </div>
       )}
 
-      <StatsCards stats={stats} />
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <StatsCardsWrapper lojaIds={lojaIds} />
+      </Suspense>
 
-      <KanbanStatsCards
-        data={statusFunil}
-        description="Acompanhamento da jornada de vendas da sua unidade"
-      />
+      <Suspense fallback={<KanbanStatsCardsSkeleton />}>
+        <KanbanStatsWrapper lojaIds={lojaIds} />
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <FunilStatus data={statusFunil} />
-        <LeadsTemperature
-          quentes={classificacao.quente}
-          mornos={classificacao.morno}
-          frios={classificacao.frio}
-        />
+        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+          <FunilStatusWrapper lojaIds={lojaIds} />
+        </Suspense>
+        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+          <LeadsTemperatureWrapper lojaIds={lojaIds} />
+        </Suspense>
       </div>
     </div>
   )

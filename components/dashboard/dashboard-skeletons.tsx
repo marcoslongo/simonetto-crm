@@ -41,3 +41,31 @@ export function DualChartSkeleton() {
     </div>
   )
 }
+
+export function KanbanStatsCardsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="border-0 shadow-lg">
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16 mb-2" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+export function TripleChartSkeleton({ height = "h-64" }: { height?: string }) {
+  return (
+    <div className="grid gap-6 md:grid-cols-3">
+      <ChartCardSkeleton height={height} />
+      <ChartCardSkeleton height={height} />
+      <ChartCardSkeleton height={height} />
+    </div>
+  )
+}
