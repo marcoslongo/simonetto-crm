@@ -330,7 +330,7 @@ export function LeadDetailsModal({
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex flex-col h-[80vh] overflow-hidden w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] xl:w-[50vw] max-w-full md:max-w-4xl">
+        <DialogContent className="flex flex-col h-[90vh] overflow-hidden w-[90vw] sm:max-w-[90vw]">
           <div className="px-6 pt-6">
             <DialogHeader className="border-b border-border pb-4">
               <div className="flex items-start justify-between gap-4">
@@ -401,7 +401,7 @@ export function LeadDetailsModal({
                 )}
                 <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
                 <TabsTrigger value="notas">Notas</TabsTrigger>
-                <TabsTrigger value="followup">Follow-up</TabsTrigger>
+                <TabsTrigger value="followup">Retornos</TabsTrigger>
                 <TabsTrigger value="historico" onClick={fetchActions}>
                   Histórico
                 </TabsTrigger>

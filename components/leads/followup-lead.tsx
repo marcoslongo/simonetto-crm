@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { Bell, CheckCircle2, Trash2, Loader2, CalendarClock, Clock } from "lucide-react"
+import { Bell, CheckCircle2, Trash2, Loader2, CalendarClock, Clock, CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
@@ -35,24 +37,17 @@ function computeNext(followups: Followup[]): { em: string; descricao?: string | 
   return { em: pending[0].agendado_para, descricao: pending[0].descricao }
 }
 
-function defaultDateTime(): string {
+function defaultHora(): string {
   const d = new Date()
-  d.setDate(d.getDate() + 1)
-  // Format as datetime-local value: YYYY-MM-DDTHH:mm
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function nowDateTimeLocal(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 export function FollowupLead({ leadId, currentUserId, onFollowupChange }: FollowupLeadProps) {
   const [followups, setFollowups] = useState<Followup[]>([])
   const [loading, setLoading] = useState(true)
-  const [agendadoPara, setAgendadoPara] = useState(defaultDateTime)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1))
+  const [selectedHora, setSelectedHora] = useState(defaultHora)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [descricao, setDescricao] = useState("")
   const [salvando, setSalvando] = useState(false)
   const [concluding, setConcluding] = useState<number | null>(null)
@@ -78,10 +73,9 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!agendadoPara) return
+    if (!selectedDate) return
 
-    // Convert datetime-local value to MySQL-compatible datetime string
-    const agendadoParaMySQL = agendadoPara.replace('T', ' ') + ':00'
+    const agendadoParaMySQL = `${format(selectedDate, 'yyyy-MM-dd')} ${selectedHora}:00`
 
     setSalvando(true)
     try {
@@ -95,17 +89,18 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        toast.error(data.mensagem ?? "Erro ao agendar follow-up")
+        toast.error(data.mensagem ?? "Erro ao agendar retorno")
         return
       }
       const updated = [...followups, data.followup]
       setFollowups(updated)
       setDescricao("")
-      setAgendadoPara(defaultDateTime())
+      setSelectedDate(addDays(new Date(), 1))
+      setSelectedHora(defaultHora())
       onFollowupChange?.(computeNext(updated))
-      toast.success("Follow-up agendado!")
+      toast.success("Retorno agendado!")
     } catch {
-      toast.error("Erro ao agendar follow-up")
+      toast.error("Erro ao agendar retorno")
     } finally {
       setSalvando(false)
     }
@@ -176,7 +171,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
           <CalendarClock className="h-4 w-4 text-blue-600" />
         </div>
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Follow-ups
+          Retornos agendados
         </h3>
       </div>
 
@@ -184,14 +179,42 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Data e hora</label>
-          <input
-            type="datetime-local"
-            value={agendadoPara}
-            min={nowDateTimeLocal()}
-            onChange={e => setAgendadoPara(e.target.value)}
-            required
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          />
+          <div className="flex gap-2">
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-left",
+                    "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {selectedDate
+                    ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                    : "Selecionar data"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false) }}
+                  disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+            <input
+              type="time"
+              value={selectedHora}
+              onChange={e => setSelectedHora(e.target.value)}
+              required
+              className="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Descrição (opcional)</label>
@@ -207,7 +230,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
           <Button
             type="submit"
             size="sm"
-            disabled={salvando || !agendadoPara}
+            disabled={salvando || !selectedDate}
             className="gap-1.5 bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
           >
             {salvando
@@ -229,13 +252,13 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
       {!loading && (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Pendentes ({pending.length})
+            Aguardando ({pending.length})
           </p>
 
           {pending.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
               <Clock className="h-7 w-7 opacity-30" />
-              <p className="text-sm">Nenhum follow-up pendente</p>
+              <p className="text-sm">Nenhum retorno agendado</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -274,7 +297,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                         <button
                           onClick={() => handleConcluir(f.id)}
                           disabled={concluding === f.id}
-                          title="Marcar como concluído"
+                          title="Marcar como realizado"
                           className={cn(
                             "rounded p-0.5 text-muted-foreground/50 transition-colors",
                             "opacity-0 group-hover:opacity-100",
@@ -291,7 +314,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                           <button
                             onClick={() => handleDelete(f.id)}
                             disabled={deleting === f.id}
-                            title="Excluir follow-up"
+                            title="Excluir retorno"
                             className={cn(
                               "rounded p-0.5 text-muted-foreground/40 transition-colors",
                               "opacity-0 group-hover:opacity-100",
@@ -332,7 +355,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
       {!loading && completed.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Concluídos ({completed.length})
+            Realizados ({completed.length})
           </p>
           <div className="space-y-2">
             {completed.map(f => (
@@ -357,7 +380,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                   <span className="font-medium">{f.usuario_nome}</span>
                   {f.concluido_em && (
                     <>
-                      <span>· Concluído em</span>
+                      <span>· Realizado em</span>
                       <span>
                         {format(new Date(f.concluido_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </span>
