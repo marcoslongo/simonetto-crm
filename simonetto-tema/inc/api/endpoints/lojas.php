@@ -120,6 +120,20 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET /api/v1/admin/usuarios — listar todos os usuários com status WhatsApp (admin)
+  register_rest_route('api/v1', '/admin/usuarios', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_admin_list_usuarios',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // POST /api/v1/admin/usuarios/{id}/whatsapp-config — admin configura instância de um usuário
+  register_rest_route('api/v1', '/admin/usuarios/(?P<id>\d+)/whatsapp-config', [
+    'methods'             => 'POST',
+    'callback'            => 'mytheme_api_admin_save_user_whatsapp_config',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
   // GET/POST /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
   register_rest_route('api/v1', '/usuarios/me/whatsapp-config', [
     [
@@ -592,6 +606,74 @@ function mytheme_api_save_whatsapp_settings(WP_REST_Request $request): WP_REST_R
   }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configurações salvas.'], 200);
+}
+
+// -------------------------------------------------------------------------
+// Admin — gerenciamento de usuários e WhatsApp
+// -------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/admin/usuarios
+ */
+function mytheme_api_admin_list_usuarios(WP_REST_Request $request): WP_REST_Response
+{
+  $users = get_users(['orderby' => 'display_name', 'order' => 'ASC']);
+
+  $resultado = [];
+  foreach ($users as $user) {
+    $instance         = get_user_meta($user->ID, '_evolution_instance',        true);
+    $connection_state = get_user_meta($user->ID, '_whatsapp_connection_state', true);
+
+    if (!$connection_state && !empty($instance)) {
+      $connection_state = 'open';
+    }
+
+    // Lojas vinculadas ao usuário
+    $loja_ids_raw = get_user_meta($user->ID, 'loja_ids', true);
+    $loja_ids     = [];
+    if (is_array($loja_ids_raw)) {
+      $loja_ids = array_map('intval', $loja_ids_raw);
+    } elseif ($loja_ids_raw) {
+      $loja_ids = [intval($loja_ids_raw)];
+    }
+
+    $resultado[] = [
+      'id'               => (int) $user->ID,
+      'nome'             => $user->display_name,
+      'email'            => $user->user_email,
+      'role'             => $user->roles[0] ?? 'subscriber',
+      'loja_ids'         => $loja_ids,
+      'instance'         => $instance ?: null,
+      'connection_state' => $connection_state ?: ($instance ? 'open' : 'not_configured'),
+    ];
+  }
+
+  return new WP_REST_Response(['success' => true, 'usuarios' => $resultado], 200);
+}
+
+/**
+ * POST /api/v1/admin/usuarios/{id}/whatsapp-config
+ */
+function mytheme_api_admin_save_user_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $target_user_id = (int) $request['id'];
+
+  if (!get_user_by('id', $target_user_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Usuário não encontrado.'], 404);
+  }
+
+  $body     = $request->get_json_params();
+  $instance = sanitize_text_field($body['instance'] ?? '');
+  $api_key  = sanitize_text_field($body['api_key']  ?? '');
+
+  if (!empty($instance)) {
+    update_user_meta($target_user_id, '_evolution_instance', $instance);
+  }
+  if (!empty($api_key)) {
+    update_user_meta($target_user_id, '_evolution_api_key', $api_key);
+  }
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração salva.'], 200);
 }
 
 // -------------------------------------------------------------------------

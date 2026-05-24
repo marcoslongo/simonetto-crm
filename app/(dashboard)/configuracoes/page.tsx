@@ -3,7 +3,7 @@ import { KeyRound, User, ShieldCheck } from 'lucide-react'
 import { ConfiguracoesForm } from './configuracoes-form'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
-import { EvolutionServerSettings } from '@/components/admin/evolution-server-settings'
+import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
 import { getLojaIntegration } from '@/lib/api-loja'
 
 export const metadata = {
@@ -88,7 +88,7 @@ export default async function ConfiguracoesPage() {
         </div>
       </div>
 
-      {user.role === 'administrator' && <EvolutionServerSettings />}
+      {user.role === 'administrator' && user.id === 1 && <AdminConfigTabs />}
 
       {isLoja && integration && (
         <IntegracaoLP
