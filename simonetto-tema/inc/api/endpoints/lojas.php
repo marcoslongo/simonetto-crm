@@ -490,9 +490,14 @@ function mytheme_api_get_loja_whatsapp_config(WP_REST_Request $request): WP_REST
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
-  $instance         = get_post_meta($loja_id, '_evolution_instance',         true);
-  $api_key          = get_post_meta($loja_id, '_evolution_api_key',          true);
-  $connection_state = get_post_meta($loja_id, '_whatsapp_connection_state',  true);
+  $instance         = get_post_meta($loja_id, '_evolution_instance',        true);
+  $api_key          = get_post_meta($loja_id, '_evolution_api_key',         true);
+  $connection_state = get_post_meta($loja_id, '_whatsapp_connection_state', true);
+
+  // Se instância configurada mas estado ainda não rastreado via webhook → assume conectado
+  if (!$connection_state && !empty($instance)) {
+    $connection_state = 'open';
+  }
 
   return new WP_REST_Response([
     'success'          => true,
