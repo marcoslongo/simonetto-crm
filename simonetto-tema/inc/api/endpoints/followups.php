@@ -29,6 +29,14 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  register_rest_route('api/v1', '/followups/overdue', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_list_overdue_followups',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
   register_rest_route('api/v1', '/followups/(?P<id>\d+)/done', [
     [
       'methods'             => 'PATCH',
@@ -45,6 +53,13 @@ add_action('rest_api_init', function () {
     ],
   ]);
 });
+
+function mytheme_api_list_overdue_followups(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id   = (int) get_current_user_id();
+  $followups = Followup_Handler::list_overdue_for_user($user_id);
+  return new WP_REST_Response(['success' => true, 'followups' => $followups], 200);
+}
 
 function mytheme_api_list_followups(WP_REST_Request $request): WP_REST_Response
 {

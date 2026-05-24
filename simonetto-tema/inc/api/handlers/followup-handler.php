@@ -57,6 +57,35 @@ class Followup_Handler
   }
 
   /**
+   * Retorna follow-ups vencidos (agendado_para < agora, não concluídos) do usuário.
+   */
+  public static function list_overdue_for_user(int $user_id): array
+  {
+    global $wpdb;
+    $table_f = self::table();
+    $table_l = $wpdb->prefix . 'leads';
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT f.*, l.nome AS lead_nome
+       FROM {$table_f} f
+       INNER JOIN {$table_l} l ON l.id = f.lead_id
+       WHERE f.usuario_id = %d
+         AND f.concluido  = 0
+         AND f.agendado_para < %s
+       ORDER BY f.agendado_para ASC
+       LIMIT 50",
+      $user_id,
+      current_time('mysql')
+    ), ARRAY_A);
+
+    return array_map(function ($row) {
+      $f = self::format($row);
+      $f['lead_nome'] = $row['lead_nome'] ?? null;
+      return $f;
+    }, $rows ?? []);
+  }
+
+  /**
    * Listar follow-ups de um lead (ordem por agendado_para ASC).
    */
   public static function list_by_lead(int $lead_id): array
