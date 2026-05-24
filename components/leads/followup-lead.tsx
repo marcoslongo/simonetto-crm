@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { Bell, CheckCircle2, Trash2, Loader2, CalendarClock, Clock, CalendarIcon } from "lucide-react"
+import { Bell, CheckCircle2, Trash2, Loader2, Clock, CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
@@ -164,68 +164,56 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-          <CalendarClock className="h-4 w-4 text-blue-600" />
-        </div>
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Retornos agendados
-        </h3>
-      </div>
-
+    <div className="space-y-6">
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Data e hora</label>
-          <div className="flex gap-2">
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-left",
-                    "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  {selectedDate
-                    ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
-                    : "Selecionar data"}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false) }}
-                  disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                  locale={ptBR}
-                />
-              </PopoverContent>
-            </Popover>
-            <input
-              type="time"
-              value={selectedHora}
-              onChange={e => setSelectedHora(e.target.value)}
-              required
-              className="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Descrição (opcional)</label>
-          <Textarea
-            value={descricao}
-            onChange={e => setDescricao(e.target.value)}
-            placeholder="Ex: ligar para confirmar visita..."
-            rows={2}
-            className="resize-none text-sm"
+      <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Novo retorno
+        </p>
+        <div className="flex gap-2">
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm text-left transition-colors",
+                  "hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                {selectedDate
+                  ? format(selectedDate, "dd 'de' MMM, yyyy", { locale: ptBR })
+                  : "Selecionar data"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false) }}
+                disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
+          <input
+            type="time"
+            value={selectedHora}
+            onChange={e => setSelectedHora(e.target.value)}
+            required
+            className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
+
+        <Textarea
+          value={descricao}
+          onChange={e => setDescricao(e.target.value)}
+          placeholder="Motivo do retorno (opcional)..."
+          rows={2}
+          className="resize-none text-sm"
+        />
+
         <div className="flex justify-end">
           <Button
             type="submit"
@@ -236,7 +224,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
             {salvando
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
               : <Bell className="h-3.5 w-3.5" />}
-            {salvando ? "Agendando..." : "Agendar"}
+            {salvando ? "Agendando..." : "Agendar retorno"}
           </Button>
         </div>
       </form>
@@ -250,14 +238,21 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
 
       {/* Pendentes */}
       {!loading && (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Aguardando ({pending.length})
-          </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Aguardando
+            </p>
+            {pending.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {pending.length}
+              </span>
+            )}
+          </div>
 
           {pending.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
-              <Clock className="h-7 w-7 opacity-30" />
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-8 text-muted-foreground">
+              <Clock className="h-6 w-6 opacity-30" />
               <p className="text-sm">Nenhum retorno agendado</p>
             </div>
           ) : (
@@ -267,47 +262,50 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                 return (
                   <div
                     key={f.id}
-                    className="group rounded-lg border border-blue-100 bg-blue-50/60 p-3 space-y-1.5"
+                    className={cn(
+                      "group relative rounded-xl border bg-card p-3 shadow-sm transition-shadow hover:shadow-md",
+                      "border-l-[3px]",
+                      isOverdue ? "border-l-red-400" : isToday ? "border-l-amber-400" : "border-l-slate-300"
+                    )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Bell className={cn(
-                          "h-3.5 w-3.5 shrink-0",
-                          isOverdue ? "text-red-500" : isToday ? "text-orange-500" : "text-blue-500"
-                        )} />
-                        <span className={cn(
-                          "text-xs font-semibold",
-                          isOverdue ? "text-red-600" : isToday ? "text-orange-600" : "text-blue-700"
-                        )}>
-                          {format(new Date(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </span>
-                        {isOverdue && (
-                          <span className="text-[10px] font-semibold rounded-full bg-red-100 text-red-600 px-1.5 py-0.5">
-                            Atrasado
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn(
+                            "text-sm font-semibold",
+                            isOverdue ? "text-red-600" : isToday ? "text-amber-700" : "text-foreground"
+                          )}>
+                            {format(new Date(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </span>
-                        )}
-                        {isToday && !isOverdue && (
-                          <span className="text-[10px] font-semibold rounded-full bg-orange-100 text-orange-600 px-1.5 py-0.5">
-                            Hoje
-                          </span>
-                        )}
+                          {isOverdue && (
+                            <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">
+                              Atrasado
+                            </span>
+                          )}
+                          {isToday && !isOverdue && (
+                            <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                              Hoje
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{f.usuario_nome}</p>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 shrink-0">
                         <button
                           onClick={() => handleConcluir(f.id)}
                           disabled={concluding === f.id}
                           title="Marcar como realizado"
                           className={cn(
-                            "rounded p-0.5 text-muted-foreground/50 transition-colors",
+                            "rounded-lg p-1.5 text-muted-foreground/40 transition-colors",
                             "opacity-0 group-hover:opacity-100",
                             "hover:text-emerald-600 hover:bg-emerald-50",
                             concluding === f.id && "opacity-100"
                           )}
                         >
                           {concluding === f.id
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <CheckCircle2 className="h-3.5 w-3.5" />}
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <CheckCircle2 className="h-4 w-4" />}
                         </button>
 
                         {(currentUserId === f.usuario_id || !currentUserId) && (
@@ -316,33 +314,25 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                             disabled={deleting === f.id}
                             title="Excluir retorno"
                             className={cn(
-                              "rounded p-0.5 text-muted-foreground/40 transition-colors",
+                              "rounded-lg p-1.5 text-muted-foreground/30 transition-colors",
                               "opacity-0 group-hover:opacity-100",
                               "hover:text-red-500 hover:bg-red-50",
                               deleting === f.id && "opacity-100"
                             )}
                           >
                             {deleting === f.id
-                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : <Trash2 className="h-3.5 w-3.5" />}
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <Trash2 className="h-4 w-4" />}
                           </button>
                         )}
                       </div>
                     </div>
 
                     {f.descricao && (
-                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                      <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                         {f.descricao}
                       </p>
                     )}
-
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span className="font-medium text-blue-700/70">{f.usuario_nome}</span>
-                      <span>·</span>
-                      <span>
-                        {format(new Date(f.criado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
                   </div>
                 )
               })}
@@ -353,39 +343,37 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
 
       {/* Concluídos */}
       {!loading && completed.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Realizados ({completed.length})
-          </p>
-          <div className="space-y-2">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Realizados
+            </p>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {completed.length}
+            </span>
+          </div>
+          <div className="space-y-1.5">
             {completed.map(f => (
               <div
                 key={f.id}
-                className="group rounded-lg border border-border bg-muted/20 p-3 space-y-1.5 opacity-70"
+                className="flex items-start gap-2.5 rounded-xl border bg-muted/20 px-3 py-2.5 opacity-60"
               >
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                  <span className="text-xs font-semibold text-muted-foreground line-through">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-xs font-medium text-muted-foreground line-through">
                     {format(new Date(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </span>
-                </div>
-
-                {f.descricao && (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed line-through">
-                    {f.descricao}
                   </p>
-                )}
-
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span className="font-medium">{f.usuario_nome}</span>
-                  {f.concluido_em && (
-                    <>
-                      <span>· Realizado em</span>
-                      <span>
-                        {format(new Date(f.concluido_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </>
+                  {f.descricao && (
+                    <p className="text-xs text-muted-foreground/80 line-clamp-1">
+                      {f.descricao}
+                    </p>
                   )}
+                  <p className="text-[10px] text-muted-foreground/60">
+                    {f.usuario_nome}
+                    {f.concluido_em && (
+                      <> · realizado {format(new Date(f.concluido_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
+                    )}
+                  </p>
                 </div>
               </div>
             ))}
