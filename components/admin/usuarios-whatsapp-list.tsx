@@ -3,8 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FaWhatsapp } from 'react-icons/fa'
-import { Loader2, Plus, RefreshCw, Search, UserCircle } from 'lucide-react'
+import { Loader2, Pencil, Plus, RefreshCw, Search, UserCircle, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface UsuarioWpp {
@@ -18,11 +23,16 @@ interface UsuarioWpp {
 }
 
 const stateLabel: Record<string, { label: string; color: string; dot: string }> = {
-  open:           { label: 'Conectado',           color: 'text-emerald-700 bg-emerald-100', dot: 'bg-emerald-500' },
-  close:          { label: 'Desconectado',         color: 'text-amber-700 bg-amber-100',    dot: 'bg-amber-400' },
-  connecting:     { label: 'Conectando…',          color: 'text-amber-700 bg-amber-100',    dot: 'bg-amber-400' },
-  not_configured: { label: 'Não configurado',      color: 'text-slate-600 bg-slate-100',    dot: 'bg-slate-400' },
-  unknown:        { label: 'Verificando…',         color: 'text-slate-600 bg-slate-100',    dot: 'bg-slate-400' },
+  open:           { label: 'Conectado',      color: 'text-emerald-700 bg-emerald-100', dot: 'bg-emerald-500' },
+  close:          { label: 'Desconectado',   color: 'text-amber-700 bg-amber-100',    dot: 'bg-amber-400' },
+  connecting:     { label: 'Conectando…',    color: 'text-amber-700 bg-amber-100',    dot: 'bg-amber-400' },
+  not_configured: { label: 'Não conf.',      color: 'text-slate-600 bg-slate-100',    dot: 'bg-slate-400' },
+  unknown:        { label: 'Verificando…',   color: 'text-slate-600 bg-slate-100',    dot: 'bg-slate-400' },
+}
+
+interface DialogState {
+  open: boolean
+  usuario: UsuarioWpp | null
 }
 
 export function UsuariosWhatsAppList() {
@@ -30,7 +40,16 @@ export function UsuariosWhatsAppList() {
   const [filtered, setFiltered] = useState<UsuarioWpp[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [creating, setCreating] = useState<number | null>(null)
+  const [dialog, setDialog] = useState<DialogState>({ open: false, usuario: null })
+
+  // Auto-create state
+  const [autoCreating, setAutoCreating] = useState(false)
+  const [autoError, setAutoError] = useState<string | null>(null)
+
+  // Manual assign state
+  const [manualInstance, setManualInstance] = useState('')
+  const [manualKey, setManualKey] = useState('')
+  const [manualSaving, setManualSaving] = useState(false)
 
   const fetchUsuarios = useCallback(async () => {
     setLoading(true)
@@ -62,21 +81,67 @@ export function UsuariosWhatsAppList() {
     )
   }, [search, usuarios])
 
-  const handleCreate = async (userId: number) => {
-    setCreating(userId)
+  const openDialog = (usuario: UsuarioWpp) => {
+    setDialog({ open: true, usuario })
+    setAutoError(null)
+    setManualInstance(usuario.instance ?? '')
+    setManualKey('')
+  }
+
+  const closeDialog = () => {
+    setDialog({ open: false, usuario: null })
+    setAutoError(null)
+    setManualInstance('')
+    setManualKey('')
+  }
+
+  const handleAutoCreate = async () => {
+    if (!dialog.usuario) return
+    setAutoCreating(true)
+    setAutoError(null)
     try {
-      const res = await fetch(`/api/admin/usuarios/${userId}/whatsapp/create`, { method: 'POST' })
+      const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/whatsapp/create`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        toast.error(data.mensagem ?? 'Erro ao criar instância.')
+        setAutoError(data.mensagem ?? `Erro ${res.status} ao criar instância.`)
         return
       }
-      toast.success(`Instância ${data.instance} criada!`)
+      toast.success(`Instância ${data.instance} criada com sucesso!`)
+      closeDialog()
+      await fetchUsuarios()
+    } catch {
+      setAutoError('Não foi possível conectar ao servidor.')
+    } finally {
+      setAutoCreating(false)
+    }
+  }
+
+  const handleManualAssign = async () => {
+    if (!dialog.usuario) return
+    const instance = manualInstance.trim()
+    if (!instance) {
+      toast.error('Informe o nome da instância.')
+      return
+    }
+    setManualSaving(true)
+    try {
+      const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/whatsapp/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance, api_key: manualKey.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.mensagem ?? 'Erro ao salvar.')
+        return
+      }
+      toast.success(`Instância ${instance} atribuída com sucesso!`)
+      closeDialog()
       await fetchUsuarios()
     } catch {
       toast.error('Erro de conexão.')
     } finally {
-      setCreating(null)
+      setManualSaving(false)
     }
   }
 
@@ -128,11 +193,9 @@ export function UsuariosWhatsAppList() {
               </tr>
             ) : filtered.map(u => {
               const st = stateLabel[u.connection_state] ?? stateLabel.unknown
-              const isCreating = creating === u.id
 
               return (
                 <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                  {/* Usuário */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-[#16255c]/10 flex items-center justify-center shrink-0">
@@ -145,7 +208,6 @@ export function UsuariosWhatsAppList() {
                     </div>
                   </td>
 
-                  {/* Perfil */}
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
                       u.role === 'administrator'
@@ -156,7 +218,6 @@ export function UsuariosWhatsAppList() {
                     </span>
                   </td>
 
-                  {/* Status WhatsApp */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${st.color}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${st.dot} ${
@@ -166,12 +227,11 @@ export function UsuariosWhatsAppList() {
                     </span>
                   </td>
 
-                  {/* Instância */}
                   <td className="px-4 py-3">
                     {u.instance ? (
                       <div className="flex items-center gap-1.5">
                         <FaWhatsapp className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                        <code className="text-xs font-mono text-slate-600 truncate max-w-[140px]">
+                        <code className="text-xs font-mono text-slate-600 truncate max-w-35">
                           {u.instance}
                         </code>
                       </div>
@@ -180,22 +240,26 @@ export function UsuariosWhatsAppList() {
                     )}
                   </td>
 
-                  {/* Ação */}
                   <td className="px-4 py-3 text-right">
-                    {!u.instance ? (
+                    {u.instance ? (
                       <Button
                         size="sm"
-                        onClick={() => handleCreate(u.id)}
-                        disabled={isCreating}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                        variant="outline"
+                        onClick={() => openDialog(u)}
+                        className="text-slate-600"
                       >
-                        {isCreating
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                          : <Plus className="h-3.5 w-3.5 mr-1.5" />}
-                        Criar Instância
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        Editar
                       </Button>
                     ) : (
-                      <span className="text-xs text-slate-400 italic">Configurado</span>
+                      <Button
+                        size="sm"
+                        onClick={() => openDialog(u)}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        Configurar
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -208,6 +272,98 @@ export function UsuariosWhatsAppList() {
       <p className="text-xs text-slate-400">
         {filtered.length} usuário{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}.
       </p>
+
+      {/* Dialog de configuração */}
+      <Dialog open={dialog.open} onOpenChange={open => { if (!open) closeDialog() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configurar WhatsApp</DialogTitle>
+            <DialogDescription>
+              {dialog.usuario?.nome} — escolha como configurar a instância.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="auto" className="mt-2">
+            <TabsList className="w-full">
+              <TabsTrigger value="auto" className="flex-1 gap-1.5">
+                <Zap className="h-3.5 w-3.5" />
+                Criar automaticamente
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex-1 gap-1.5">
+                <Pencil className="h-3.5 w-3.5" />
+                Inserir manualmente
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Aba: auto-create */}
+            <TabsContent value="auto" className="space-y-4 mt-4">
+              <p className="text-sm text-slate-600">
+                Tenta criar a instância <code className="text-xs bg-slate-100 px-1 rounded">user-{dialog.usuario?.id}</code> diretamente no servidor Evolution usando a chave global configurada.
+              </p>
+              {autoError && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  <p className="font-semibold mb-0.5">Falha na criação automática</p>
+                  <p className="text-xs">{autoError}</p>
+                  <p className="text-xs mt-1.5 text-red-500">
+                    Use a aba &quot;Inserir manualmente&quot; para registrar uma instância existente.
+                  </p>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+                <Button
+                  onClick={handleAutoCreate}
+                  disabled={autoCreating}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  {autoCreating
+                    ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    : <Zap className="h-4 w-4 mr-1.5" />}
+                  Criar instância
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+
+            {/* Aba: manual */}
+            <TabsContent value="manual" className="space-y-4 mt-4">
+              <p className="text-sm text-slate-600">
+                Registre uma instância já existente no painel do Evolution. Obtenha o nome e a API key da instância e cole abaixo.
+              </p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-instance">Nome da instância *</Label>
+                  <Input
+                    id="manual-instance"
+                    placeholder="ex: user-5 ou 9b768abb-a144-4500-a23a-58b5ca755ca3"
+                    value={manualInstance}
+                    onChange={e => setManualInstance(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-key">API key da instância</Label>
+                  <Input
+                    id="manual-key"
+                    placeholder="chave gerada pelo Evolution para esta instância"
+                    value={manualKey}
+                    onChange={e => setManualKey(e.target.value)}
+                  />
+                  <p className="text-xs text-slate-400">Deixe em branco para manter a chave atual (se já configurada).</p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+                <Button
+                  onClick={handleManualAssign}
+                  disabled={manualSaving || !manualInstance.trim()}
+                >
+                  {manualSaving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

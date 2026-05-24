@@ -42,6 +42,7 @@ export async function POST(
 
   const createBody: Record<string, unknown> = {
     instanceName,
+    token: settings.evolution_api_key,
     qrcode: true,
     integration: 'WHATSAPP-BAILEYS',
   }
@@ -92,7 +93,7 @@ export async function POST(
       instanceApiKey =
         (createData?.hash as Record<string, unknown>)?.apikey as string
         ?? (createData?.apikey as string)
-        ?? null
+        ?? settings.evolution_api_key
     }
   } catch (err) {
     console.error('[admin/usuarios/create] fetch error:', err)
@@ -111,7 +112,7 @@ export async function POST(
     },
     body: JSON.stringify({
       instance: instanceId,
-      ...(instanceApiKey ? { api_key: instanceApiKey } : {}),
+      api_key: instanceApiKey ?? settings.evolution_api_key,
     }),
   })
 
