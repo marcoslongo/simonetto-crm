@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { KanbanColumns } from '@/components/leads/kanban-columns'
 import { getMultiLojaLeads } from '@/lib/api-loja'
 import { getLojas } from '@/lib/api'
+import { WhatsAppSetupBanner } from '@/components/crm/whatsapp-setup-banner'
 
 export const metadata = {
   title: 'Atendimentos | Noxus - Lead Ops',
@@ -55,6 +56,8 @@ export default async function CrmAtendimentoPage({ searchParams }: PageProps) {
             : `Gerencie os leads da sua unidade: ${user.loja_nome || user.name}`}
         </p>
       </div>
+
+      <WhatsAppSetupBanner lojaId={lojaIds[0]} />
 
       <KanbanColumns
         leads={leads}

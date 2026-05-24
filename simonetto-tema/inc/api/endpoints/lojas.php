@@ -545,11 +545,13 @@ function mytheme_api_save_loja_whatsapp_config(WP_REST_Request $request): WP_RES
  */
 function mytheme_api_get_whatsapp_settings(WP_REST_Request $request): WP_REST_Response
 {
-  $url = get_option('evolution_api_url', '');
+  $url     = get_option('evolution_api_url', '');
+  $api_key = get_option('evolution_api_key', '');
 
   return new WP_REST_Response([
     'success'           => true,
     'evolution_api_url' => $url ?: null,
+    'evolution_api_key' => $api_key ?: null,
   ], 200);
 }
 
@@ -559,9 +561,14 @@ function mytheme_api_get_whatsapp_settings(WP_REST_Request $request): WP_REST_Re
 function mytheme_api_save_whatsapp_settings(WP_REST_Request $request): WP_REST_Response
 {
   $body = $request->get_json_params();
-  $url  = esc_url_raw(trim($body['evolution_api_url'] ?? ''));
 
-  update_option('evolution_api_url', $url);
+  if (isset($body['evolution_api_url'])) {
+    update_option('evolution_api_url', esc_url_raw(trim($body['evolution_api_url'])));
+  }
+
+  if (!empty($body['evolution_api_key'])) {
+    update_option('evolution_api_key', sanitize_text_field(trim($body['evolution_api_key'])));
+  }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configurações salvas.'], 200);
 }
