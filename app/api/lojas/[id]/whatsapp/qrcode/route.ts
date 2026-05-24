@@ -55,13 +55,15 @@ export async function GET(
       headers: { apikey: apiKey },
       cache: 'no-store',
     })
-    const qrData = await qrRes.json()
+    const rawText = await qrRes.text()
+    let qrData: Record<string, unknown> = {}
+    try { qrData = JSON.parse(rawText) } catch { /* non-JSON response from Evolution Go */ }
 
     if (!qrRes.ok) {
-      console.error('[qrcode] Evolution API error:', qrRes.status, JSON.stringify(qrData))
+      console.error('[qrcode] Evolution API error:', qrRes.status, rawText)
       return NextResponse.json({
         success: false,
-        mensagem: qrData?.message ?? `Evolution API retornou ${qrRes.status}`,
+        mensagem: (qrData?.message as string) ?? `Evolution API retornou ${qrRes.status}: ${rawText}`,
       }, { status: 400 })
     }
 

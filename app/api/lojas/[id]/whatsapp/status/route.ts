@@ -31,8 +31,11 @@ export async function GET(
   }
 
   // Estado rastreado via webhook CONNECTION — não precisa chamar o Evolution Go
-  const raw: string = config.connection_state ?? 'unknown'
-  const state = /^(open|connected)$/i.test(raw) ? 'open' : raw.toLowerCase()
+  // Fallback: instância configurada mas connection_state ainda não registrado (WP sem deploy) → assume open
+  const raw: string = config.connection_state ?? ''
+  const state = (config.instance && !raw)
+    ? 'open'
+    : (/^(open|connected)$/i.test(raw) ? 'open' : (raw.toLowerCase() || 'unknown'))
 
   return NextResponse.json({ state, instance: config.instance })
 }
