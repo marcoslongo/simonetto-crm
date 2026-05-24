@@ -490,14 +490,16 @@ function mytheme_api_get_loja_whatsapp_config(WP_REST_Request $request): WP_REST
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
-  $instance = get_post_meta($loja_id, '_evolution_instance', true);
-  $api_key  = get_post_meta($loja_id, '_evolution_api_key',  true);
+  $instance         = get_post_meta($loja_id, '_evolution_instance',         true);
+  $api_key          = get_post_meta($loja_id, '_evolution_api_key',          true);
+  $connection_state = get_post_meta($loja_id, '_whatsapp_connection_state',  true);
 
   return new WP_REST_Response([
-    'success'    => true,
-    'instance'   => $instance ?: null,
-    'api_key'    => $api_key ? '••••' . substr($api_key, -4) : null,
-    'configured' => !empty($instance) && !empty($api_key),
+    'success'          => true,
+    'instance'         => $instance ?: null,
+    'api_key'          => $api_key ? '••••' . substr($api_key, -4) : null,
+    'configured'       => !empty($instance) && !empty($api_key),
+    'connection_state' => $connection_state ?: 'unknown',
   ], 200);
 }
 

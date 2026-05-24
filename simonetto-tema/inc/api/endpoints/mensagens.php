@@ -394,6 +394,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['status' => 'no_loja'], 200);
   }
 
+  // ---- Estado da conexão (event = "Connection") ----
+  if ($event === 'Connection') {
+    $state = $data['state'] ?? ($body['state'] ?? '');
+    if ($state && $loja_id) {
+      update_post_meta($loja_id, '_whatsapp_connection_state', sanitize_text_field($state));
+    }
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
+
   // ---- Recibo de leitura / entrega (event = "Receipt") ----
   if ($event === 'Receipt') {
     $state_map = [

@@ -19,36 +19,20 @@ export async function GET(
   const { id } = await params
   const token = await getAuthToken()
 
-  const [configRes, settingsRes] = await Promise.all([
-    fetch(`${WP_API_BASE}/lojas/${id}/whatsapp-config`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    }),
-    fetch(`${WP_API_BASE}/settings/whatsapp`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    }),
-  ])
+  const configRes = await fetch(`${WP_API_BASE}/lojas/${id}/whatsapp-config`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
 
   const config = configRes.ok ? await configRes.json() : null
-  const settings = settingsRes.ok ? await settingsRes.json() : null
 
-  if (!config?.instance || !settings?.evolution_api_url) {
+  if (!config?.instance) {
     return NextResponse.json({ state: 'not_configured', instance: null })
   }
 
-  const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  const apiKey = config.api_key ?? settings.evolution_api_key
+  // Estado rastreado via webhook CONNECTION — não precisa chamar o Evolution Go
+  const raw: string = config.connection_state ?? 'unknown'
+  const state = /^(open|connected)$/i.test(raw) ? 'open' : raw.toLowerCase()
 
-  try {
-    const stateRes = await fetch(`${evolutionUrl}/instance/connectionState/${config.instance}`, {
-      headers: { apikey: apiKey },
-      cache: 'no-store',
-    })
-    const stateData = await stateRes.json()
-    const state: string = stateData?.instance?.state ?? stateData?.state ?? 'unknown'
-    return NextResponse.json({ state, instance: config.instance })
-  } catch {
-    return NextResponse.json({ state: 'error', instance: config.instance })
-  }
+  return NextResponse.json({ state, instance: config.instance })
 }

@@ -117,7 +117,8 @@ export function WhatsAppConfig({ lojaId, isAdmin = false, siteUrl }: WhatsAppCon
           const state: ConnectionState = statusData.state ?? 'unknown'
           setConnectionState(state)
 
-          if (state !== 'open') {
+          // Só busca QR quando confirmadamente desconectado — não em 'unknown' ou 'error'
+          if (state === 'close' || state === 'connecting') {
             await fetchQrCode()
             startPolling()
           }
@@ -219,7 +220,9 @@ export function WhatsAppConfig({ lojaId, isAdmin = false, siteUrl }: WhatsAppCon
   }
 
   const isConnected = connectionState === 'open'
+  const isDisconnected = connectionState === 'close' || connectionState === 'connecting'
   const hasInstance = !!config.instance
+  const showQr = hasInstance && isDisconnected
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
@@ -246,10 +249,15 @@ export function WhatsAppConfig({ lojaId, isAdmin = false, siteUrl }: WhatsAppCon
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Conectado — {config.instance}
             </span>
-          ) : hasInstance ? (
+          ) : isDisconnected ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-              Aguardando conexão — {config.instance}
+              Desconectado — {config.instance}
+            </span>
+          ) : hasInstance ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+              {config.instance} — verificando status…
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
@@ -358,8 +366,8 @@ export function WhatsAppConfig({ lojaId, isAdmin = false, siteUrl }: WhatsAppCon
           </div>
         )}
 
-        {/* QR Code — exibido para admin e usuário loja enquanto não conectado */}
-        {hasInstance && !isConnected && (
+        {/* QR Code — exibido apenas quando confirmadamente desconectado */}
+        {showQr && (
           <div className="rounded-xl bg-white shadow-sm p-5 text-center space-y-4">
             <div>
               <p className="text-sm font-semibold text-slate-700">Conecte o WhatsApp</p>
