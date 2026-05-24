@@ -10,6 +10,7 @@ import {
   Check,
   Copy,
   Loader2,
+  Plus,
   Save,
   Settings,
   Webhook,
@@ -41,6 +42,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [createFailed, setCreateFailed] = useState(false)
   const [savingGlobal, setSavingGlobal] = useState(false)
   const [loadingQr, setLoadingQr] = useState(false)
   const [showWebhookInfo, setShowWebhookInfo] = useState(false)
@@ -95,15 +97,17 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
     pollRef.current = setInterval(() => { checkStatus() }, 5000)
   }, [checkStatus, stopPolling])
 
-  // Cria instância automaticamente se não existir e inicia QR
-  const ensureInstanceAndShowQr = useCallback(async () => {
+  // Tenta criar instância (admin only — requer GLOBAL_API_KEY configurada)
+  const handleCreateInstance = useCallback(async () => {
     setCreating(true)
+    setCreateFailed(false)
     try {
       const res = await fetch('/api/usuarios/me/whatsapp/create', { method: 'POST' })
       const data = await res.json()
 
       if (!res.ok || !data.success) {
-        toast.error(data.mensagem ?? 'Erro ao preparar instância WhatsApp.')
+        setCreateFailed(true)
+        toast.error(data.mensagem ?? 'Erro ao criar instância.')
         return
       }
 
@@ -111,7 +115,9 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
       setConnectionState('connecting')
       await fetchQrCode()
       startPolling()
+      toast.success('Instância criada!')
     } catch {
+      setCreateFailed(true)
       toast.error('Erro de conexão ao servidor Evolution.')
     } finally {
       setCreating(false)
@@ -139,10 +145,8 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
             await fetchQrCode()
             startPolling()
           }
-        } else {
-          // Nenhuma instância — cria automaticamente (plug and play)
-          await ensureInstanceAndShowQr()
         }
+        // Sem instância: não tenta criar automaticamente — mostra estado "não configurado"
       }
 
       if (settingsRes?.ok) {
@@ -153,7 +157,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
     } finally {
       setLoading(false)
     }
-  }, [isAdmin, fetchQrCode, startPolling, ensureInstanceAndShowQr])
+  }, [isAdmin, fetchQrCode, startPolling])
 
   useEffect(() => {
     fetchConfig()
@@ -317,6 +321,32 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
                 : <Save className="h-3.5 w-3.5 mr-1.5" />}
               Salvar
             </Button>
+          </div>
+        )}
+
+        {/* Admin: criar instância quando não configurada */}
+        {isAdmin && !instance && (
+          <div className="rounded-xl bg-white shadow-sm p-4 text-center space-y-3">
+            <p className="text-sm text-slate-500">Nenhuma instância configurada para este usuário.</p>
+            <Button
+              onClick={handleCreateInstance}
+              disabled={creating}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            >
+              {creating
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Criando…</>
+                : <><Plus className="h-4 w-4 mr-2" />Criar Instância</>}
+            </Button>
+          </div>
+        )}
+
+        {/* Usuário sem instância configurada */}
+        {!isAdmin && !instance && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center space-y-1">
+            <p className="text-sm font-semibold text-amber-700">WhatsApp não configurado</p>
+            <p className="text-xs text-amber-600">
+              Aguarde o administrador configurar sua instância WhatsApp.
+            </p>
           </div>
         )}
 

@@ -605,6 +605,7 @@ function mytheme_api_get_user_whatsapp_config(WP_REST_Request $request): WP_REST
 {
   $user_id          = get_current_user_id();
   $instance         = get_user_meta($user_id, '_evolution_instance',        true);
+  $api_key          = get_user_meta($user_id, '_evolution_api_key',         true);
   $connection_state = get_user_meta($user_id, '_whatsapp_connection_state', true);
 
   if (!$connection_state && !empty($instance)) {
@@ -614,7 +615,8 @@ function mytheme_api_get_user_whatsapp_config(WP_REST_Request $request): WP_REST
   return new WP_REST_Response([
     'success'          => true,
     'instance'         => $instance ?: null,
-    'configured'       => !empty($instance),
+    'api_key'          => $api_key  ?: null, // chave da instância — usada server-side para QR e envio
+    'configured'       => !empty($instance) && !empty($api_key),
     'connection_state' => $connection_state ?: 'unknown',
   ], 200);
 }

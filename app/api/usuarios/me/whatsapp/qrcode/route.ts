@@ -32,12 +32,13 @@ export async function GET() {
   if (!config?.instance) {
     return NextResponse.json({ success: false, mensagem: 'Instância não configurada.' }, { status: 400 })
   }
-  if (!settings?.evolution_api_url || !settings?.evolution_api_key) {
+  if (!settings?.evolution_api_url) {
     return NextResponse.json({ success: false, mensagem: 'Servidor Evolution não configurado.' }, { status: 400 })
   }
 
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  const apiKey = settings.evolution_api_key
+  // Usa a chave da instância do usuário — a chave global não autentica operações de instância
+  const apiKey = config.api_key ?? settings.evolution_api_key
   const targetUrl = `${evolutionUrl}/instance/connect/${config.instance}`
 
   try {
