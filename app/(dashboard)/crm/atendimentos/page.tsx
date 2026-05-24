@@ -8,25 +8,29 @@ export const metadata = {
   description: 'Gerencie os atendimentos da sua unidade',
 }
 
-export default async function CrmAtendimentoPage() {
+interface PageProps {
+  searchParams: Promise<{ loja_id?: string }>
+}
+
+export default async function CrmAtendimentoPage({ searchParams }: PageProps) {
   const user = await requireAuth()
+  const { loja_id } = await searchParams
 
-  const lojaIds = user.loja_ids
-
-  if (!lojaIds.length) {
+  const allLojaIds = user.loja_ids
+  if (!allLojaIds.length) {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">
-            Atendimentos
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            Nenhuma loja vinculada ao seu usuário.
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Atendimentos</h2>
+          <p className="text-muted-foreground mt-1">Nenhuma loja vinculada ao seu usuário.</p>
         </div>
       </div>
     )
   }
+
+  // Filter to a specific loja if the URL param exists and the user has access
+  const filteredId = loja_id ? Number(loja_id) : null
+  const lojaIds = filteredId && allLojaIds.includes(filteredId) ? [filteredId] : allLojaIds
 
   const [{ leads, total: totalLeads }, lojasData] = await Promise.all([
     getMultiLojaLeads(lojaIds, 100),
@@ -37,14 +41,18 @@ export default async function CrmAtendimentoPage() {
     .filter(l => lojaIds.includes(Number(l.id)))
     .map(l => ({ id: Number(l.id), nome: l.nome }))
 
+  const lojaFiltrada = filteredId
+    ? lojasData.lojas.find(l => Number(l.id) === filteredId)
+    : null
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">
-          Atendimentos
-        </h2>
+        <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Atendimentos</h2>
         <p className="text-muted-foreground mt-1">
-          Gerencie os leads da sua unidade: {user.loja_nome || user.name}
+          {lojaFiltrada
+            ? `Kanban filtrado para: ${lojaFiltrada.nome}`
+            : `Gerencie os leads da sua unidade: ${user.loja_nome || user.name}`}
         </p>
       </div>
 

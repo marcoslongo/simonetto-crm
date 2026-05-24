@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Bell, CalendarClock, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
+import { Bell, Calendar, CalendarClock, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -98,7 +98,7 @@ export function FollowupBell() {
           className="relative"
           aria-label="Retornos atrasados"
         >
-          <Bell
+          <Calendar
             className={cn(
               'h-5 w-5 transition-colors',
               count > 0 ? 'text-orange-500' : 'text-gray-500'

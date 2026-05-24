@@ -28,8 +28,13 @@ import { FunilStatus } from '@/components/lojas/funil-status'
 import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
 import { LeadsRecentes } from '@/components/lojas/leads-recentes'
+import { LojaPageTabs } from '@/components/lojas/loja-page-tabs'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
+import {
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+  BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
@@ -49,52 +54,42 @@ async function LojaStatsWrapper({ id }: { id: string }) {
   const stats = await getLojaStats(id)
   return <StatsCards stats={stats} />
 }
-
 async function LojaMetricasWrapper({ id }: { id: string }) {
   const data = await getLojaServiceStats(id)
   return <MetricasAtendimento data={data} />
 }
-
 async function LojaFunilWrapper({ id }: { id: string }) {
   const data = await getLojaStatusFunil(id)
   return <FunilStatus data={data} />
 }
-
 async function LojaTemperaturaWrapper({ id }: { id: string }) {
   const data = await getLojaClassificacao(id)
   return <TemperaturaLeads data={data} />
 }
-
 async function Leads30DaysWrapper({ id }: { id: string }) {
   const data = await getLojaLeads30Days(id)
   return <ChartLeads30Days data={data} lojaIds={[id]} />
 }
-
 async function Leads12MonthsWrapper({ id }: { id: string }) {
   const data = await getLojaLeads12Months(id)
   return <ChartLeads12Months data={data} />
 }
-
 async function IntegracaoWrapper({ id }: { id: string }) {
   const data = await getLojaIntegration(id)
   return <IntegracaoLP lojaId={id} initialData={data} isAdmin />
 }
-
 async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
   const { leads } = await getLojaLeads(id, 1, 10)
   return <LeadsRecentes leads={leads} isAdmin currentUserId={currentUserId} />
 }
-
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])
   return <ChartVnrMotivos initialData={data} isAdmin={false} lojaIds={[Number(id)]} />
 }
-
 async function FunilAtendenteWrapper({ id }: { id: string }) {
   const data = await getFunilPorAtendente([Number(id)])
   return <ChartFunilPorAtendente data={data} />
 }
-
 async function TempoPorEtapaWrapper({ id }: { id: string }) {
   const data = await getTempoPorEtapa([Number(id)])
   return <ChartTempoPorEtapa data={data} />
@@ -106,9 +101,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
   const { id } = await params
 
   const lojasResponse = await getLojas()
-  if (!lojasResponse.success) {
-    throw new Error('Falha ao carregar lojas')
-  }
+  if (!lojasResponse.success) throw new Error('Falha ao carregar lojas')
 
   const loja = lojasResponse.lojas.find((l) => l.id === id)
 
@@ -128,15 +121,35 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/admin">Início</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/admin/lojas">Lojas</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{loja.nome}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">{loja.nome}</h2>
-          <p className="text-muted-foreground mt-1">
-            Visualização detalhada da loja
-          </p>
+          <p className="text-muted-foreground mt-1">Visualização detalhada da loja</p>
         </div>
         <Link href="/admin/lojas">
-          <Button variant="outline" className="shadow-sm">
+          <Button variant="outline" className="shadow-sm shrink-0">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -145,55 +158,66 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
       <LojaInfoCard loja={loja} />
 
-      <Suspense fallback={<StatsCardsSkeleton />}>
-        <LojaStatsWrapper id={id} />
-      </Suspense>
-
-      <Suspense fallback={<TripleChartSkeleton height="h-56" />}>
-        <div className="grid gap-6 md:grid-cols-3">
-          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
-            <LojaMetricasWrapper id={id} />
-          </Suspense>
-          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
-            <LojaFunilWrapper id={id} />
-          </Suspense>
-          <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
-            <LojaTemperaturaWrapper id={id} />
-          </Suspense>
-        </div>
-      </Suspense>
-
-      <Suspense fallback={<ChartCardSkeleton height="h-48" />}>
-        <LeadsRecentesWrapper id={id} currentUserId={user.id} />
-      </Suspense>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-          <Leads30DaysWrapper id={id} />
-        </Suspense>
-        <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-          <Leads12MonthsWrapper id={id} />
-        </Suspense>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <TempoPorEtapaWrapper id={id} />
-        </Suspense>
-        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <VnrWrapper id={id} />
-        </Suspense>
-      </div>
-
-      <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-        <FunilAtendenteWrapper id={id} />
-      </Suspense>
-
-      <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
-        <IntegracaoWrapper id={id} />
-      </Suspense>
-
-      <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
+      <LojaPageTabs
+        visaoGeral={
+          <>
+            <Suspense fallback={<StatsCardsSkeleton />}>
+              <LojaStatsWrapper id={id} />
+            </Suspense>
+            <Suspense fallback={<TripleChartSkeleton height="h-56" />}>
+              <div className="grid gap-6 md:grid-cols-3">
+                <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+                  <LojaMetricasWrapper id={id} />
+                </Suspense>
+                <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+                  <LojaFunilWrapper id={id} />
+                </Suspense>
+                <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+                  <LojaTemperaturaWrapper id={id} />
+                </Suspense>
+              </div>
+            </Suspense>
+          </>
+        }
+        leads={
+          <>
+            <Suspense fallback={<ChartCardSkeleton height="h-48" />}>
+              <LeadsRecentesWrapper id={id} currentUserId={user.id} />
+            </Suspense>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+                <Leads30DaysWrapper id={id} />
+              </Suspense>
+              <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+                <Leads12MonthsWrapper id={id} />
+              </Suspense>
+            </div>
+          </>
+        }
+        relatorios={
+          <>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+                <TempoPorEtapaWrapper id={id} />
+              </Suspense>
+              <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+                <VnrWrapper id={id} />
+              </Suspense>
+            </div>
+            <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+              <FunilAtendenteWrapper id={id} />
+            </Suspense>
+          </>
+        }
+        configuracoes={
+          <>
+            <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
+              <IntegracaoWrapper id={id} />
+            </Suspense>
+            <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
+          </>
+        }
+      />
     </div>
   )
 }

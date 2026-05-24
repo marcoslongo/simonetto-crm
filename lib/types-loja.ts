@@ -1,8 +1,11 @@
 export interface LojaStats {
   total: number
   hoje: number
+  ontem?: number
   semana: number
+  semana_anterior?: number
   mes: number
+  mes_anterior?: number
 }
 
 export interface LojaStatusFunil {

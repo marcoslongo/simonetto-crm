@@ -207,20 +207,28 @@ class Loja_Handler
     $table_leads = $wpdb->prefix . 'leads';
 
     $stats = $wpdb->get_row($wpdb->prepare("
-      SELECT 
+      SELECT
         COUNT(*) as total,
         SUM(CASE WHEN DATE(data_criacao) = CURDATE() THEN 1 ELSE 0 END) as hoje,
+        SUM(CASE WHEN DATE(data_criacao) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) as ontem,
         SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as semana,
-        SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as mes
+        SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                  AND data_criacao < DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as semana_anterior,
+        SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as mes,
+        SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                  AND data_criacao < DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as mes_anterior
       FROM {$table_leads}
       WHERE loja_id = %d
     ", $loja_id));
 
     return array(
-      'total' => $stats ? (int) $stats->total : 0,
-      'hoje' => $stats ? (int) $stats->hoje : 0,
-      'semana' => $stats ? (int) $stats->semana : 0,
-      'mes' => $stats ? (int) $stats->mes : 0,
+      'total'           => $stats ? (int) $stats->total : 0,
+      'hoje'            => $stats ? (int) $stats->hoje : 0,
+      'ontem'           => $stats ? (int) $stats->ontem : 0,
+      'semana'          => $stats ? (int) $stats->semana : 0,
+      'semana_anterior' => $stats ? (int) $stats->semana_anterior : 0,
+      'mes'             => $stats ? (int) $stats->mes : 0,
+      'mes_anterior'    => $stats ? (int) $stats->mes_anterior : 0,
     );
   }
 
