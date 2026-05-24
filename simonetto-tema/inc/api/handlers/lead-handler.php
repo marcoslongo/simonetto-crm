@@ -444,14 +444,21 @@ class Lead_Handler
     $query_values[] = $per_page;
     $query_values[] = $offset;
 
-    $table_msgs = $wpdb->prefix . 'mensagens';
+    $table_msgs      = $wpdb->prefix . 'mensagens';
+    $table_followups = $wpdb->prefix . 'leads_followups';
 
     $leads = $wpdb->get_results($wpdb->prepare(
       "SELECT l.*,
          (SELECT COUNT(*) FROM {$table_msgs} m
           WHERE m.lead_id = l.id
             AND m.direcao = 'recebida'
-            AND m.status  != 'vista') AS unread_count
+            AND m.status  != 'vista') AS unread_count,
+         (SELECT f.agendado_para FROM {$table_followups} f
+          WHERE f.lead_id = l.id AND f.concluido = 0
+          ORDER BY f.agendado_para ASC LIMIT 1) AS proximo_followup_em,
+         (SELECT f.descricao FROM {$table_followups} f
+          WHERE f.lead_id = l.id AND f.concluido = 0
+          ORDER BY f.agendado_para ASC LIMIT 1) AS proximo_followup_descricao
        FROM {$table_name} l
        {$where_sql}
        ORDER BY l.data_criacao DESC
@@ -760,6 +767,9 @@ class Lead_Handler
     } else {
       $lead['responsavel_nome'] = null;
     }
+
+    $lead['proximo_followup_em']        = $lead['proximo_followup_em'] ?? null;
+    $lead['proximo_followup_descricao'] = $lead['proximo_followup_descricao'] ?? null;
 
     if ($lead['loja_id']) {
       $loja_id = intval($lead['loja_id']);

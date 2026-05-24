@@ -46,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { NotasLead } from "@/components/leads/notas-lead";
+import { FollowupLead } from "@/components/leads/followup-lead";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -79,6 +80,7 @@ interface LeadDialogProps {
   isAdmin?: boolean;
   lojas?: LojaOption[];
   currentUserId?: number;
+  onFollowupUpdate?: (next: { em: string; descricao?: string | null } | null) => void;
 }
 
 const interestLabels: Record<string, string> = {
@@ -110,6 +112,7 @@ export function LeadDetailsModal({
   isAdmin,
   lojas = [],
   currentUserId,
+  onFollowupUpdate,
 }: LeadDialogProps) {
   const router = useRouter();
 
@@ -398,6 +401,7 @@ export function LeadDetailsModal({
                 )}
                 <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
                 <TabsTrigger value="notas">Notas</TabsTrigger>
+                <TabsTrigger value="followup">Follow-up</TabsTrigger>
                 <TabsTrigger value="historico" onClick={fetchActions}>
                   Histórico
                 </TabsTrigger>
@@ -851,6 +855,17 @@ export function LeadDetailsModal({
               <TabsContent value="notas" className="mt-0">
                 <div className="rounded-xl border border-border bg-card p-5">
                   <NotasLead leadId={String(lead.id)} currentUserId={currentUserId} />
+                </div>
+              </TabsContent>
+
+              {/* Follow-up */}
+              <TabsContent value="followup" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <FollowupLead
+                    leadId={String(lead.id)}
+                    currentUserId={currentUserId}
+                    onFollowupChange={onFollowupUpdate}
+                  />
                 </div>
               </TabsContent>
 

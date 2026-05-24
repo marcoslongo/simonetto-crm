@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -47,6 +47,7 @@ import {
   User,
   RefreshCw,
   AlertTriangle,
+  Bell,
 } from 'lucide-react'
 import {
   Popover,
@@ -54,7 +55,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
@@ -561,6 +562,13 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           isAdmin={isAdmin}
           lojas={lojas}
           currentUserId={currentUser?.id}
+          onFollowupUpdate={(next) => {
+            setLeads(prev => prev.map(l =>
+              String(l.id) === String(selectedLead.id)
+                ? { ...l, proximo_followup_em: next?.em ?? null, proximo_followup_descricao: next?.descricao ?? null }
+                : l
+            ))
+          }}
         />
       )}
 
@@ -745,6 +753,16 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
 
   const sla = getSLAInfo(lead)
 
+  const followupInfo = useMemo(() => {
+    if (!lead.proximo_followup_em) return null
+    const dt = new Date(lead.proximo_followup_em)
+    const now = new Date()
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+    const isOverdue = dt < now
+    const isToday = dt <= todayEnd && !isOverdue
+    return { dt, isOverdue, isToday }
+  }, [lead.proximo_followup_em])
+
   return (
     <TooltipProvider>
       <div
@@ -899,6 +917,27 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {followupInfo && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                  followupInfo.isOverdue ? "bg-red-100 text-red-600" :
+                  followupInfo.isToday   ? "bg-orange-100 text-orange-600" :
+                                           "bg-blue-100 text-blue-600"
+                )}>
+                  <Bell className="h-2.5 w-2.5" />
+                  {format(followupInfo.dt, "dd/MM HH:mm")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="text-xs">
+                {followupInfo.isOverdue ? "Follow-up atrasado" :
+                 followupInfo.isToday   ? "Follow-up hoje" :
+                                          "Follow-up agendado"}
+                {lead.proximo_followup_descricao && `: ${lead.proximo_followup_descricao}`}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {sla && (
             <Tooltip>
               <TooltipTrigger asChild>

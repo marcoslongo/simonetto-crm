@@ -76,6 +76,8 @@ export interface Lead {
   unread_count?: number;
   responsavel_id?: number | null;
   responsavel_nome?: string | null;
+  proximo_followup_em?: string | null;
+  proximo_followup_descricao?: string | null;
 }
 
 export interface LeadsResponse {
