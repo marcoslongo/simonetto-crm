@@ -627,12 +627,17 @@ function mytheme_api_save_user_whatsapp_config(WP_REST_Request $request): WP_RES
   $user_id  = get_current_user_id();
   $body     = $request->get_json_params();
   $instance = sanitize_text_field($body['instance'] ?? '');
+  $api_key  = sanitize_text_field($body['api_key']  ?? '');
 
   if (empty($instance)) {
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Nome da instância é obrigatório.'], 400);
   }
 
   update_user_meta($user_id, '_evolution_instance', $instance);
+
+  if (!empty($api_key)) {
+    update_user_meta($user_id, '_evolution_api_key', $api_key);
+  }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração WhatsApp salva.'], 200);
 }

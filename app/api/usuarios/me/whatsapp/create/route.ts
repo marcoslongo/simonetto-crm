@@ -50,6 +50,7 @@ export async function POST() {
   }
 
   let instanceId = instanceName
+  let instanceApiKey: string | null = null
 
   try {
     const createRes = await fetch(`${evolutionUrl}/instance/create`, {
@@ -77,13 +78,19 @@ export async function POST() {
           mensagem: (createData?.message as string) ?? `Evolution API retornou ${createRes.status}`,
         }, { status: 400 })
       }
-      // Instância já existe — usa o instanceName como ID
     } else {
-      // Evolution Go pode retornar o UUID gerado
+      // Extrai instanceId e a chave específica da instância gerada pelo Evolution Go
       instanceId =
         (createData?.instance as Record<string, unknown>)?.instanceName as string
         ?? (createData?.instanceName as string)
         ?? instanceName
+
+      instanceApiKey =
+        (createData?.hash as Record<string, unknown>)?.apikey as string
+        ?? (createData?.apikey as string)
+        ?? null
+
+      console.log('[whatsapp/create] created:', instanceId, 'apikey present:', !!instanceApiKey)
     }
   } catch (err) {
     console.error('[whatsapp/create] fetch error:', err)
@@ -93,14 +100,17 @@ export async function POST() {
     }, { status: 500 })
   }
 
-  // Persiste o instanceId no WordPress (user_meta)
+  // Persiste instanceId e chave específica no WordPress (user_meta)
   await fetch(`${WP_API_BASE}/usuarios/me/whatsapp-config`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ instance: instanceId }),
+    body: JSON.stringify({
+      instance: instanceId,
+      ...(instanceApiKey ? { api_key: instanceApiKey } : {}),
+    }),
   })
 
   return NextResponse.json({ success: true, instance: instanceId })

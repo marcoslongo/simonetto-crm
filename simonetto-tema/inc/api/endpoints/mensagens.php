@@ -195,7 +195,7 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
   $current_user_id = get_current_user_id();
   $evo_url         = get_option('evolution_api_url', '');
   $evo_instance    = get_user_meta($current_user_id, '_evolution_instance', true);
-  $evo_key         = get_option('evolution_api_key', ''); // chave global — nunca mascarada
+  $evo_key         = get_user_meta($current_user_id, '_evolution_api_key', true); // chave por instância de usuário
 
   if ($telefone && $evo_url && $evo_instance && $evo_key) {
     $phone_clean = preg_replace('/\D/', '', $telefone);
