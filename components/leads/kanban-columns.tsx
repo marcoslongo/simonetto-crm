@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -450,8 +450,13 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     })
   )
 
-  const leadsByStatus = (status: string) =>
-    leads.filter((l) => (l.status ?? 'nao_atendido') === status)
+  const itemsByStatus = useMemo(() => {
+    const map: Record<string, Lead[]> = {}
+    for (const col of COLUNAS) {
+      map[col.key] = leads.filter(l => (l.status ?? 'nao_atendido') === col.key)
+    }
+    return map
+  }, [leads])
 
   const registrarContato = async (leadId: string | number, tipoContato: string, observacao?: string) => {
     try {
@@ -550,25 +555,25 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     }
   }
 
-  const handleLeadClick = (lead: Lead) => {
+  const handleLeadClick = useCallback((lead: Lead) => {
     setSelectedLead(lead)
     setIsModalOpen(true)
     onLeadClick?.(lead)
-  }
+  }, [onLeadClick])
 
-  const handleMessagesRead = (leadId: string) => {
+  const handleMessagesRead = useCallback((leadId: string) => {
     setLeads(prev =>
       prev.map(l => String(l.id) === leadId ? { ...l, unread_count: 0 } : l)
     )
-  }
+  }, [])
 
-  const handleLeadCriado = (lead: Lead) => {
+  const handleLeadCriado = useCallback((lead: Lead) => {
     setLeads(prev => [lead, ...prev])
-  }
+  }, [])
 
-  const handleLeadUpdate = (updated: Lead) => {
+  const handleLeadUpdate = useCallback((updated: Lead) => {
     setLeads(prev => prev.map(l => String(l.id) === String(updated.id) ? updated : l))
-  }
+  }, [])
 
   // Lojas disponíveis para o seletor: filtra pelo lojaIds se fornecido
   const lojasSeletor = lojaIds?.length
@@ -678,27 +683,22 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         onDragEnd={handleDragEnd}
       >
         <div className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4", searchQuery.trim() && "hidden")}>
-          {COLUNAS.map((coluna) => {
-            const items = leadsByStatus(coluna.key)
-            const styles = colorStyles[coluna.color]
-
-            return (
-              <KanbanColumn
-                key={coluna.key}
-                coluna={coluna}
-                items={items}
-                styles={styles}
-                onLeadClick={handleLeadClick}
-                onLeadUpdate={handleLeadUpdate}
-                visibleCount={getVisible(coluna.key)}
-                onLoadMore={() => loadMore(coluna.key)}
-                isLoadingMore={columnLoading[coluna.key] ?? false}
-                hasMoreGlobal={leads.length < totalLeads}
-                isLoadingAll={loadingAll}
-                savingLeads={savingLeads}
-              />
-            )
-          })}
+          {COLUNAS.map((coluna) => (
+            <KanbanColumn
+              key={coluna.key}
+              coluna={coluna}
+              items={itemsByStatus[coluna.key] ?? []}
+              styles={colorStyles[coluna.color]}
+              onLeadClick={handleLeadClick}
+              onLeadUpdate={handleLeadUpdate}
+              visibleCount={getVisible(coluna.key)}
+              onLoadMore={() => loadMore(coluna.key)}
+              isLoadingMore={columnLoading[coluna.key] ?? false}
+              hasMoreGlobal={leads.length < totalLeads}
+              isLoadingAll={loadingAll}
+              savingLeads={savingLeads}
+            />
+          ))}
         </div>
 
         <DragOverlay>
@@ -762,7 +762,7 @@ interface KanbanColumnProps {
   savingLeads?: Set<string>
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads }: KanbanColumnProps) {
+const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
@@ -807,7 +807,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibl
                 <DraggableLeadRow
                   key={lead.id}
                   lead={lead}
-                  onOpen={() => onLeadClick?.(lead)}
+                  onLeadClick={onLeadClick}
                   onLeadUpdate={onLeadUpdate}
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
                 />
@@ -845,16 +845,16 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibl
       </CardContent>
     </Card>
   )
-}
+})
 
 interface DraggableLeadRowProps {
   lead: Lead
-  onOpen: () => void
+  onLeadClick?: (lead: Lead) => void
   onLeadUpdate: (updated: Lead) => void
   isSaving?: boolean
 }
 
-function DraggableLeadRow({ lead, onOpen, onLeadUpdate, isSaving = false }: DraggableLeadRowProps) {
+const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -959,7 +959,7 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate, isSaving = false }: Drag
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={onOpen}
+                onClick={() => onLeadClick?.(lead)}
                 className="w-full text-left focus-visible:outline-none cursor-pointer"
               >
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -1137,7 +1137,7 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate, isSaving = false }: Drag
 
           <div className="opacity-0 transition-opacity group-hover:opacity-100">
             <button
-              onClick={onOpen}
+              onClick={() => onLeadClick?.(lead)}
               title="Ver detalhes"
               className="rounded-md p-1 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
             >
@@ -1148,4 +1148,4 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate, isSaving = false }: Drag
       </div>
     </TooltipProvider>
   )
-}
+})
