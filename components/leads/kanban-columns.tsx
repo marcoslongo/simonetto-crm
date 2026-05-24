@@ -560,6 +560,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
           lojas={lojas}
+          currentUserId={currentUser?.id}
         />
       )}
 

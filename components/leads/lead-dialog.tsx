@@ -45,6 +45,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { NotasLead } from "@/components/leads/notas-lead";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -77,6 +78,7 @@ interface LeadDialogProps {
   onMessagesRead?: (leadId: string) => void;
   isAdmin?: boolean;
   lojas?: LojaOption[];
+  currentUserId?: number;
 }
 
 const interestLabels: Record<string, string> = {
@@ -107,6 +109,7 @@ export function LeadDetailsModal({
   onMessagesRead,
   isAdmin,
   lojas = [],
+  currentUserId,
 }: LeadDialogProps) {
   const router = useRouter();
 
@@ -394,6 +397,7 @@ export function LeadDetailsModal({
                   <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
                 )}
                 <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
+                <TabsTrigger value="notas">Notas</TabsTrigger>
                 <TabsTrigger value="historico" onClick={fetchActions}>
                   Histórico
                 </TabsTrigger>
@@ -841,6 +845,13 @@ export function LeadDetailsModal({
                   telefone={lead.telefone}
                   lojaId={lead.loja_id ? Number(lead.loja_id) : null}
                 />
+              </TabsContent>
+
+              {/* Notas internas */}
+              <TabsContent value="notas" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <NotasLead leadId={String(lead.id)} currentUserId={currentUserId} />
+                </div>
               </TabsContent>
 
               {/* Histórico */}
