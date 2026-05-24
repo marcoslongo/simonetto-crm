@@ -285,6 +285,82 @@ export async function getMultiLojaLeads(
   return { leads, total: results.reduce((s, r) => s + r.total, 0) }
 }
 
+export interface ConversaoPorLojaItem {
+  loja_id: number
+  loja_nome: string
+  total_leads: number
+  vendas_realizadas: number
+  vendas_nao_realizadas: number
+  em_negociacao: number
+  nao_atendido: number
+  taxa_conversao: number
+}
+
+export interface FunilPorAtendenteItem {
+  responsavel_id: number
+  atendente_nome: string
+  total_leads: number
+  vendas_realizadas: number
+  vendas_nao_realizadas: number
+  em_negociacao: number
+  nao_atendido: number
+  taxa_conversao: number
+  ciclo_medio_horas: number | null
+}
+
+export interface TempoPorEtapaItem {
+  status: string
+  label: string
+  total: number
+  tempo_medio_horas: number
+  tipo: 'ativo' | 'fechado'
+}
+
+export async function getConversaoPorLoja(lojaIds: number[] = []): Promise<ConversaoPorLojaItem[]> {
+  const qs = new URLSearchParams()
+  if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/stats/conversao-por-loja${qs.toString() ? `?${qs}` : ''}`,
+      { cache: 'no-store', headers }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data ?? []
+  } catch { return [] }
+}
+
+export async function getFunilPorAtendente(lojaIds: number[] = []): Promise<FunilPorAtendenteItem[]> {
+  const qs = new URLSearchParams()
+  if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/stats/funil-por-atendente${qs.toString() ? `?${qs}` : ''}`,
+      { cache: 'no-store', headers }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data ?? []
+  } catch { return [] }
+}
+
+export async function getTempoPorEtapa(lojaIds: number[] = []): Promise<TempoPorEtapaItem[]> {
+  const qs = new URLSearchParams()
+  if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/stats/tempo-por-etapa${qs.toString() ? `?${qs}` : ''}`,
+      { cache: 'no-store', headers }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data ?? []
+  } catch { return [] }
+}
+
 export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {
   const qs = new URLSearchParams()
   if (lojaIds?.length) qs.set('loja_id', lojaIds.join(','))

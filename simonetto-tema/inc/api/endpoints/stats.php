@@ -57,6 +57,24 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_stats_time_by_store',
     'permission_callback' => 'mytheme_api_is_administrator',
   ));
+
+  register_rest_route('api/v1', '/stats/conversao-por-loja', array(
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_stats_conversao_por_loja',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ));
+
+  register_rest_route('api/v1', '/stats/funil-por-atendente', array(
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_stats_funil_por_atendente',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ));
+
+  register_rest_route('api/v1', '/stats/tempo-por-etapa', array(
+    'methods' => 'GET',
+    'callback' => 'mytheme_api_stats_tempo_por_etapa',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ));
 });
 
 function mytheme_api_stats_general($request)
@@ -136,4 +154,37 @@ function mytheme_api_stats_time_by_store($request)
     'total_lojas' => count($data),
     'data' => $data
   ], 200);
+}
+
+function mytheme_api_stats_conversao_por_loja($request)
+{
+  $loja_ids = [];
+  $raw = $request->get_param('loja_ids');
+  if ($raw) {
+    $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
+  }
+  $data = Stats_Handler::conversao_por_loja($loja_ids);
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
+}
+
+function mytheme_api_stats_funil_por_atendente($request)
+{
+  $loja_ids = [];
+  $raw = $request->get_param('loja_ids');
+  if ($raw) {
+    $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
+  }
+  $data = Stats_Handler::funil_por_atendente($loja_ids);
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
+}
+
+function mytheme_api_stats_tempo_por_etapa($request)
+{
+  $loja_ids = [];
+  $raw = $request->get_param('loja_ids');
+  if ($raw) {
+    $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
+  }
+  $data = Stats_Handler::tempo_por_etapa($loja_ids);
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }

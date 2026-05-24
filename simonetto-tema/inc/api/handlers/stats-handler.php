@@ -232,6 +232,187 @@ class Stats_Handler
   }
 
   /**
+   * Taxa de conversão por loja
+   */
+  public static function conversao_por_loja(array $loja_ids = []): array
+  {
+    global $wpdb;
+    $table_leads = $wpdb->prefix . 'leads';
+    $table_posts = $wpdb->posts;
+
+    $where = 'WHERE l.loja_id IS NOT NULL';
+    if (!empty($loja_ids)) {
+      $loja_ids = array_values(array_map('intval', $loja_ids));
+      $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+      $where .= $wpdb->prepare(" AND l.loja_id IN ($placeholders)", ...$loja_ids);
+    }
+
+    $sql = "
+      SELECT
+        l.loja_id,
+        p.post_title AS loja_nome,
+        COUNT(*) AS total_leads,
+        SUM(l.status = 'venda_realizada') AS vendas_realizadas,
+        SUM(l.status = 'venda_nao_realizada') AS vendas_nao_realizadas,
+        SUM(l.status = 'em_negociacao') AS em_negociacao,
+        SUM(l.status = 'nao_atendido') AS nao_atendido,
+        ROUND(
+          SUM(l.status = 'venda_realizada') * 100.0 /
+          NULLIF(SUM(l.status IN ('venda_realizada', 'venda_nao_realizada')), 0), 2
+        ) AS taxa_conversao
+      FROM {$table_leads} l
+      INNER JOIN {$table_posts} p
+        ON p.ID = l.loja_id AND p.post_type = 'lojas'
+      {$where}
+      GROUP BY l.loja_id, p.post_title
+      ORDER BY taxa_conversao DESC
+    ";
+
+    $results = $wpdb->get_results($sql, ARRAY_A);
+    foreach ($results as &$row) {
+      $row['loja_id']             = (int)   $row['loja_id'];
+      $row['total_leads']         = (int)   $row['total_leads'];
+      $row['vendas_realizadas']   = (int)   $row['vendas_realizadas'];
+      $row['vendas_nao_realizadas'] = (int) $row['vendas_nao_realizadas'];
+      $row['em_negociacao']       = (int)   $row['em_negociacao'];
+      $row['nao_atendido']        = (int)   $row['nao_atendido'];
+      $row['taxa_conversao']      = (float) $row['taxa_conversao'];
+    }
+    return $results;
+  }
+
+  /**
+   * Funil por atendente
+   */
+  public static function funil_por_atendente(array $loja_ids = []): array
+  {
+    global $wpdb;
+    $table_leads = $wpdb->prefix . 'leads';
+    $table_users = $wpdb->users;
+
+    $where = 'WHERE l.responsavel_id IS NOT NULL';
+    if (!empty($loja_ids)) {
+      $loja_ids = array_values(array_map('intval', $loja_ids));
+      $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+      $where .= $wpdb->prepare(" AND l.loja_id IN ($placeholders)", ...$loja_ids);
+    }
+
+    $sql = "
+      SELECT
+        l.responsavel_id,
+        u.display_name AS atendente_nome,
+        COUNT(*) AS total_leads,
+        SUM(l.status = 'venda_realizada') AS vendas_realizadas,
+        SUM(l.status = 'venda_nao_realizada') AS vendas_nao_realizadas,
+        SUM(l.status = 'em_negociacao') AS em_negociacao,
+        SUM(l.status = 'nao_atendido') AS nao_atendido,
+        ROUND(
+          SUM(l.status = 'venda_realizada') * 100.0 /
+          NULLIF(SUM(l.status IN ('venda_realizada', 'venda_nao_realizada')), 0), 2
+        ) AS taxa_conversao,
+        ROUND(
+          AVG(
+            CASE WHEN l.status IN ('venda_realizada', 'venda_nao_realizada')
+              THEN TIMESTAMPDIFF(HOUR, l.data_criacao, l.data_atualizacao)
+            END
+          ), 2
+        ) AS ciclo_medio_horas
+      FROM {$table_leads} l
+      INNER JOIN {$table_users} u ON u.ID = l.responsavel_id
+      {$where}
+      GROUP BY l.responsavel_id, u.display_name
+      ORDER BY vendas_realizadas DESC
+    ";
+
+    $results = $wpdb->get_results($sql, ARRAY_A);
+    foreach ($results as &$row) {
+      $row['responsavel_id']        = (int)   $row['responsavel_id'];
+      $row['total_leads']           = (int)   $row['total_leads'];
+      $row['vendas_realizadas']     = (int)   $row['vendas_realizadas'];
+      $row['vendas_nao_realizadas'] = (int)   $row['vendas_nao_realizadas'];
+      $row['em_negociacao']         = (int)   $row['em_negociacao'];
+      $row['nao_atendido']          = (int)   $row['nao_atendido'];
+      $row['taxa_conversao']        = (float) $row['taxa_conversao'];
+      $row['ciclo_medio_horas']     = $row['ciclo_medio_horas'] !== null ? (float) $row['ciclo_medio_horas'] : null;
+    }
+    return $results;
+  }
+
+  /**
+   * Tempo médio por etapa (usa data_atualizacao como proxy de quando o status foi alterado)
+   */
+  public static function tempo_por_etapa(array $loja_ids = []): array
+  {
+    global $wpdb;
+    $table_leads = $wpdb->prefix . 'leads';
+
+    $loja_filter = '';
+    if (!empty($loja_ids)) {
+      $loja_ids = array_values(array_map('intval', $loja_ids));
+      $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+      $loja_filter = $wpdb->prepare("AND loja_id IN ($placeholders)", ...$loja_ids);
+    }
+
+    // Leads ativos: tempo desde a última atualização de status (tempo na etapa atual)
+    $sql_ativos = "
+      SELECT
+        status,
+        COUNT(*) AS total,
+        ROUND(AVG(TIMESTAMPDIFF(HOUR, data_atualizacao, NOW())), 2) AS tempo_medio_horas
+      FROM {$table_leads}
+      WHERE status NOT IN ('venda_realizada', 'venda_nao_realizada')
+      {$loja_filter}
+      GROUP BY status
+    ";
+
+    // Leads fechados: ciclo completo desde criação até fechamento
+    $sql_fechados = "
+      SELECT
+        status,
+        COUNT(*) AS total,
+        ROUND(AVG(TIMESTAMPDIFF(HOUR, data_criacao, data_atualizacao)), 2) AS tempo_medio_horas
+      FROM {$table_leads}
+      WHERE status IN ('venda_realizada', 'venda_nao_realizada')
+      {$loja_filter}
+      GROUP BY status
+    ";
+
+    $label_map = [
+      'nao_atendido'        => 'Não atendido',
+      'em_negociacao'       => 'Em negociação',
+      'venda_realizada'     => 'Venda realizada',
+      'venda_nao_realizada' => 'Venda não realizada',
+    ];
+    $order_map = [
+      'nao_atendido' => 0, 'em_negociacao' => 1,
+      'venda_realizada' => 2, 'venda_nao_realizada' => 3,
+    ];
+
+    $results = [];
+    foreach ($wpdb->get_results($sql_ativos, ARRAY_A) as $row) {
+      $results[] = [
+        'status'            => $row['status'],
+        'label'             => $label_map[$row['status']] ?? $row['status'],
+        'total'             => (int)   $row['total'],
+        'tempo_medio_horas' => (float) $row['tempo_medio_horas'],
+        'tipo'              => 'ativo',
+      ];
+    }
+    foreach ($wpdb->get_results($sql_fechados, ARRAY_A) as $row) {
+      $results[] = [
+        'status'            => $row['status'],
+        'label'             => $label_map[$row['status']] ?? $row['status'],
+        'total'             => (int)   $row['total'],
+        'tempo_medio_horas' => (float) $row['tempo_medio_horas'],
+        'tipo'              => 'fechado',
+      ];
+    }
+
+    usort($results, fn($a, $b) => ($order_map[$a['status']] ?? 99) <=> ($order_map[$b['status']] ?? 99));
+    return $results;
+  }
+
+  /**
    * Tempo médio por loja
    */
   public static function avg_time_by_store()
