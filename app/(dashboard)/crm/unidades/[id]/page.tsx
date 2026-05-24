@@ -8,14 +8,22 @@ import {
   getLojaStatusFunil,
   getLojaClassificacao,
   getLojaServiceStats,
+  getLojaLeads,
+  getVnrStats,
+  getFunilPorAtendente,
+  getTempoPorEtapa,
 } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
+import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
+import { ChartFunilPorAtendente } from '@/components/dashboard/chart-funil-por-atendente'
+import { ChartTempoPorEtapa } from '@/components/dashboard/chart-tempo-por-etapa'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { LojaInfoCard } from '@/components/lojas/loja-info-card'
 import { FunilStatus } from '@/components/lojas/funil-status'
 import { TemperaturaLeads } from '@/components/lojas/temperatura-leads'
 import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
+import { LeadsRecentes } from '@/components/lojas/leads-recentes'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -58,6 +66,26 @@ async function Leads30DaysWrapper({ id }: { id: string }) {
 async function Leads12MonthsWrapper({ id }: { id: string }) {
   const data = await getLojaLeads12Months(id)
   return <ChartLeads12Months data={data} lojaId={id} />
+}
+
+async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
+  const { leads } = await getLojaLeads(id, 1, 10)
+  return <LeadsRecentes leads={leads} isAdmin={false} currentUserId={currentUserId} />
+}
+
+async function VnrWrapper({ id }: { id: string }) {
+  const data = await getVnrStats([Number(id)])
+  return <ChartVnrMotivos initialData={data} isAdmin={false} lojaIds={[Number(id)]} />
+}
+
+async function FunilAtendenteWrapper({ id }: { id: string }) {
+  const data = await getFunilPorAtendente([Number(id)])
+  return <ChartFunilPorAtendente data={data} />
+}
+
+async function TempoPorEtapaWrapper({ id }: { id: string }) {
+  const data = await getTempoPorEtapa([Number(id)])
+  return <ChartTempoPorEtapa data={data} />
 }
 
 export default async function CrmUnidadePage({ params }: UnidadePageProps) {
@@ -109,6 +137,10 @@ export default async function CrmUnidadePage({ params }: UnidadePageProps) {
         </div>
       </Suspense>
 
+      <Suspense fallback={<ChartCardSkeleton height="h-48" />}>
+        <LeadsRecentesWrapper id={id} currentUserId={user.id} />
+      </Suspense>
+
       <div className="grid gap-6 md:grid-cols-2">
         <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
           <Leads30DaysWrapper id={id} />
@@ -117,6 +149,19 @@ export default async function CrmUnidadePage({ params }: UnidadePageProps) {
           <Leads12MonthsWrapper id={id} />
         </Suspense>
       </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+          <TempoPorEtapaWrapper id={id} />
+        </Suspense>
+        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
+          <VnrWrapper id={id} />
+        </Suspense>
+      </div>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+        <FunilAtendenteWrapper id={id} />
+      </Suspense>
     </div>
   )
 }
