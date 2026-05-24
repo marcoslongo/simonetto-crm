@@ -95,13 +95,10 @@ export default async function ConfiguracoesPage() {
         />
       )}
 
-      {isLoja && (
-        <WhatsAppConfig
-          lojaId={String(primaryLojaId)}
-          isAdmin={false}
-          siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
-        />
-      )}
+      <WhatsAppConfig
+        isAdmin={false}
+        siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
+      />
     </div>
   )
 }

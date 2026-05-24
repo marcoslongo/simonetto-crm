@@ -214,7 +214,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
             <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
               <IntegracaoWrapper id={id} />
             </Suspense>
-            <WhatsAppConfig lojaId={id} isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
+            <WhatsAppConfig isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
           </>
         }
       />

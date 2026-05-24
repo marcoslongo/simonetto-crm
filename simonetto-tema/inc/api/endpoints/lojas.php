@@ -119,6 +119,20 @@ add_action('rest_api_init', function () {
       'permission_callback' => 'mytheme_api_is_administrator',
     ],
   ]);
+
+  // GET/POST /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
+  register_rest_route('api/v1', '/usuarios/me/whatsapp-config', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_user_whatsapp_config',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_user_whatsapp_config',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
 });
 
 /**
@@ -578,4 +592,47 @@ function mytheme_api_save_whatsapp_settings(WP_REST_Request $request): WP_REST_R
   }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configurações salvas.'], 200);
+}
+
+// -------------------------------------------------------------------------
+// WhatsApp por usuário — configuração individual
+// -------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/usuarios/me/whatsapp-config
+ */
+function mytheme_api_get_user_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id          = get_current_user_id();
+  $instance         = get_user_meta($user_id, '_evolution_instance',        true);
+  $connection_state = get_user_meta($user_id, '_whatsapp_connection_state', true);
+
+  if (!$connection_state && !empty($instance)) {
+    $connection_state = 'open';
+  }
+
+  return new WP_REST_Response([
+    'success'          => true,
+    'instance'         => $instance ?: null,
+    'configured'       => !empty($instance),
+    'connection_state' => $connection_state ?: 'unknown',
+  ], 200);
+}
+
+/**
+ * POST /api/v1/usuarios/me/whatsapp-config
+ */
+function mytheme_api_save_user_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id  = get_current_user_id();
+  $body     = $request->get_json_params();
+  $instance = sanitize_text_field($body['instance'] ?? '');
+
+  if (empty($instance)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Nome da instância é obrigatório.'], 400);
+  }
+
+  update_user_meta($user_id, '_evolution_instance', $instance);
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração WhatsApp salva.'], 200);
 }

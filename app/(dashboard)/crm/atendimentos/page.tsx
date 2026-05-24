@@ -57,7 +57,7 @@ export default async function CrmAtendimentoPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <WhatsAppSetupBanner lojaId={lojaIds[0]} />
+      <WhatsAppSetupBanner />
 
       <KanbanColumns
         leads={leads}

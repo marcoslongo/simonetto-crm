@@ -192,69 +192,68 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
   $wamid  = null;
   $status = 'erro';
 
-  if ($loja_id && $telefone) {
-    $evo_url      = get_option('evolution_api_url', '');
-    $evo_instance = get_post_meta($loja_id, '_evolution_instance', true);
-    $evo_key      = get_post_meta($loja_id, '_evolution_api_key', true);
+  $current_user_id = get_current_user_id();
+  $evo_url         = get_option('evolution_api_url', '');
+  $evo_instance    = get_user_meta($current_user_id, '_evolution_instance', true);
+  $evo_key         = get_option('evolution_api_key', ''); // chave global — nunca mascarada
 
-    if ($evo_url && $evo_instance && $evo_key) {
-      $phone_clean = preg_replace('/\D/', '', $telefone);
-      if (!str_starts_with($phone_clean, '55')) {
-        $phone_clean = '55' . $phone_clean;
-      }
+  if ($telefone && $evo_url && $evo_instance && $evo_key) {
+    $phone_clean = preg_replace('/\D/', '', $telefone);
+    if (!str_starts_with($phone_clean, '55')) {
+      $phone_clean = '55' . $phone_clean;
+    }
 
-      if ($media_url) {
-        // Enviar mídia via Evolution Go
-        $evo_payload = [
-          'instanceId' => $evo_instance,
-          'number'     => $phone_clean,
-          'type'       => $media_type ?? 'document',
-          'url'        => $media_url,
-        ];
-        if ($caption)  $evo_payload['caption']  = $caption;
-        if ($filename) $evo_payload['filename']  = $filename;
+    if ($media_url) {
+      // Enviar mídia via Evolution Go
+      $evo_payload = [
+        'instanceId' => $evo_instance,
+        'number'     => $phone_clean,
+        'type'       => $media_type ?? 'document',
+        'url'        => $media_url,
+      ];
+      if ($caption)  $evo_payload['caption']  = $caption;
+      if ($filename) $evo_payload['filename']  = $filename;
 
-        $evo_response = wp_remote_post(
-          trailingslashit($evo_url) . 'send/media',
-          [
-            'timeout'   => 30,
-            'sslverify' => false,
-            'headers'   => [
-              'apikey'       => $evo_key,
-              'Content-Type' => 'application/json',
-            ],
-            'body' => wp_json_encode($evo_payload),
-          ]
-        );
-      } else {
-        // Enviar texto
-        $evo_response = wp_remote_post(
-          trailingslashit($evo_url) . 'send/text',
-          [
-            'timeout'   => 15,
-            'sslverify' => false,
-            'headers'   => [
-              'apikey'       => $evo_key,
-              'Content-Type' => 'application/json',
-            ],
-            'body' => wp_json_encode([
-              'instanceId' => $evo_instance,
-              'number'     => $phone_clean,
-              'text'       => $conteudo,
-            ]),
-          ]
-        );
-      }
+      $evo_response = wp_remote_post(
+        trailingslashit($evo_url) . 'send/media',
+        [
+          'timeout'   => 30,
+          'sslverify' => false,
+          'headers'   => [
+            'apikey'       => $evo_key,
+            'Content-Type' => 'application/json',
+          ],
+          'body' => wp_json_encode($evo_payload),
+        ]
+      );
+    } else {
+      // Enviar texto
+      $evo_response = wp_remote_post(
+        trailingslashit($evo_url) . 'send/text',
+        [
+          'timeout'   => 15,
+          'sslverify' => false,
+          'headers'   => [
+            'apikey'       => $evo_key,
+            'Content-Type' => 'application/json',
+          ],
+          'body' => wp_json_encode([
+            'instanceId' => $evo_instance,
+            'number'     => $phone_clean,
+            'text'       => $conteudo,
+          ]),
+        ]
+      );
+    }
 
-      $evo_code = !is_wp_error($evo_response) ? wp_remote_retrieve_response_code($evo_response) : null;
-      $evo_body = !is_wp_error($evo_response) ? wp_remote_retrieve_body($evo_response)           : null;
-      $evo_err  = is_wp_error($evo_response)  ? $evo_response->get_error_message()               : null;
+    $evo_code = !is_wp_error($evo_response) ? wp_remote_retrieve_response_code($evo_response) : null;
+    $evo_body = !is_wp_error($evo_response) ? wp_remote_retrieve_body($evo_response)           : null;
+    $evo_err  = is_wp_error($evo_response)  ? $evo_response->get_error_message()               : null;
 
-      if (!is_wp_error($evo_response) && $evo_code < 300) {
-        $evo_data = json_decode($evo_body, true);
-        $wamid    = $evo_data['data']['Info']['ID'] ?? null;
-        $status   = 'enviada';
-      }
+    if (!is_wp_error($evo_response) && $evo_code < 300) {
+      $evo_data = json_decode($evo_body, true);
+      $wamid    = $evo_data['data']['Info']['ID'] ?? null;
+      $status   = 'enviada';
     }
   }
 
@@ -385,20 +384,32 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   $info  = $data['Info']  ?? [];
 
   // instanceId é UUID — confirmado pelo Evolution Go
-  $instance = $body['instanceId'] ?? ($body['instanceName'] ?? '');
-  $loja_id  = $instance ? Mensagem_Handler::find_loja_by_instance($instance) : null;
-  if (!$loja_id) {
-    $loja_id = Mensagem_Handler::find_any_configured_loja();
+  $instance   = $body['instanceId'] ?? ($body['instanceName'] ?? '');
+  $usuario_id = $instance ? Mensagem_Handler::find_user_by_instance($instance) : null;
+  if (!$usuario_id) {
+    $usuario_id = Mensagem_Handler::find_any_configured_user();
   }
-  if (!$loja_id) {
-    return new WP_REST_Response(['status' => 'no_loja'], 200);
+
+  // Deriva loja_id do usuário para manter compatibilidade com wp_mensagens.loja_id
+  $loja_id = null;
+  if ($usuario_id) {
+    $user_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
+    if (is_array($user_loja_ids) && !empty($user_loja_ids)) {
+      $loja_id = intval($user_loja_ids[0]);
+    } elseif ($user_loja_ids) {
+      $loja_id = intval($user_loja_ids);
+    }
+  }
+
+  if (!$usuario_id) {
+    return new WP_REST_Response(['status' => 'no_user'], 200);
   }
 
   // ---- Estado da conexão (event = "Connection") ----
   if ($event === 'Connection') {
     $state = $data['state'] ?? ($body['state'] ?? '');
-    if ($state && $loja_id) {
-      update_post_meta($loja_id, '_whatsapp_connection_state', sanitize_text_field($state));
+    if ($state) {
+      update_user_meta($usuario_id, '_whatsapp_connection_state', sanitize_text_field($state));
     }
     return new WP_REST_Response(['status' => 'ok'], 200);
   }

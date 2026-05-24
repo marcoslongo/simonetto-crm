@@ -106,7 +106,42 @@ class Mensagem_Handler
   }
 
   // -------------------------------------------------------------------------
-  // BUSCAR qualquer loja que tenha instância configurada (fallback de webhook)
+  // BUSCAR usuario_id pelo nome/ID da instância Evolution API (user_meta)
+  // -------------------------------------------------------------------------
+
+  public static function find_user_by_instance(string $instance): ?int
+  {
+    global $wpdb;
+
+    $user_id = $wpdb->get_var($wpdb->prepare(
+      "SELECT user_id FROM {$wpdb->usermeta}
+       WHERE meta_key = '_evolution_instance' AND meta_value = %s
+       LIMIT 1",
+      $instance
+    ));
+
+    return $user_id ? intval($user_id) : null;
+  }
+
+  // -------------------------------------------------------------------------
+  // BUSCAR qualquer usuário com instância configurada (fallback de webhook)
+  // -------------------------------------------------------------------------
+
+  public static function find_any_configured_user(): ?int
+  {
+    global $wpdb;
+
+    $user_id = $wpdb->get_var(
+      "SELECT user_id FROM {$wpdb->usermeta}
+       WHERE meta_key = '_evolution_instance' AND meta_value != ''
+       LIMIT 1"
+    );
+
+    return $user_id ? intval($user_id) : null;
+  }
+
+  // -------------------------------------------------------------------------
+  // BUSCAR qualquer loja que tenha instância configurada (legado — mantido)
   // -------------------------------------------------------------------------
 
   public static function find_any_configured_loja(): ?int
@@ -123,7 +158,7 @@ class Mensagem_Handler
   }
 
   // -------------------------------------------------------------------------
-  // BUSCAR loja_id pelo nome da instância Evolution API
+  // BUSCAR loja_id pelo nome da instância (legado — mantido)
   // -------------------------------------------------------------------------
 
   public static function find_loja_by_instance(string $instance): ?int
