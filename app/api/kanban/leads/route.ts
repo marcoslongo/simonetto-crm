@@ -17,6 +17,7 @@ export async function GET(req: Request) {
   const perPage = Math.min(200, Math.max(1, Number(searchParams.get('per_page') ?? '100')))
   const from = searchParams.get('from') ?? undefined
   const to = searchParams.get('to') ?? undefined
+  const search = searchParams.get('search') ?? undefined
 
   if (!lojaIds.length) {
     return NextResponse.json({ success: true, leads: [], total: 0 })
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   try {
     const results = await Promise.all(
       lojaIds.map(id =>
-        getLojaLeads(id, page, perPage, from, to).catch(err => {
+        getLojaLeads(id, page, perPage, from, to, search).catch(err => {
           console.error(`[kanban/leads] loja ${id} falhou:`, err)
           return { leads: [] as Lead[], total: 0 }
         })

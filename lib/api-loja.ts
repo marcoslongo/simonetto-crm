@@ -150,11 +150,13 @@ export async function getLojaLeads(
   page = 1,
   perPage = 100,
   from?: string,
-  to?: string
+  to?: string,
+  search?: string
 ): Promise<{ leads: Lead[]; total: number }> {
   let url = `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`
-  if (from) url += `&from=${encodeURIComponent(from)}`
-  if (to)   url += `&to=${encodeURIComponent(to)}`
+  if (from)   url += `&from=${encodeURIComponent(from)}`
+  if (to)     url += `&to=${encodeURIComponent(to)}`
+  if (search) url += `&search=${encodeURIComponent(search)}`
   const response = await fetch(
     url,
     {

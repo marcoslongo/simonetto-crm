@@ -49,6 +49,8 @@ import {
   AlertTriangle,
   Bell,
   Loader2,
+  Search,
+  X,
 } from 'lucide-react'
 import {
   Popover,
@@ -213,6 +215,11 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [pendingQuiz, setPendingQuiz] = useState<Lead | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
   const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Lead[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchTotal, setSearchTotal] = useState(0)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
   const isFirstPollRef = useRef(true)
@@ -274,6 +281,32 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     fetchAllLeads(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    const q = searchQuery.trim()
+    if (!q) { setSearchResults([]); setSearchTotal(0); return }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      if (!ids.length) return
+      setSearchLoading(true)
+      try {
+        const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=1&per_page=50&search=${encodeURIComponent(q)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!data.success) return
+        setSearchResults(data.leads ?? [])
+        setSearchTotal(data.total ?? 0)
+      } catch {
+        // silencioso
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 300)
+
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, ids.join(',')])
 
   const handleRefresh = useCallback(() => {
     setLeads([])
@@ -544,28 +577,99 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
-        {loadingAll ? (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-            </svg>
-            Carregando leads…
-          </span>
-        ) : (
-          <Button
-            onClick={handleRefresh}
-            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Atualizar
-          </Button>
-        )}
-        {lojasSeletor.length > 0 && (
-          <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
-        )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 shrink-0">
+          {loadingAll ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Carregando leads…
+            </span>
+          ) : (
+            <Button
+              onClick={handleRefresh}
+              className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+          )}
+          {lojasSeletor.length > 0 && (
+            <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome, e-mail ou telefone…"
+            className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Resultados de busca */}
+      {searchQuery.trim() && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {searchLoading
+              ? <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Buscando…</span>
+              : <span className="text-xs text-muted-foreground">{searchTotal} resultado{searchTotal !== 1 ? 's' : ''} para <strong className="text-foreground">"{searchQuery.trim()}"</strong></span>
+            }
+          </div>
+
+          {!searchLoading && searchResults.length === 0 && (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-muted-foreground">
+              <Search className="h-7 w-7 opacity-30" />
+              <p className="text-sm">Nenhum lead encontrado</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {searchResults.map(lead => {
+              const sla = getSLAInfo(lead)
+              const statusLabel = statusLabels[lead.status ?? 'nao_atendido']
+              return (
+                <button
+                  key={lead.id}
+                  onClick={() => handleLeadClick(lead)}
+                  className={cn(
+                    "group text-left rounded-xl border bg-card px-4 py-3 shadow-sm transition-shadow hover:shadow-md space-y-1.5",
+                    "border-l-[3px]",
+                    sla?.level === 'critical' ? "border-l-red-500" :
+                    sla?.level === 'warning'  ? "border-l-orange-400" :
+                    "border-l-slate-200"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-foreground">{lead.nome}</p>
+                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {statusLabel}
+                    </span>
+                  </div>
+                  {lead.email && <p className="truncate text-xs text-muted-foreground">{lead.email}</p>}
+                  {lead.telefone && <p className="text-xs text-muted-foreground">{lead.telefone}</p>}
+                  {lead.loja_nome && <p className="text-[10px] text-muted-foreground/70">{lead.loja_nome}</p>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -573,7 +677,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4", searchQuery.trim() && "hidden")}>
           {COLUNAS.map((coluna) => {
             const items = leadsByStatus(coluna.key)
             const styles = colorStyles[coluna.color]
