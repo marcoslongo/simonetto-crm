@@ -48,6 +48,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Bell,
+  Loader2,
 } from 'lucide-react'
 import {
   Popover,
@@ -211,6 +212,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [pendingQuiz, setPendingQuiz] = useState<Lead | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
+  const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set())
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
   const isFirstPollRef = useRef(true)
@@ -436,14 +438,14 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
   const moverLead = async (lead: Lead, novoStatus: LeadStatus) => {
     const statusAnterior = lead.status ?? 'nao_atendido'
-
     if (statusAnterior === novoStatus) return
 
+    const leadId = String(lead.id)
+
     setLeads((prev) =>
-      prev.map((l) =>
-        String(l.id) === String(lead.id) ? { ...l, status: novoStatus } : l
-      )
+      prev.map((l) => String(l.id) === leadId ? { ...l, status: novoStatus } : l)
     )
+    setSavingLeads(prev => new Set(prev).add(leadId))
 
     try {
       const res = await fetch('/api/lead-status', {
@@ -468,7 +470,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         })
         setLeads(prev =>
           prev.map(l =>
-            String(l.id) === String(lead.id)
+            String(l.id) === leadId
               ? { ...l, responsavel_id: currentUser.id, responsavel_nome: currentUser.nome }
               : l
           )
@@ -478,11 +480,11 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
       toast.success('Lead movido com sucesso.')
     } catch {
       setLeads((prev) =>
-        prev.map((l) =>
-          String(l.id) === String(lead.id) ? { ...l, status: statusAnterior } : l
-        )
+        prev.map((l) => String(l.id) === leadId ? { ...l, status: statusAnterior } : l)
       )
       toast.error('Erro ao mover lead.')
+    } finally {
+      setSavingLeads(prev => { const s = new Set(prev); s.delete(leadId); return s })
     }
   }
 
@@ -589,6 +591,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                 isLoadingMore={columnLoading[coluna.key] ?? false}
                 hasMoreGlobal={leads.length < totalLeads}
                 isLoadingAll={loadingAll}
+                savingLeads={savingLeads}
               />
             )
           })}
@@ -652,9 +655,10 @@ interface KanbanColumnProps {
   isLoadingMore?: boolean
   hasMoreGlobal?: boolean
   isLoadingAll?: boolean
+  savingLeads?: Set<string>
 }
 
-function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll }: KanbanColumnProps) {
+function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.key,
   })
@@ -701,6 +705,7 @@ function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibl
                   lead={lead}
                   onOpen={() => onLeadClick?.(lead)}
                   onLeadUpdate={onLeadUpdate}
+                  isSaving={savingLeads?.has(String(lead.id)) ?? false}
                 />
               ))}
 
@@ -742,9 +747,10 @@ interface DraggableLeadRowProps {
   lead: Lead
   onOpen: () => void
   onLeadUpdate: (updated: Lead) => void
+  isSaving?: boolean
 }
 
-function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps) {
+function DraggableLeadRow({ lead, onOpen, onLeadUpdate, isSaving = false }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -822,11 +828,12 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
         ref={setNodeRef}
         style={style}
         className={cn(
-          "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50 border-l-2",
+          "group relative flex items-start gap-3 px-5 py-4 transition-all hover:bg-muted/40 bg-white/50 border-l-2",
           sla?.level === 'critical' ? "border-l-red-500"   :
           sla?.level === 'warning'  ? "border-l-orange-400" :
           "border-l-transparent",
-          isDragging && "opacity-50 shadow-lg z-50"
+          isDragging && "opacity-50 shadow-lg z-50",
+          isSaving && "opacity-60"
         )}
       >
         <button
@@ -837,6 +844,12 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
         >
           <GripVertical className="h-4 w-4" />
         </button>
+
+        {isSaving && (
+          <div className="absolute top-2 right-2 z-10">
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <Tooltip>
