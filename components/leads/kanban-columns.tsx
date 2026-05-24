@@ -46,6 +46,7 @@ import {
   Check,
   User,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   Popover,
@@ -63,6 +64,30 @@ import { Lead } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
 
 export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
+
+// ── SLA helpers ──────────────────────────────────────────────────────────────
+type SLALevel = 'warning' | 'critical'
+
+function formatSLAElapsed(minutes: number): string {
+  if (minutes >= 24 * 60) return `${Math.floor(minutes / (24 * 60))}d`
+  if (minutes >= 60)      return `${Math.floor(minutes / 60)}h`
+  return `${Math.round(minutes)}m`
+}
+
+function getSLAInfo(lead: Lead): { level: SLALevel; elapsed: string } | null {
+  const now = Date.now()
+  if (lead.status === 'nao_atendido') {
+    const min = (now - new Date(lead.data_criacao).getTime()) / 60000
+    if (min >= 24 * 60) return { level: 'critical', elapsed: formatSLAElapsed(min) }
+    if (min >= 2 * 60)  return { level: 'warning',  elapsed: formatSLAElapsed(min) }
+  } else if (lead.status === 'em_negociacao') {
+    const min = (now - new Date(lead.data_atualizacao).getTime()) / 60000
+    if (min >= 7 * 24 * 60) return { level: 'critical', elapsed: formatSLAElapsed(min) }
+    if (min >= 3 * 24 * 60) return { level: 'warning',  elapsed: formatSLAElapsed(min) }
+  }
+  return null
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const statusLabels: Record<string, string> = {
   nao_atendido: 'Não Atendido',
@@ -717,13 +742,18 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
     locale: ptBR,
   })
 
+  const sla = getSLAInfo(lead)
+
   return (
     <TooltipProvider>
       <div
         ref={setNodeRef}
         style={style}
         className={cn(
-          "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50",
+          "group relative flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/40 bg-white/50 border-l-2",
+          sla?.level === 'critical' ? "border-l-red-500"   :
+          sla?.level === 'warning'  ? "border-l-orange-400" :
+          "border-l-transparent",
           isDragging && "opacity-50 shadow-lg z-50"
         )}
       >
@@ -868,6 +898,26 @@ function DraggableLeadRow({ lead, onOpen, onLeadUpdate }: DraggableLeadRowProps)
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {sla && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                  sla.level === 'critical'
+                    ? "bg-red-100 text-red-600"
+                    : "bg-orange-100 text-orange-600"
+                )}>
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                  {sla.elapsed}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="text-xs">
+                {lead.status === 'nao_atendido'
+                  ? `Sem contato há ${sla.elapsed}`
+                  : `Sem atualização há ${sla.elapsed}`}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {(lead.unread_count ?? 0) > 0 && (
             <span className="relative flex h-2.5 w-2.5 mt-1">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
