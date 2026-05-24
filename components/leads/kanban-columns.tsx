@@ -214,10 +214,17 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
   const isFirstPollRef = useRef(true)
+  const leadsRef = useRef<Lead[]>(initialLeads)
+  const isDraggingRef = useRef(false)
+  const isFirstKanbanPollRef = useRef(true)
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
   }, [isModalOpen])
+
+  useEffect(() => {
+    leadsRef.current = leads
+  }, [leads])
 
   const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
 
@@ -273,6 +280,50 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     setRefreshKey(k => k + 1)
     fetchAllLeads(true)
   }, [fetchAllLeads])
+
+  const backgroundPoll = useCallback(async () => {
+    if (!ids.length || isModalOpenRef.current || isDraggingRef.current) return
+    try {
+      const res = await fetch(`/api/kanban/leads?loja_ids=${ids.join(',')}&page=1&per_page=200`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (!data.success || !Array.isArray(data.leads)) return
+
+      const freshLeads = data.leads as Lead[]
+      const freshMap = new Map(freshLeads.map(l => [String(l.id), l]))
+      const prev = leadsRef.current
+
+      let movedCount = 0
+      const updated = prev.map(l => {
+        const fresh = freshMap.get(String(l.id))
+        if (!fresh) return l
+        if (fresh.status !== l.status) movedCount++
+        if (fresh.data_atualizacao !== l.data_atualizacao) return { ...l, ...fresh }
+        return l
+      })
+
+      const existingIds = new Set(prev.map(l => String(l.id)))
+      const newLeads = freshLeads.filter(f => !existingIds.has(String(f.id)))
+
+      const hasChanges = movedCount > 0 || newLeads.length > 0
+      if (hasChanges) setLeads(newLeads.length ? [...updated, ...newLeads] : updated)
+      setTotalLeads(data.total)
+
+      if (!isFirstKanbanPollRef.current && hasChanges) {
+        if (movedCount > 0)
+          toast.info(`${movedCount} lead${movedCount > 1 ? 's foram movidos' : ' foi movido'} por outro atendente`)
+        if (newLeads.length > 0)
+          toast.info(`${newLeads.length} novo${newLeads.length > 1 ? 's leads chegaram' : ' lead chegou'}`)
+      }
+      isFirstKanbanPollRef.current = false
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(',')])
+
+  useEffect(() => {
+    const timer = setInterval(backgroundPoll, POLL_INTERVAL)
+    return () => clearInterval(timer)
+  }, [backgroundPoll])
 
   useEffect(() => {
     const ids = lojaIds?.length ? lojaIds : lojaId ? [lojaId] : []
@@ -440,12 +491,14 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     const lead = leads.find((l) => String(l.id) === String(active.id))
     if (lead) {
       setActiveLead(lead)
+      isDraggingRef.current = true
     }
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveLead(null)
+    isDraggingRef.current = false
 
     if (!over) return
 
