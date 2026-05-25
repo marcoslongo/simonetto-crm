@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import { isUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
@@ -12,6 +13,11 @@ async function getAuthToken(): Promise<string | null> {
 export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false }, { status: 401 })
+
+  // Evita retornar dados do cache WP quando a instância foi recém deletada
+  if (isUserDeleted(session.user.id)) {
+    return NextResponse.json({ instance: null, api_key: null, connection_state: null })
+  }
 
   const token = await getAuthToken()
 

@@ -9,6 +9,7 @@ async function getAuthToken(): Promise<string | null> {
   return cookieStore.get('auth_token')?.value ?? null
 }
 
+// Deleta instância pelo nome (busca UUID via /instance/all primeiro)
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
@@ -32,16 +33,49 @@ export async function DELETE(
     return NextResponse.json({ success: false, mensagem: 'Servidor Evolution não configurado.' }, { status: 400 })
   }
 
-  const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
+  const evolutionUrl = (settings.evolution_api_url as string).replace(/\/$/, '')
+  const globalKey = settings.evolution_api_key as string
 
-  await fetch(`${evolutionUrl}/instance/logout/${name}`, {
-    method: 'DELETE',
-    headers: { apikey: settings.evolution_api_key },
-  }).catch(() => {})
+  // Busca UUID e token da instância pelo nome
+  let instanceUUID: string | null = null
+  let instanceToken: string | null = null
 
-  const delRes = await fetch(`${evolutionUrl}/instance/delete/${name}`, {
+  try {
+    const allRes = await fetch(`${evolutionUrl}/instance/all`, {
+      headers: { apikey: globalKey },
+      cache: 'no-store',
+    })
+    if (allRes.ok) {
+      const allData = await allRes.json()
+      const found = (allData?.data ?? []).find(
+        (i: { name: string; id: string; token: string }) => i.name === name
+      )
+      instanceUUID = found?.id ?? null
+      instanceToken = found?.token ?? null
+    }
+  } catch (err) {
+    console.error('[evolution/instances/delete] /instance/all error:', err)
+  }
+
+  if (!instanceUUID) {
+    return NextResponse.json({
+      success: false,
+      mensagem: `Instância "${name}" não encontrada no servidor Evolution.`,
+    }, { status: 404 })
+  }
+
+  // Logout com token da instância
+  if (instanceToken) {
+    await fetch(`${evolutionUrl}/instance/logout`, {
+      method: 'DELETE',
+      headers: { apikey: instanceToken },
+    }).catch(() => {})
+  }
+
+  // Delete pelo UUID com chave global
+  const delRes = await fetch(`${evolutionUrl}/instance/delete/${instanceUUID}`, {
     method: 'DELETE',
-    headers: { apikey: settings.evolution_api_key },
+    headers: { apikey: globalKey },
   })
 
   const rawText = await delRes.text()

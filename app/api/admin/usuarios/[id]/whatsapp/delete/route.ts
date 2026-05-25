@@ -23,51 +23,104 @@ export async function DELETE(
   const { id: userId } = await params
   const token = await getAuthToken()
 
-  // Busca config atual do usuário
-  const configRes = await fetch(`${WP_API_BASE}/admin/usuarios/${userId}/whatsapp-config`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
-  const config = configRes.ok ? await configRes.json() : null
+  const [configRes, settingsRes] = await Promise.all([
+    fetch(`${WP_API_BASE}/admin/usuarios/${userId}/whatsapp-config`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    }),
+    fetch(`${WP_API_BASE}/settings/whatsapp`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    }),
+  ])
 
-  // Busca configurações globais do Evolution
-  const settingsRes = await fetch(`${WP_API_BASE}/settings/whatsapp`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
+  const config = configRes.ok ? await configRes.json() : null
   const settings = settingsRes.ok ? await settingsRes.json() : null
 
-  // Deleta do Evolution se instância existir
+  console.log('[whatsapp/delete] userId=%s instance=%s instance_id=%s', userId, config?.instance ?? 'null', config?.instance_id ?? 'null')
+
+  let evolutionError: string | null = null
+
   if (config?.instance && settings?.evolution_api_url && settings?.evolution_api_key) {
     const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-    const instanceName = config.instance
-    const apiKey = config.api_key ?? settings.evolution_api_key
+    const globalKey = settings.evolution_api_key as string
+    const instanceToken = config.api_key as string | undefined
+    const instanceName = config.instance as string
 
-    // Tenta fazer logout primeiro (desconecta WhatsApp)
-    await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
-      method: 'DELETE',
-      headers: { apikey: apiKey },
-    }).catch(() => {})
+    // Resolve UUID: usa instance_id salvo ou busca pelo nome em /instance/all
+    let instanceUUID: string | null = (config.instance_id as string) ?? null
 
-    // Deleta a instância do Evolution
-    await fetch(`${evolutionUrl}/instance/delete/${instanceName}`, {
-      method: 'DELETE',
-      headers: { apikey: settings.evolution_api_key },
-    }).catch(() => {})
+    if (!instanceUUID) {
+      console.log('[whatsapp/delete] instance_id não salvo — buscando pelo nome em /instance/all')
+      try {
+        const allRes = await fetch(`${evolutionUrl}/instance/all`, {
+          headers: { apikey: globalKey },
+          cache: 'no-store',
+        })
+        if (allRes.ok) {
+          const allData = await allRes.json()
+          const found = (allData?.data ?? []).find(
+            (i: { name: string; id: string }) => i.name === instanceName
+          )
+          instanceUUID = found?.id ?? null
+          console.log('[whatsapp/delete] found UUID by name=%s → id=%s', instanceName, instanceUUID ?? 'null')
+        }
+      } catch (err) {
+        console.warn('[whatsapp/delete] /instance/all error:', err)
+      }
+    }
+
+    // Logout (desconecta o número) — usa token da instância
+    if (instanceToken) {
+      try {
+        const logoutRes = await fetch(`${evolutionUrl}/instance/logout`, {
+          method: 'DELETE',
+          headers: { apikey: instanceToken },
+        })
+        const logoutText = await logoutRes.text()
+        console.log('[whatsapp/delete] logout status=%d body=%s', logoutRes.status, logoutText)
+      } catch (err) {
+        console.warn('[whatsapp/delete] logout network error:', err)
+      }
+    }
+
+    // Delete da instância — usa UUID e chave global
+    if (instanceUUID) {
+      try {
+        const delRes = await fetch(`${evolutionUrl}/instance/delete/${instanceUUID}`, {
+          method: 'DELETE',
+          headers: { apikey: globalKey },
+        })
+        const delText = await delRes.text()
+        console.log('[whatsapp/delete] delete status=%d body=%s', delRes.status, delText)
+
+        if (!delRes.ok) {
+          let parsed: Record<string, unknown> = {}
+          try { parsed = JSON.parse(delText) } catch { /* non-JSON */ }
+          evolutionError = (parsed?.error as string) ?? delText
+          console.error('[whatsapp/delete] delete falhou:', evolutionError)
+        }
+      } catch (err) {
+        evolutionError = `Falha de rede ao conectar no Evolution: ${String(err)}`
+        console.error('[whatsapp/delete] delete exception:', err)
+      }
+    } else {
+      evolutionError = `Instância "${instanceName}" não encontrada no servidor Evolution.`
+      console.warn('[whatsapp/delete]', evolutionError)
+    }
+  } else {
+    console.log('[whatsapp/delete] sem instância configurada ou settings ausente — pulando Evolution')
   }
 
-  // Limpa o user_meta no WordPress
+  // Limpa user_meta no WordPress (independente do resultado no Evolution)
   const clearRes = await fetch(`${WP_API_BASE}/admin/usuarios/${userId}/whatsapp-config`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ instance: null, api_key: null, connection_state: null }),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instance: null, api_key: null, connection_state: null, instance_id: null }),
   })
 
   const clearText = await clearRes.text()
-  console.log('[whatsapp/delete] WP clear status:', clearRes.status, clearText)
+  console.log('[whatsapp/delete] WP clear status=%d body=%s', clearRes.status, clearText)
 
   if (!clearRes.ok) {
     return NextResponse.json({
@@ -78,5 +131,10 @@ export async function DELETE(
 
   markUserDeleted(Number(userId))
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({
+    success: true,
+    aviso: evolutionError
+      ? `Instância removida localmente, mas houve erro no servidor Evolution: ${evolutionError}`
+      : null,
+  })
 }

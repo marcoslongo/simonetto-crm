@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FaWhatsapp } from 'react-icons/fa'
-import { Loader2, Pencil, Plus, RefreshCw, Search, Trash2, UserCircle, Zap } from 'lucide-react'
+import { Loader2, Pencil, Plus, RefreshCw, Search, Trash2, UserCircle, Zap, Eraser } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface UsuarioWpp {
@@ -53,6 +53,9 @@ export function UsuariosWhatsAppList() {
 
   // Delete state
   const [deleting, setDeleting] = useState(false)
+
+  // Clear all state
+  const [clearingAll, setClearingAll] = useState(false)
 
   const fetchUsuarios = useCallback(async () => {
     setLoading(true)
@@ -137,8 +140,12 @@ export function UsuariosWhatsAppList() {
       const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/whatsapp/delete`, { method: 'DELETE' })
       if (res.status === 401) { window.location.href = '/login?callbackUrl=/configuracoes'; return }
       const data = await res.json()
-      if (!data.success) { toast.error('Erro ao excluir instância.'); return }
-      toast.success('Instância excluída.')
+      if (!data.success) { toast.error(data.mensagem ?? 'Erro ao excluir instância.'); return }
+      if (data.aviso) {
+        toast.warning(data.aviso)
+      } else {
+        toast.success('Instância excluída do servidor e configuração removida.')
+      }
       const uid = dialog.usuario.id
       closeDialog()
       // Atualiza localmente sem depender do cache do WP
@@ -147,6 +154,24 @@ export function UsuariosWhatsAppList() {
       toast.error('Erro de conexão.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (!confirm('Isso vai remover a configuração WhatsApp de TODOS os usuários e deletar as instâncias do servidor Evolution. Confirma?')) return
+    setClearingAll(true)
+    try {
+      const res = await fetch('/api/admin/whatsapp/clear-all', { method: 'POST' })
+      if (res.status === 401) { window.location.href = '/login'; return }
+      const data = await res.json()
+      if (!data.success) { toast.error('Erro ao limpar instâncias.'); return }
+      const total = data.limpados?.length ?? 0
+      toast.success(`${total} instância${total !== 1 ? 's' : ''} removida${total !== 1 ? 's' : ''} com sucesso.`)
+      await fetchUsuarios()
+    } catch {
+      toast.error('Erro de conexão.')
+    } finally {
+      setClearingAll(false)
     }
   }
 
@@ -207,6 +232,18 @@ export function UsuariosWhatsAppList() {
         <Button variant="outline" size="sm" onClick={fetchUsuarios}>
           <RefreshCw className="h-4 w-4 mr-1.5" />
           Atualizar
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleClearAll}
+          disabled={clearingAll}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+        >
+          {clearingAll
+            ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            : <Eraser className="h-4 w-4 mr-1.5" />}
+          Limpar tudo
         </Button>
       </div>
 

@@ -92,7 +92,11 @@ export function EvolutionInstances() {
         toast.error(data.mensagem ?? 'Erro ao excluir instância.')
         return
       }
-      toast.success(`Instância "${u.instance}" excluída.`)
+      if (data.aviso) {
+        toast.warning(data.aviso)
+      } else {
+        toast.success(`Instância "${u.instance}" excluída do servidor.`)
+      }
       // Atualiza estado local imediatamente (WP pode retornar cache na próxima leitura)
       const semInstancia = (u: UsuarioWpp) => ({ ...u, instance: null, connection_state: 'not_configured' })
       setUsuarios(prev => prev.map(x => x.id === u.id ? semInstancia(x) : x))

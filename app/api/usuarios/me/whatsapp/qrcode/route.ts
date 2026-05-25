@@ -32,38 +32,42 @@ export async function GET() {
   if (!config?.instance) {
     return NextResponse.json({ success: false, mensagem: 'Instância não configurada.' }, { status: 400 })
   }
-  if (!settings?.evolution_api_url) {
+  if (!settings?.evolution_api_url || !config?.api_key) {
     return NextResponse.json({ success: false, mensagem: 'Servidor Evolution não configurado.' }, { status: 400 })
   }
 
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  // Usa a chave da instância do usuário — a chave global não autentica operações de instância
-  const apiKey = config.api_key ?? settings.evolution_api_key
-  const targetUrl = `${evolutionUrl}/instance/connect/${config.instance}`
+  // A chave de autenticação para operações de instância é o token próprio da instância
+  const instanceToken = config.api_key as string
 
   try {
-    const qrRes = await fetch(targetUrl, {
-      headers: { apikey: apiKey },
+    const qrRes = await fetch(`${evolutionUrl}/instance/qr`, {
+      headers: { apikey: instanceToken },
       cache: 'no-store',
     })
+
     const rawText = await qrRes.text()
     let qrData: Record<string, unknown> = {}
-    try { qrData = JSON.parse(rawText) } catch { /* non-JSON response */ }
+    try { qrData = JSON.parse(rawText) } catch { /* non-JSON */ }
 
     if (!qrRes.ok) {
-      console.error('[usuarios/me/whatsapp/qrcode] Evolution error:', qrRes.status, rawText)
+      console.error('[usuarios/me/qrcode] Evolution error:', qrRes.status, rawText)
       return NextResponse.json({
         success: false,
-        mensagem: (qrData?.message as string) ?? `Evolution API retornou ${qrRes.status}: ${rawText}`,
+        mensagem: (qrData?.message as string) ?? `Evolution retornou ${qrRes.status}: ${rawText}`,
       }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true, base64: qrData?.base64 ?? null })
+    // Evolution GO retorna: { data: { Qrcode: "data:image/png;base64,...", Code: "..." } }
+    const d = (qrData?.data as Record<string, unknown>) ?? {}
+    const base64 = (d?.Qrcode as string) ?? (d?.qrcode as string) ?? null
+
+    return NextResponse.json({ success: true, base64 })
   } catch (err) {
-    console.error('[usuarios/me/whatsapp/qrcode] fetch error:', targetUrl, err)
+    console.error('[usuarios/me/qrcode] fetch error:', evolutionUrl, err)
     return NextResponse.json({
       success: false,
-      mensagem: `Não foi possível conectar ao servidor Evolution: ${evolutionUrl}`,
+      mensagem: `Não foi possível conectar ao servidor Evolution.`,
     }, { status: 500 })
   }
 }

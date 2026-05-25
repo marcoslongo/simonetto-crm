@@ -10,6 +10,8 @@ async function getAuthToken(): Promise<string | null> {
   return cookieStore.get('auth_token')?.value ?? null
 }
 
+const SUBSCRIBE_EVENTS = ['MESSAGE', 'SEND_MESSAGE', 'CONNECTION', 'QRCODE']
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,10 +31,7 @@ export async function POST(
   })
 
   if (settingsRes.status === 401) {
-    return NextResponse.json({
-      success: false,
-      mensagem: 'Sessão expirada. Faça login novamente.',
-    }, { status: 401 })
+    return NextResponse.json({ success: false, mensagem: 'Sessão expirada.' }, { status: 401 })
   }
 
   const settings = settingsRes.ok ? await settingsRes.json() : null
@@ -46,44 +45,47 @@ export async function POST(
 
   const instanceName = `user-${userId}`
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  const webhookUrl = SITE_URL ? `${SITE_URL}/api/whatsapp/evolution/webhook` : null
+  const globalKey = settings.evolution_api_key as string
 
-  // Deleta instância anterior para garantir sessão limpa (evita auto-connect com número antigo)
-  await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
-    method: 'DELETE',
-    headers: { apikey: settings.evolution_api_key },
-  }).catch(() => {})
-  await fetch(`${evolutionUrl}/instance/delete/${instanceName}`, {
-    method: 'DELETE',
-    headers: { apikey: settings.evolution_api_key },
-  }).catch(() => {})
-
-  const createBody: Record<string, unknown> = {
-    name: instanceName,
-    token: crypto.randomUUID(),
-    qrcode: true,
-    integration: 'WHATSAPP-BAILEYS',
-  }
-  if (webhookUrl) {
-    createBody.webhook = {
-      url: webhookUrl,
-      byEvents: true,
-      base64: false,
-      events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE'],
+  // Remove instância anterior pelo nome (busca UUID via /instance/all)
+  try {
+    const allRes = await fetch(`${evolutionUrl}/instance/all`, {
+      headers: { apikey: globalKey },
+      cache: 'no-store',
+    })
+    if (allRes.ok) {
+      const allData = await allRes.json()
+      const existing = (allData?.data ?? []).find(
+        (i: { name: string; id: string; token: string }) => i.name === instanceName
+      )
+      if (existing?.id) {
+        await fetch(`${evolutionUrl}/instance/logout`, {
+          method: 'DELETE',
+          headers: { apikey: existing.token ?? globalKey },
+        }).catch(() => {})
+        await fetch(`${evolutionUrl}/instance/delete/${existing.id}`, {
+          method: 'DELETE',
+          headers: { apikey: globalKey },
+        }).catch(() => {})
+        console.log('[admin/create] deleted old instance id=%s', existing.id)
+      }
     }
+  } catch (err) {
+    console.warn('[admin/create] cleanup error (non-fatal):', err)
   }
 
-  let instanceId = instanceName
-  let instanceApiKey: string | null = null
+  const instanceToken = crypto.randomUUID()
+  const instanceUUID = crypto.randomUUID()
+
+  // Cria nova instância na Evolution GO
+  let createdId = instanceUUID
+  let createdToken = instanceToken
 
   try {
     const createRes = await fetch(`${evolutionUrl}/instance/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: settings.evolution_api_key,
-      },
-      body: JSON.stringify(createBody),
+      headers: { 'Content-Type': 'application/json', apikey: globalKey },
+      body: JSON.stringify({ name: instanceName, instanceId: instanceUUID, token: instanceToken }),
     })
 
     const rawText = await createRes.text()
@@ -91,51 +93,56 @@ export async function POST(
     try { createData = JSON.parse(rawText) } catch { /* non-JSON */ }
 
     if (!createRes.ok) {
-      const alreadyExists =
-        createRes.status === 409 ||
-        String(createData?.message ?? '').toLowerCase().includes('exist')
-
-      if (!alreadyExists) {
-        console.error('[admin/usuarios/create] Evolution error:', createRes.status, rawText)
-        const mensagem = createRes.status === 401
-          ? 'A chave de API global do Evolution está incorreta. Verifique as Configurações do servidor Evolution.'
-          : (createData?.message as string) ?? `Evolution API retornou ${createRes.status}`
-        return NextResponse.json({ success: false, mensagem }, { status: 400 })
-      }
-    } else {
-      instanceId =
-        (createData?.instance as Record<string, unknown>)?.name as string
-        ?? (createData?.instance as Record<string, unknown>)?.instanceName as string
-        ?? (createData?.name as string)
-        ?? (createData?.instanceName as string)
-        ?? instanceName
-
-      instanceApiKey =
-        (createData?.hash as Record<string, unknown>)?.apikey as string
-        ?? (createData?.token as string)
-        ?? (createData?.apikey as string)
-        ?? settings.evolution_api_key
+      console.error('[admin/create] Evolution error:', createRes.status, rawText)
+      const d = (createData?.data as Record<string, unknown>) ?? {}
+      const mensagem = createRes.status === 401
+        ? 'Chave global do Evolution inválida. Verifique em Configurações.'
+        : (d?.error as string) ?? (createData?.message as string) ?? `Evolution retornou ${createRes.status}`
+      return NextResponse.json({ success: false, mensagem }, { status: 400 })
     }
+
+    const d = (createData?.data as Record<string, unknown>) ?? {}
+    createdId = (d?.id as string) ?? instanceUUID
+    createdToken = (d?.token as string) ?? instanceToken
+    console.log('[admin/create] created id=%s name=%s', createdId, instanceName)
   } catch (err) {
-    console.error('[admin/usuarios/create] fetch error:', err)
+    console.error('[admin/create] fetch error:', err)
     return NextResponse.json({
       success: false,
       mensagem: 'Não foi possível conectar ao servidor Evolution.',
     }, { status: 500 })
   }
 
-  // Persiste no user_meta do usuário alvo via endpoint admin
+  // Conecta a instância e configura webhook + eventos
+  const webhookUrl = SITE_URL ? `${SITE_URL}/api/whatsapp/evolution/webhook` : null
+  try {
+    const connectBody: Record<string, unknown> = {
+      immediate: false,
+      subscribe: SUBSCRIBE_EVENTS,
+    }
+    if (webhookUrl) connectBody.webhookUrl = webhookUrl
+
+    const connectRes = await fetch(`${evolutionUrl}/instance/connect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: createdToken },
+      body: JSON.stringify(connectBody),
+    })
+    const connectText = await connectRes.text()
+    console.log('[admin/create] connect status=%d body=%s', connectRes.status, connectText)
+  } catch (err) {
+    console.warn('[admin/create] connect error (non-fatal):', err)
+  }
+
+  // Persiste no WordPress
   await fetch(`${WP_API_BASE}/admin/usuarios/${userId}/whatsapp-config`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      instance: instanceId,
-      api_key: instanceApiKey ?? settings.evolution_api_key,
+      instance: instanceName,
+      api_key: createdToken,
+      instance_id: createdId,
     }),
   })
 
-  return NextResponse.json({ success: true, instance: instanceId })
+  return NextResponse.json({ success: true, instance: instanceName })
 }
