@@ -14,7 +14,6 @@ export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false }, { status: 401 })
 
-  // Instância foi recém deletada — retorna not_configured sem esperar o cache WP expirar
   if (isUserDeleted(session.user.id)) {
     return NextResponse.json({ state: 'not_configured', instance: null })
   }
@@ -39,37 +38,52 @@ export async function GET() {
     return NextResponse.json({ state: 'not_configured', instance: null })
   }
 
-  // Se não tiver token da instância ou URL do servidor, usa cache WP
-  if (!settings?.evolution_api_url || !config?.api_key) {
+  if (!settings?.evolution_api_url || !settings?.evolution_api_key) {
+    // Sem settings → usa cache do WP
     const raw: string = config.connection_state ?? ''
     const state = /^(open|connected)$/i.test(raw) ? 'open' : (raw.toLowerCase() || 'close')
     return NextResponse.json({ state, instance: config.instance })
   }
 
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  const instanceToken = config.api_key as string
+  const globalKey = settings.evolution_api_key as string
+  const instanceName = config.instance as string
+
+  // Busca token real da instância via /instance/all (globalKey)
+  let instanceToken: string | null = null
+  try {
+    const allRes = await fetch(`${evolutionUrl}/instance/all`, {
+      headers: { apikey: globalKey },
+      cache: 'no-store',
+    })
+    if (allRes.ok) {
+      const allData = await allRes.json()
+      const found = (allData?.data ?? []).find(
+        (i: { name: string; token: string }) => i.name === instanceName
+      )
+      instanceToken = found?.token ?? null
+    }
+  } catch { /* fallback abaixo */ }
+
+  // Instância não existe no Evolution → não configurado
+  if (!instanceToken) {
+    return NextResponse.json({ state: 'not_configured', instance: null })
+  }
 
   try {
-    // Evolution GO: GET /instance/status com token da instância como apikey
     const statusRes = await fetch(`${evolutionUrl}/instance/status`, {
       headers: { apikey: instanceToken },
       cache: 'no-store',
     })
 
-    // 401 = token inválido → instância foi deletada ou token expirou
-    if (statusRes.status === 401 || statusRes.status === 403) {
-      return NextResponse.json({ state: 'not_configured', instance: null })
-    }
-
-    // Outros erros (5xx, rede) → fallback para cache WP
     if (!statusRes.ok) {
+      // Erro no servidor → fallback WP
       const raw: string = config.connection_state ?? ''
       const state = /^(open|connected)$/i.test(raw) ? 'open' : (raw.toLowerCase() || 'close')
       return NextResponse.json({ state, instance: config.instance })
     }
 
     const statusData = await statusRes.json()
-    // Resposta: { data: { Connected: bool, LoggedIn: bool, Name: string }, message: "success" }
     const d = (statusData?.data as Record<string, unknown>) ?? {}
     const connected = d?.Connected === true
     const loggedIn = d?.LoggedIn === true
@@ -85,7 +99,6 @@ export async function GET() {
 
     return NextResponse.json({ state, instance: config.instance })
   } catch {
-    // Fallback se Evolution estiver inacessível
     const raw: string = config.connection_state ?? ''
     const state = /^(open|connected)$/i.test(raw) ? 'open' : (raw.toLowerCase() || 'close')
     return NextResponse.json({ state, instance: config.instance })
