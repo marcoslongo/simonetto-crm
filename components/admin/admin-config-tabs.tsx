@@ -1,8 +1,9 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Server, Users } from 'lucide-react'
+import { Database, Server, Users } from 'lucide-react'
 import { EvolutionServerSettings } from './evolution-server-settings'
+import { EvolutionInstances } from './evolution-instances'
 import { UsuariosWhatsAppList } from './usuarios-whatsapp-list'
 
 export function AdminConfigTabs() {
@@ -23,6 +24,10 @@ export function AdminConfigTabs() {
             <Users className="h-4 w-4" />
             Usuários WhatsApp
           </TabsTrigger>
+          <TabsTrigger value="instancias" className="flex items-center gap-1.5 text-sm">
+            <Database className="h-4 w-4" />
+            Instâncias
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="servidor" className="mt-0">
@@ -31,6 +36,10 @@ export function AdminConfigTabs() {
 
         <TabsContent value="usuarios" className="mt-0">
           <UsuariosWhatsAppList />
+        </TabsContent>
+
+        <TabsContent value="instancias" className="mt-0">
+          <EvolutionInstances />
         </TabsContent>
       </Tabs>
     </div>

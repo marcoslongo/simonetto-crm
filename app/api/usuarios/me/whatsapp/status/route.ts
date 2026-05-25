@@ -26,11 +26,10 @@ export async function GET() {
     return NextResponse.json({ state: 'not_configured', instance: null })
   }
 
-  // Fallback: instância configurada mas connection_state ainda não registrado → assume open
   const raw: string = config.connection_state ?? ''
-  const state = (config.instance && !raw)
+  const state = /^(open|connected)$/i.test(raw)
     ? 'open'
-    : (/^(open|connected)$/i.test(raw) ? 'open' : (raw.toLowerCase() || 'unknown'))
+    : (raw.toLowerCase() || 'connecting')
 
   return NextResponse.json({ state, instance: config.instance })
 }

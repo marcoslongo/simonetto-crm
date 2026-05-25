@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FaWhatsapp } from 'react-icons/fa'
-import { Loader2, Pencil, Plus, RefreshCw, Search, UserCircle, Zap } from 'lucide-react'
+import { Loader2, Pencil, Plus, RefreshCw, Search, Trash2, UserCircle, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface UsuarioWpp {
@@ -51,14 +51,23 @@ export function UsuariosWhatsAppList() {
   const [manualKey, setManualKey] = useState('')
   const [manualSaving, setManualSaving] = useState(false)
 
+  // Delete state
+  const [deleting, setDeleting] = useState(false)
+
   const fetchUsuarios = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/usuarios')
+      if (res.status === 401) {
+        window.location.href = '/login?callbackUrl=/admin/usuarios'
+        return
+      }
       const data = await res.json()
       if (data.success) {
         setUsuarios(data.usuarios)
         setFiltered(data.usuarios)
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao carregar usuários.')
       }
     } catch {
       toast.error('Erro ao carregar usuários.')
@@ -101,6 +110,10 @@ export function UsuariosWhatsAppList() {
     setAutoError(null)
     try {
       const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/whatsapp/create`, { method: 'POST' })
+      if (res.status === 401) {
+        window.location.href = '/login?callbackUrl=/admin/usuarios'
+        return
+      }
       const data = await res.json()
       if (!res.ok || !data.success) {
         setAutoError(data.mensagem ?? `Erro ${res.status} ao criar instância.`)
@@ -113,6 +126,27 @@ export function UsuariosWhatsAppList() {
       setAutoError('Não foi possível conectar ao servidor.')
     } finally {
       setAutoCreating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!dialog.usuario) return
+    if (!confirm(`Excluir a instância de ${dialog.usuario.nome}? Esta ação remove o WhatsApp configurado.`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/whatsapp/delete`, { method: 'DELETE' })
+      if (res.status === 401) { window.location.href = '/login?callbackUrl=/configuracoes'; return }
+      const data = await res.json()
+      if (!data.success) { toast.error('Erro ao excluir instância.'); return }
+      toast.success('Instância excluída.')
+      const uid = dialog.usuario.id
+      closeDialog()
+      // Atualiza localmente sem depender do cache do WP
+      setUsuarios(prev => prev.map(u => u.id === uid ? { ...u, instance: null, connection_state: 'not_configured' } : u))
+    } catch {
+      toast.error('Erro de conexão.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -130,6 +164,10 @@ export function UsuariosWhatsAppList() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instance, api_key: manualKey.trim() }),
       })
+      if (res.status === 401) {
+        window.location.href = '/login?callbackUrl=/admin/usuarios'
+        return
+      }
       const data = await res.json()
       if (!res.ok || !data.success) {
         toast.error(data.mensagem ?? 'Erro ao salvar.')
@@ -282,6 +320,23 @@ export function UsuariosWhatsAppList() {
               {dialog.usuario?.nome} — escolha como configurar a instância.
             </DialogDescription>
           </DialogHeader>
+
+          {dialog.usuario?.instance && (
+            <div className="mt-2 flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                {deleting
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+                Excluir instância
+              </Button>
+            </div>
+          )}
 
           <Tabs defaultValue="auto" className="mt-2">
             <TabsList className="w-full">

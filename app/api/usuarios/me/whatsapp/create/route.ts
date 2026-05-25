@@ -36,8 +36,8 @@ export async function POST() {
   const webhookUrl = SITE_URL ? `${SITE_URL}/api/whatsapp/evolution/webhook` : null
 
   const createBody: Record<string, unknown> = {
-    instanceName,
-    token: settings.evolution_api_key,
+    name: instanceName,
+    token: crypto.randomUUID(),
     qrcode: true,
     integration: 'WHATSAPP-BAILEYS',
   }
@@ -82,12 +82,15 @@ export async function POST() {
     } else {
       // Extrai instanceId e a chave específica da instância gerada pelo Evolution Go
       instanceId =
-        (createData?.instance as Record<string, unknown>)?.instanceName as string
+        (createData?.instance as Record<string, unknown>)?.name as string
+        ?? (createData?.instance as Record<string, unknown>)?.instanceName as string
+        ?? (createData?.name as string)
         ?? (createData?.instanceName as string)
         ?? instanceName
 
       instanceApiKey =
         (createData?.hash as Record<string, unknown>)?.apikey as string
+        ?? (createData?.token as string)
         ?? (createData?.apikey as string)
         ?? settings.evolution_api_key
 

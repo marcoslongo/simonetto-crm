@@ -12,7 +12,7 @@ async function getAuthToken(): Promise<string | null> {
 export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false }, { status: 401 })
-  if (session.user.role !== 'administrator') {
+  if (session.user.role !== 'administrator' || session.user.id !== 1) {
     return NextResponse.json({ success: false }, { status: 403 })
   }
 
@@ -24,7 +24,7 @@ export async function GET() {
   })
 
   if (res.status === 401) {
-    return NextResponse.json({ success: false, mensagem: 'Sessão expirada. Faça login novamente.' }, { status: 401 })
+    return NextResponse.json({ success: false, mensagem: 'Sessão expirada.' }, { status: 401 })
   }
 
   if (!res.ok) {
@@ -32,5 +32,5 @@ export async function GET() {
   }
 
   const data = await res.json()
-  return NextResponse.json(data, { status: res.status })
+  return NextResponse.json(data)
 }

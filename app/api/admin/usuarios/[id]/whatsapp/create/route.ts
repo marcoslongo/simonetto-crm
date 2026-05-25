@@ -27,6 +27,14 @@ export async function POST(
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   })
+
+  if (settingsRes.status === 401) {
+    return NextResponse.json({
+      success: false,
+      mensagem: 'Sessão expirada. Faça login novamente.',
+    }, { status: 401 })
+  }
+
   const settings = settingsRes.ok ? await settingsRes.json() : null
 
   if (!settings?.evolution_api_url || !settings?.evolution_api_key) {
@@ -40,9 +48,19 @@ export async function POST(
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
   const webhookUrl = SITE_URL ? `${SITE_URL}/api/whatsapp/evolution/webhook` : null
 
+  // Deleta instância anterior para garantir sessão limpa (evita auto-connect com número antigo)
+  await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
+    method: 'DELETE',
+    headers: { apikey: settings.evolution_api_key },
+  }).catch(() => {})
+  await fetch(`${evolutionUrl}/instance/delete/${instanceName}`, {
+    method: 'DELETE',
+    headers: { apikey: settings.evolution_api_key },
+  }).catch(() => {})
+
   const createBody: Record<string, unknown> = {
-    instanceName,
-    token: settings.evolution_api_key,
+    name: instanceName,
+    token: crypto.randomUUID(),
     qrcode: true,
     integration: 'WHATSAPP-BAILEYS',
   }
@@ -79,19 +97,22 @@ export async function POST(
 
       if (!alreadyExists) {
         console.error('[admin/usuarios/create] Evolution error:', createRes.status, rawText)
-        return NextResponse.json({
-          success: false,
-          mensagem: (createData?.message as string) ?? `Evolution API retornou ${createRes.status}`,
-        }, { status: 400 })
+        const mensagem = createRes.status === 401
+          ? 'A chave de API global do Evolution está incorreta. Verifique as Configurações do servidor Evolution.'
+          : (createData?.message as string) ?? `Evolution API retornou ${createRes.status}`
+        return NextResponse.json({ success: false, mensagem }, { status: 400 })
       }
     } else {
       instanceId =
-        (createData?.instance as Record<string, unknown>)?.instanceName as string
+        (createData?.instance as Record<string, unknown>)?.name as string
+        ?? (createData?.instance as Record<string, unknown>)?.instanceName as string
+        ?? (createData?.name as string)
         ?? (createData?.instanceName as string)
         ?? instanceName
 
       instanceApiKey =
         (createData?.hash as Record<string, unknown>)?.apikey as string
+        ?? (createData?.token as string)
         ?? (createData?.apikey as string)
         ?? settings.evolution_api_key
     }

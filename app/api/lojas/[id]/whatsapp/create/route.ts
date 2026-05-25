@@ -47,7 +47,8 @@ export async function POST(
     : null
 
   const createBody: Record<string, unknown> = {
-    instanceName,
+    name: instanceName,
+    token: crypto.randomUUID(),
     qrcode: true,
     integration: 'WHATSAPP-BAILEYS',
   }
@@ -76,10 +77,10 @@ export async function POST(
     if (createRes.status === 409 || String(createData?.message ?? '').toLowerCase().includes('exists')) {
       return NextResponse.json({ success: true, instance: instanceName, already_exists: true })
     }
-    return NextResponse.json({
-      success: false,
-      mensagem: createData?.message ?? 'Erro ao criar instância na Evolution API.',
-    }, { status: 400 })
+    const mensagem = createRes.status === 401
+      ? 'A chave de API global do Evolution está incorreta. Verifique as Configurações do servidor Evolution.'
+      : createData?.message ?? 'Erro ao criar instância na Evolution API.'
+    return NextResponse.json({ success: false, mensagem }, { status: 400 })
   }
 
   const instanceApiKey: string | null =
