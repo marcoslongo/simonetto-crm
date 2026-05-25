@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import { isUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
@@ -32,5 +33,10 @@ export async function GET() {
   }
 
   const data = await res.json()
+  if (data.success && Array.isArray(data.usuarios)) {
+    data.usuarios = data.usuarios.map((u: { id: number; instance?: string | null }) =>
+      isUserDeleted(u.id) ? { ...u, instance: null, connection_state: 'not_configured' } : u
+    )
+  }
   return NextResponse.json(data)
 }

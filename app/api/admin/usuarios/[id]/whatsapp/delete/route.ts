@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import { markUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
@@ -74,6 +75,8 @@ export async function DELETE(
       mensagem: `Falha ao limpar dados no WordPress (${clearRes.status}): ${clearText}`,
     }, { status: 500 })
   }
+
+  markUserDeleted(Number(userId))
 
   return NextResponse.json({ success: true })
 }
