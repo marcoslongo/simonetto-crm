@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
-import { isUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
@@ -77,11 +76,6 @@ export async function GET() {
       instance?: string | null
       connection_state?: string
     }) => {
-      // Instância recém deletada via UI (cache em memória)
-      if (isUserDeleted(u.id)) {
-        return { ...u, instance: null, connection_state: 'not_configured' }
-      }
-
       // Sem instância configurada no WP
       if (!u.instance) return u
 

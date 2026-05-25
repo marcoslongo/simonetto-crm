@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
-import { isUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
@@ -72,9 +71,6 @@ export async function GET() {
       instance?: string | null
       connection_state?: string
     }) => {
-      if (isUserDeleted(u.id)) {
-        return { ...u, instance: null, connection_state: 'not_configured' }
-      }
       if (!u.instance) return u
 
       const evo = evolutionMap.get(u.instance)

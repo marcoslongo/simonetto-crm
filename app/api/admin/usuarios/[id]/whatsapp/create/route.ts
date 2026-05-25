@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import { clearUserDeleted } from '@/lib/wp-delete-cache'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
@@ -143,6 +144,8 @@ export async function POST(
       instance_id: createdId,
     }),
   })
+
+  clearUserDeleted(Number(userId))
 
   return NextResponse.json({ success: true, instance: instanceName })
 }
