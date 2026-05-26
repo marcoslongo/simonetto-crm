@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Building2, CalendarIcon, Eraser, LocateFixed, Search, Store, TrendingUp, X } from "lucide-react"
+import { Building2, CalendarIcon, Eraser, Search, Store, TrendingUp, Phone, User, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -27,13 +27,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import { getLeadsStatsFilterDateStats } from "@/lib/leads-service"
 
@@ -71,6 +65,14 @@ function normalizeLeads(data: any[], from: string, to: string) {
 
 type Origem = 'todos' | 'industria' | 'proprio'
 
+const DAY_PAGE_SIZE = 10
+
+const CLASSIF_COLORS: Record<string, string> = {
+  quente: 'bg-orange-100 text-orange-700',
+  morno:  'bg-yellow-100 text-yellow-700',
+  frio:   'bg-sky-100 text-sky-700',
+}
+
 const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] = [
   { value: 'todos', label: 'Todos', icon: null },
   { value: 'industria', label: 'Indústria', icon: <Building2 className="h-3.5 w-3.5" /> },
@@ -95,6 +97,7 @@ export function ChartLeads30Days({
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [leadsDay, setLeadsDay] = useState<any[]>([])
   const [loadingDialog, setLoadingDialog] = useState(false)
+  const [dayPage, setDayPage] = useState(1)
 
   async function fetchData(fromDate?: Date, toDate?: Date, origemVal: Origem = origem) {
     setLoading(true)
@@ -150,6 +153,7 @@ export function ChartLeads30Days({
 
     setSelectedDate(date)
     setLeadsDay([])
+    setDayPage(1)
     setOpenDialog(true)
     setLoadingDialog(true)
 
@@ -322,46 +326,111 @@ export function ChartLeads30Days({
       </Card>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl" aria-describedby="dialog-leads-desc">
-          <DialogHeader>
-            <DialogTitle>
-              Leads do dia{" "}
-              {selectedDate &&
-                new Date(selectedDate).toLocaleDateString("pt-BR")}
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2.5">
+              <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-[#16255c]/10 text-[#16255c]">
+                {selectedDate
+                  ? format(new Date(selectedDate + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                  : ''}
+              </span>
+              {loadingDialog
+                ? <span className="text-sm text-muted-foreground font-normal">carregando...</span>
+                : <span className="text-base font-bold text-[#16255c]">
+                    {leadsDay.length} lead{leadsDay.length !== 1 ? 's' : ''}
+                  </span>
+              }
             </DialogTitle>
-            <DialogDescription id="dialog-leads-desc">
-              Lista de leads capturados neste dia
-            </DialogDescription>
           </DialogHeader>
 
-          {loadingDialog ? (
-            <p className="text-center py-8">Carregando leads...</p>
-          ) : leadsDay.length === 0 ? (
-            <p className="text-center py-8">Nenhum lead nesse dia</p>
-          ) : (
-            <div className="max-h-100 overflow-auto space-y-2">
-              {leadsDay.map((lead, i) => (
-                <div
-                  key={i}
-                  className="border rounded-lg p-3 bg-slate-50 space-y-1"
+          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+            {loadingDialog ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : leadsDay.length === 0 ? (
+              <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
+                Nenhum lead capturado neste dia
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {leadsDay.slice((dayPage - 1) * DAY_PAGE_SIZE, dayPage * DAY_PAGE_SIZE).map((lead: any, i: number) => (
+                  <div
+                    key={lead.id ?? i}
+                    className="rounded-lg border border-border/60 bg-card p-3.5 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm text-[#16255c]">{lead.nome}</p>
+                          {lead.classificacao && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold capitalize ${CLASSIF_COLORS[lead.classificacao] ?? 'bg-slate-100 text-slate-600'}`}>
+                              {lead.classificacao}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                          {lead.telefone && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              {lead.telefone}
+                            </span>
+                          )}
+                          {lead.loja_nome && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground max-w-52 truncate">
+                              <Store className="h-3 w-3 shrink-0" />
+                              {lead.loja_nome}
+                            </span>
+                          )}
+                          {lead.responsavel_nome && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <User className="h-3 w-3 shrink-0" />
+                              {lead.responsavel_nome}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        {lead.interesse && (
+                          <p className="text-[10px] text-muted-foreground max-w-36 truncate text-right">
+                            {lead.interesse}
+                          </p>
+                        )}
+                        {lead.cidade && (
+                          <p className="text-[10px] text-muted-foreground text-right">{lead.cidade}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {Math.ceil(leadsDay.length / DAY_PAGE_SIZE) > 1 && (
+            <div className="flex items-center justify-between border-t px-6 py-3">
+              <span className="text-xs text-muted-foreground">
+                {(dayPage - 1) * DAY_PAGE_SIZE + 1}–{Math.min(dayPage * DAY_PAGE_SIZE, leadsDay.length)} de {leadsDay.length}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs"
+                  disabled={dayPage === 1}
+                  onClick={() => setDayPage(p => p - 1)}
                 >
-                  <p className="font-semibold text-[#16255c]">
-                    {lead.nome}
-                  </p>
-
-                  {lead.loja_regiao && (
-                    <p className="text-xs text-slate-600 flex gap-1.5 items-center">
-                      <Store size={14} /> Loja: <strong>{lead.loja_regiao}</strong>
-                    </p>
-                  )}
-
-                  {lead.cidade && (
-                    <p className="text-xs text-slate-600 flex gap-1.5 items-center">
-                      <LocateFixed size={14} /> Cidade: <strong>{lead.cidade}</strong>
-                    </p>
-                  )}
-                </div>
-              ))}
+                  <ChevronLeft className="h-3 w-3 mr-1" /> Anterior
+                </Button>
+                <span className="text-xs text-muted-foreground px-1 tabular-nums">
+                  {dayPage} / {Math.ceil(leadsDay.length / DAY_PAGE_SIZE)}
+                </span>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs"
+                  disabled={dayPage === Math.ceil(leadsDay.length / DAY_PAGE_SIZE)}
+                  onClick={() => setDayPage(p => p + 1)}
+                >
+                  Próxima <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
