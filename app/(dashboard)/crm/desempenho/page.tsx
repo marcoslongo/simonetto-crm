@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAuth } from '@/lib/auth'
+import { requireGerente } from '@/lib/auth'
 import {
   getMultiLojaLeads30Days, getMultiLojaLeads12Months, getVnrStats, getMultiLojaStatusFunil,
   getConversaoPorLoja, getFunilPorAtendente, getTempoPorEtapa,
@@ -58,7 +58,7 @@ async function TempoPorEtapaChart({ lojaIds }: { lojaIds: number[] }) {
 }
 
 export default async function DesempenhoPage() {
-  const user = await requireAuth()
+  const user = await requireGerente()
 
   const isLoja = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []

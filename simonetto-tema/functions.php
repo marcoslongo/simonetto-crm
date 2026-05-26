@@ -33,11 +33,15 @@ function add_loja_role_userid_to_jwt($data, $user) {
         ? array_values(array_filter(array_map('intval', $raw)))
         : ($raw ? [intval($raw)] : []);
 
-    $roles = $user->roles;
+    $roles      = $user->roles;
+    $is_gerente = (bool) get_field('is_gerente', 'user_' . $user_id);
 
     $data['user_id'] = $user_id;
     $data['role']    = $roles;
-    $data['acf']     = ['loja_ids' => $loja_ids];
+    $data['acf']     = [
+        'loja_ids'   => $loja_ids,
+        'is_gerente' => $is_gerente,
+    ];
 
     return $data;
 }
@@ -67,18 +71,20 @@ function crm_login_user(WP_REST_Request $request) {
     ? array_values(array_filter(array_map('intval', $raw)))
     : ($raw ? [intval($raw)] : []);
 
-  $loja_nome = get_user_meta($user->ID, 'loja_nome', true);
-  $role      = $user->roles[0] ?? 'subscriber';
+  $loja_nome  = get_user_meta($user->ID, 'loja_nome', true);
+  $role       = $user->roles[0] ?? 'subscriber';
+  $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
 
   return new WP_REST_Response([
     'token' => wp_create_nonce('crm_auth_' . $user->ID),
     'user' => [
-      'id'        => $user->ID,
-      'email'     => $user->user_email,
-      'name'      => $user->display_name,
-      'role'      => $role === 'administrator' ? 'administrator' : 'loja',
-      'loja_ids'  => $loja_ids,
-      'loja_nome' => $loja_nome ?: null,
+      'id'         => $user->ID,
+      'email'      => $user->user_email,
+      'name'       => $user->display_name,
+      'role'       => $role === 'administrator' ? 'administrator' : 'loja',
+      'loja_ids'   => $loja_ids,
+      'loja_nome'  => $loja_nome ?: null,
+      'is_gerente' => $is_gerente,
     ],
     'expires' => date('c', time() + WEEK_IN_SECONDS),
   ]);

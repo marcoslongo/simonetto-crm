@@ -41,6 +41,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname()
 
   const isAdmin = user.role === 'administrator'
+  const isGerente = isAdmin || user.is_gerente === true
   const rootHref = isAdmin ? '/admin' : '/crm'
 
   const navigation = isAdmin
@@ -86,23 +87,29 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           group: 'Visão Geral',
           items: [
             { name: 'Resumo', href: '/crm', icon: LayoutDashboard },
-            ...(user.loja_ids.length > 1
+            ...(isGerente && user.loja_ids.length > 1
               ? [{ name: 'Unidades', href: '/crm/unidades', icon: Building2 }]
               : []),
           ],
         },
-        {
-          group: 'Análise',
-          items: [
-            { name: 'Desempenho', href: '/crm/desempenho', icon: TrendingUp },
-            { name: 'Comportamento', href: '/crm/comportamento', icon: MousePointerClick },
-          ],
-        },
+        ...(isGerente
+          ? [
+              {
+                group: 'Análise',
+                items: [
+                  { name: 'Desempenho', href: '/crm/desempenho', icon: TrendingUp },
+                  { name: 'Comportamento', href: '/crm/comportamento', icon: MousePointerClick },
+                ],
+              },
+            ]
+          : []),
         {
           group: 'Operações',
           items: [
             { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
-            { name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing },
+            ...(isGerente
+              ? [{ name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing }]
+              : []),
           ],
         },
         {

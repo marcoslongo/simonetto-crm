@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireGerente } from '@/lib/auth'
 import { CrmContent } from '@/components/relatorios/crm-content'
 import { redirect } from 'next/navigation'
 
@@ -7,9 +7,9 @@ export const metadata = {
 }
 
 export default async function CrmRelatoriosPage() {
-  const user = await requireAuth()
+  const user = await requireGerente()
 
-  if (user.role !== 'loja' || !user.loja_ids.length) {
+  if (!user.loja_ids.length) {
     redirect('/crm')
   }
 

@@ -19,6 +19,7 @@ export interface AuthResponse {
   role: string[];
   acf: {
     loja_ids: number[];
+    is_gerente?: boolean;
   };
 }
 
@@ -30,6 +31,7 @@ export interface User {
   role: UserRole;
   loja_ids: number[];
   loja_nome?: string;
+  is_gerente: boolean;
 }
 
 export interface Session {

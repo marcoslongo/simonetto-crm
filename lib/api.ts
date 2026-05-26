@@ -83,7 +83,8 @@ export async function authenticateUser(
     nicename: data.user_nicename,
     role: normalizedRole,
     loja_ids,
-    loja_nome: data.user_display_name
+    loja_nome: data.user_display_name,
+    is_gerente: data.acf?.is_gerente === true,
   }
 
   return {

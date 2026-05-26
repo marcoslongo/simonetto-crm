@@ -108,12 +108,24 @@ export async function requireLoja(): Promise<User> {
   return requireRole(['loja', 'administrator'])
 }
 
+export async function requireGerente(): Promise<User> {
+  const user = await requireLoja()
+  if (!isGerente(user)) {
+    redirect('/crm')
+  }
+  return user
+}
+
 // =====================================
 // UTILITÁRIOS
 // =====================================
 
 export function isAdmin(user: User): boolean {
   return user.role === 'administrator'
+}
+
+export function isGerente(user: User): boolean {
+  return isAdmin(user) || user.is_gerente === true
 }
 
 export function canAccessLoja(user: User, lojaId: number): boolean {

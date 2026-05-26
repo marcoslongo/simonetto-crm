@@ -1,4 +1,4 @@
-import { requireLoja } from '@/lib/auth'
+import { requireGerente } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
 import { getLojaStats } from '@/lib/api-loja'
 import {
@@ -17,7 +17,7 @@ export const metadata = {
 }
 
 export default async function CrmUnidadesPage() {
-  const user = await requireLoja()
+  const user = await requireGerente()
 
   if (user.loja_ids.length <= 1) redirect('/crm')
 

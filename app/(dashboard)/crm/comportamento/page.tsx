@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAuth } from '@/lib/auth'
+import { requireGerente } from '@/lib/auth'
 import { getLeadsTrackingDeviceServer, getLeadsTrackingHorarioServer } from '@/lib/server-leads-service'
 import { ChartDeviceBreakdown } from '@/components/dashboard/chart-device-breakdown'
 import { ChartHorarioLeads } from '@/components/dashboard/chart-horario-leads'
@@ -21,7 +21,7 @@ async function DeviceChart({ lojaId }: { lojaId?: number }) {
 }
 
 export default async function ComportamentoPage() {
-  const user = await requireAuth()
+  const user = await requireGerente()
 
   const isLoja = user.role === 'loja'
   const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
