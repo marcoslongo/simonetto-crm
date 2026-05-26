@@ -63,14 +63,29 @@ export async function getLeads(
   return data;
 }
 
-export async function getAllLeads(lojaId?: number, token?: string): Promise<Lead[]> {
+export async function getAllLeads(
+  lojaId?: number,
+  token?: string,
+  from?: string,
+  to?: string,
+  origem?: 'industria' | 'proprio',
+  status?: string[],
+): Promise<Lead[]> {
   let endpoint = `leads?page=1&per_page=10000`;
 
   if (lojaId) endpoint += `&loja_id=${lojaId}`;
+  if (from)   endpoint += `&from=${encodeURIComponent(from)}`;
+  if (to)     endpoint += `&to=${encodeURIComponent(to)}`;
+  if (origem) endpoint += `&origem=${encodeURIComponent(origem)}`;
 
   const data = await fetchAPI(endpoint, 'Erro ao buscar todos os leads', token);
+  let leads: Lead[] = data.leads || [];
 
-  return data.leads || [];
+  if (status && status.length > 0) {
+    leads = leads.filter(l => status.includes(l.status));
+  }
+
+  return leads;
 }
 
 export async function getLeadById(id: number, token?: string): Promise<Lead | null> {

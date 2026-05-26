@@ -3,8 +3,22 @@
 import { getAllLeadsServer } from "@/lib/server-leads-service"
 import { getLojaLeads } from "@/lib/api-loja"
 
-export async function fetchAllLeadsForExport(lojaId?: number) {
-  return getAllLeadsServer(lojaId)
+export interface ExportFilters {
+  lojaId?: number
+  from?: string
+  to?: string
+  origem?: 'industria' | 'proprio'
+  status?: string[]
+}
+
+export async function fetchAllLeadsForExport(filters?: ExportFilters) {
+  return getAllLeadsServer(
+    filters?.lojaId,
+    filters?.from,
+    filters?.to,
+    filters?.origem,
+    filters?.status,
+  )
 }
 
 export async function fetchLojaLeadsForExport(lojaId: number) {

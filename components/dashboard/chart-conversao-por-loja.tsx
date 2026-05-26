@@ -1,13 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import {
   BarChart, Bar, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer, LabelList,
 } from "recharts"
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
-import { TrendingUp, Store } from "lucide-react"
+import { TrendingUp, Store, ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import type { ConversaoPorLojaItem } from "@/lib/api-loja"
+
+const PAGE_SIZE = 10
 
 interface Props {
   data: ConversaoPorLojaItem[]
@@ -46,6 +50,8 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ChartConversaoPorLoja({ data }: Props) {
+  const [page, setPage] = useState(0)
+
   if (!data.length) {
     return (
       <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
@@ -64,29 +70,59 @@ export function ChartConversaoPorLoja({ data }: Props) {
 
   const sorted = [...data].sort((a, b) => b.taxa_conversao - a.taxa_conversao)
   const avg = data.reduce((s, d) => s + d.taxa_conversao, 0) / data.length
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
+  const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-[#16255c]">Taxa de Conversão por Loja</CardTitle>
+              <CardDescription className="text-slate-500 mt-0.5">
+                {data.length} loja{data.length !== 1 ? 's' : ''} · média{" "}
+                <span className="font-semibold text-emerald-600">{avg.toFixed(1)}%</span>
+              </CardDescription>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-xl font-bold text-[#16255c]">Taxa de Conversão por Loja</CardTitle>
-            <CardDescription className="text-slate-500 mt-0.5">
-              {data.length} loja{data.length !== 1 ? 's' : ''} · média{" "}
-              <span className="font-semibold text-emerald-600">{avg.toFixed(1)}%</span>
-            </CardDescription>
-          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={page === 0}
+                onClick={() => setPage(p => p - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-slate-500 tabular-nums w-14 text-center">
+                {page + 1} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={page === totalPages - 1}
+                onClick={() => setPage(p => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
 
       <CardContent>
-        <div style={{ height: Math.max(200, sorted.length * 52) }}>
+        <div style={{ height: pageData.length * 52 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={sorted}
+              data={pageData}
               layout="vertical"
               margin={{ top: 4, right: 80, left: 8, bottom: 4 }}
             >
@@ -114,7 +150,7 @@ export function ChartConversaoPorLoja({ data }: Props) {
                   formatter={(v: number) => `${v}%`}
                   style={{ fontSize: 11, fontWeight: 600, fill: "#059669" }}
                 />
-                {sorted.map(entry => (
+                {pageData.map(entry => (
                   <Cell
                     key={entry.loja_id}
                     fill={entry.taxa_conversao >= avg ? "#10b981" : "#94a3b8"}
@@ -133,9 +169,12 @@ export function ChartConversaoPorLoja({ data }: Props) {
             <span className="text-right">Taxa</span>
           </div>
           <div className="space-y-0.5 mt-2">
-            {sorted.map(row => (
+            {pageData.map((row, i) => (
               <div key={row.loja_id} className="grid grid-cols-5 gap-2 text-xs py-1.5 rounded-md px-1 hover:bg-slate-100 transition-colors">
-                <span className="col-span-2 text-slate-700 font-medium truncate">{row.loja_nome}</span>
+                <span className="col-span-2 text-slate-700 font-medium truncate">
+                  <span className="text-slate-400 mr-1">{page * PAGE_SIZE + i + 1}.</span>
+                  {row.loja_nome}
+                </span>
                 <span className="text-right text-slate-500 tabular-nums">{row.total_leads}</span>
                 <span className="text-right text-emerald-600 font-medium tabular-nums">{row.vendas_realizadas}</span>
                 <span
@@ -147,6 +186,36 @@ export function ChartConversaoPorLoja({ data }: Props) {
               </div>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <span className="text-xs text-slate-400">
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} de {sorted.length} lojas
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={page === 0}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  <ChevronLeft className="h-3 w-3 mr-1" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={page === totalPages - 1}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Próxima
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
