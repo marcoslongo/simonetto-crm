@@ -47,9 +47,17 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
   const [loading, setLoading] = useState(true);
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
   const [uploadando, setUploadando] = useState(false);
+  const [wpConfigured, setWpConfigured] = useState<boolean | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch('/api/usuarios/me/whatsapp')
+      .then(r => r.json())
+      .then(d => setWpConfigured(d.configured === true))
+      .catch(() => setWpConfigured(true))
+  }, [])
 
   const buscarMensagens = useCallback(async () => {
     try {
@@ -198,10 +206,28 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
     }
   };
 
-  if (loading) {
+  if (wpConfigured === null || loading) {
     return (
       <div className="flex items-center justify-center h-48">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!wpConfigured) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-12 text-center gap-3">
+        <FaWhatsapp className="h-12 w-12 text-emerald-500/30" />
+        <p className="text-sm font-medium">WhatsApp não configurado</p>
+        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+          Para enviar e receber mensagens, configure sua instância do WhatsApp nas configurações da conta.
+        </p>
+        <a
+          href="/configuracoes"
+          className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
+        >
+          Ir para Configurações
+        </a>
       </div>
     );
   }
