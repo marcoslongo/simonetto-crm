@@ -78,8 +78,8 @@ async function IntegracaoWrapper({ id }: { id: string }) {
   return <IntegracaoLP lojaId={id} initialData={data} isAdmin />
 }
 async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
-  const { leads } = await getLojaLeads(id, 1, 10)
-  return <LeadsRecentes leads={leads} isAdmin currentUserId={currentUserId} />
+  const { leads, total } = await getLojaLeads(id, 1, 10)
+  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin currentUserId={currentUserId} />
 }
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])

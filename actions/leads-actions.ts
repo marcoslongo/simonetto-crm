@@ -26,6 +26,10 @@ export async function fetchLojaLeadsForExport(lojaId: number) {
   return leads
 }
 
+export async function fetchLojaLeadsPaginated(lojaId: number, page: number) {
+  return getLojaLeads(lojaId, page, 10)
+}
+
 const STATUS_PAGE_SIZE = 10
 
 export async function fetchLeadsByStatusPaginated(params: {

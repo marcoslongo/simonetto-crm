@@ -68,8 +68,8 @@ async function Leads12MonthsWrapper({ id }: { id: string }) {
   return <ChartLeads12Months data={data} lojaId={id} />
 }
 async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
-  const { leads } = await getLojaLeads(id, 1, 10)
-  return <LeadsRecentes leads={leads} isAdmin={false} currentUserId={currentUserId} />
+  const { leads, total } = await getLojaLeads(id, 1, 10)
+  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin={false} currentUserId={currentUserId} />
 }
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])

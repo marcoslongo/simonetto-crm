@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { LeadDetailsModal } from "@/components/leads/lead-dialog"
-import { Users, ExternalLink } from "lucide-react"
+import { Users, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { fetchLojaLeadsPaginated } from "@/actions/leads-actions"
 import type { Lead } from "@/lib/types"
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -18,14 +20,29 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 interface LeadsRecentesProps {
   leads: Lead[]
+  total: number
+  lojaId: number
   isAdmin?: boolean
   currentUserId?: number
 }
 
-export function LeadsRecentes({ leads, isAdmin, currentUserId }: LeadsRecentesProps) {
+export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, currentUserId }: LeadsRecentesProps) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [page, setPage] = useState(1)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [isPending, startTransition] = useTransition()
 
-  if (!leads.length) {
+  const totalPages = Math.ceil(total / 10) || 1
+
+  function goTo(next: number) {
+    startTransition(async () => {
+      const { leads: fetched } = await fetchLojaLeadsPaginated(lojaId, next)
+      setLeads(fetched)
+      setPage(next)
+    })
+  }
+
+  if (!total && !initialLeads.length) {
     return (
       <Card className="border-0 shadow-lg bg-linear-to-br from-slate-50 to-slate-100">
         <CardHeader>
@@ -52,14 +69,14 @@ export function LeadsRecentes({ leads, isAdmin, currentUserId }: LeadsRecentesPr
             <div>
               <CardTitle className="text-xl font-bold text-[#16255c]">Leads Recentes</CardTitle>
               <CardDescription className="text-slate-500">
-                {leads.length} lead{leads.length !== 1 ? "s" : ""} mais recentes · clique para abrir
+                {total} lead{total !== 1 ? "s" : ""} · clique para abrir
               </CardDescription>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="p-0 pb-2">
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto transition-opacity duration-150 ${isPending ? "opacity-50" : ""}`}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80">
@@ -109,6 +126,34 @@ export function LeadsRecentes({ leads, isAdmin, currentUserId }: LeadsRecentesPr
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 pt-3 pb-1 border-t border-slate-100">
+              <span className="text-xs text-slate-400">
+                Página {page} de {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={page === 1 || isPending}
+                  onClick={() => goTo(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={page === totalPages || isPending}
+                  onClick={() => goTo(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

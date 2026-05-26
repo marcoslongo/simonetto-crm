@@ -55,7 +55,6 @@ export async function getLojas(token?: string): Promise<Loja[]> {
       throw new Error('API retornou sucesso = false')
     }
 
-    console.log(`✅ ${data.lojas.length} lojas carregadas`)
     return data.lojas
   } catch (error) {
     console.error('Erro ao buscar lojas:', error)
