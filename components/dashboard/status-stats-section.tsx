@@ -18,6 +18,8 @@ export async function StatusStatsSection({ from, to, lojaId }: StatusStatsSectio
         venda_realizada: statusTotal.venda_realizada,
         venda_nao_realizada: statusTotal.venda_nao_realizada,
       }}
+      from={from}
+      to={to}
     />
   )
 }
