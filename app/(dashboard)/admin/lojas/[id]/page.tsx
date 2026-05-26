@@ -30,7 +30,6 @@ import { MetricasAtendimento } from '@/components/lojas/metricas-atendimento'
 import { LeadsRecentes } from '@/components/lojas/leads-recentes'
 import { LojaPageTabs } from '@/components/lojas/loja-page-tabs'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
-import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
@@ -210,12 +209,9 @@ export default async function LojaPage({ params }: LojaPageProps) {
           </>
         }
         configuracoes={
-          <>
-            <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
-              <IntegracaoWrapper id={id} />
-            </Suspense>
-            <WhatsAppConfig isAdmin siteUrl={process.env.NEXT_PUBLIC_SITE_URL} />
-          </>
+          <Suspense fallback={<ChartCardSkeleton height="h-40" />}>
+            <IntegracaoWrapper id={id} />
+          </Suspense>
         }
       />
     </div>
