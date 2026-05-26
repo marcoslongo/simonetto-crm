@@ -19,6 +19,7 @@ import {
   Settings,
   TrendingUp,
   MousePointerClick,
+  CalendarDays,
 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
@@ -73,6 +74,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             { name: 'Lojas', href: '/admin/lojas', icon: Building2 },
             { name: 'Leads', href: '/admin/leads', icon: Users },
             { name: 'Relatórios', href: '/admin/relatorios', icon: FileChartColumnIncreasing },
+            { name: 'Calendário', href: '/crm/calendario', icon: CalendarDays },
           ],
         },
         {
@@ -107,6 +109,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           group: 'Operações',
           items: [
             { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
+            { name: 'Calendário', href: '/crm/calendario', icon: CalendarDays },
             ...(isGerente
               ? [{ name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing }]
               : []),

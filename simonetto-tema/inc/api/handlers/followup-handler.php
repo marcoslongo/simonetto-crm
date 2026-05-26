@@ -39,7 +39,8 @@ class Followup_Handler
 
     $sql = "CREATE TABLE IF NOT EXISTS {$table} (
       id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      lead_id       BIGINT UNSIGNED NOT NULL,
+      lead_id       BIGINT UNSIGNED NULL,
+      titulo        VARCHAR(255)    NULL,
       usuario_id    BIGINT UNSIGNED NOT NULL,
       usuario_nome  VARCHAR(255)    NOT NULL DEFAULT '',
       agendado_para DATETIME        NOT NULL,
@@ -54,6 +55,48 @@ class Followup_Handler
 
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
+
+    self::maybe_upgrade_table();
+  }
+
+  /**
+   * Migra instalações existentes: torna lead_id nullable e adiciona coluna titulo.
+   */
+  public static function maybe_upgrade_table(): void
+  {
+    $version_key = 'noxus_followup_schema_version';
+    if ((int) get_option($version_key, 0) >= 2) {
+      return;
+    }
+
+    global $wpdb;
+    $table = self::table();
+
+    // Torna lead_id nullable se ainda for NOT NULL
+    $col = $wpdb->get_row($wpdb->prepare(
+      "SELECT IS_NULLABLE FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'lead_id'",
+      DB_NAME,
+      $table
+    ), ARRAY_A);
+
+    if ($col && $col['IS_NULLABLE'] === 'NO') {
+      $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN lead_id BIGINT UNSIGNED NULL");
+    }
+
+    // Adiciona coluna titulo se não existir
+    $has_titulo = (int) $wpdb->get_var($wpdb->prepare(
+      "SELECT COUNT(*) FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'titulo'",
+      DB_NAME,
+      $table
+    ));
+
+    if (!$has_titulo) {
+      $wpdb->query("ALTER TABLE {$table} ADD COLUMN titulo VARCHAR(255) NULL AFTER lead_id");
+    }
+
+    update_option($version_key, 2);
   }
 
   /**
@@ -68,7 +111,7 @@ class Followup_Handler
     $rows = $wpdb->get_results($wpdb->prepare(
       "SELECT f.*, l.nome AS lead_nome
        FROM {$table_f} f
-       INNER JOIN {$table_l} l ON l.id = f.lead_id
+       LEFT JOIN {$table_l} l ON l.id = f.lead_id
        WHERE f.usuario_id = %d
          AND f.concluido  = 0
          AND f.agendado_para < %s
@@ -80,6 +123,40 @@ class Followup_Handler
 
     return array_map(function ($row) {
       $f = self::format($row);
+      $f['lead_nome'] = $row['lead_nome'] ?? null;
+      return $f;
+    }, $rows ?? []);
+  }
+
+  /**
+   * Listar follow-ups de um mês para o calendário do usuário.
+   * Retorna apenas os compromissos criados pelo próprio usuário.
+   */
+  public static function list_for_calendar(int $user_id, int $year, int $month): array
+  {
+    global $wpdb;
+    $table_f = self::table();
+    $table_l = $wpdb->prefix . 'leads';
+
+    $days_in_month = (int) date('t', mktime(0, 0, 0, $month, 1, $year));
+    $month_start   = sprintf('%04d-%02d-01 00:00:00', $year, $month);
+    $month_end     = sprintf('%04d-%02d-%02d 23:59:59', $year, $month, $days_in_month);
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT f.*, l.nome AS lead_nome
+       FROM {$table_f} f
+       LEFT JOIN {$table_l} l ON l.id = f.lead_id
+       WHERE f.usuario_id = %d
+         AND f.agendado_para BETWEEN %s AND %s
+       ORDER BY f.agendado_para ASC
+       LIMIT 500",
+      $user_id,
+      $month_start,
+      $month_end
+    ), ARRAY_A);
+
+    return array_map(function (array $row): array {
+      $f              = self::format($row);
       $f['lead_nome'] = $row['lead_nome'] ?? null;
       return $f;
     }, $rows ?? []);
@@ -100,17 +177,23 @@ class Followup_Handler
   }
 
   /**
-   * Criar follow-up.
+   * Criar follow-up (com ou sem lead vinculado).
    */
   public static function create(array $params): array|WP_Error
   {
     global $wpdb;
 
-    $lead_id      = intval($params['lead_id'] ?? 0);
+    $lead_id       = isset($params['lead_id']) && $params['lead_id'] ? (int) $params['lead_id'] : null;
+    $titulo        = isset($params['titulo']) && $params['titulo'] !== ''
+      ? sanitize_text_field($params['titulo'])
+      : null;
     $agendado_para = sanitize_text_field($params['agendado_para'] ?? '');
 
-    if (!$lead_id || !$agendado_para) {
-      return new WP_Error('missing_fields', 'lead_id e agendado_para são obrigatórios.', ['status' => 400]);
+    if (!$agendado_para) {
+      return new WP_Error('missing_fields', 'agendado_para é obrigatório.', ['status' => 400]);
+    }
+    if (!$lead_id && !$titulo) {
+      return new WP_Error('missing_fields', 'lead_id ou titulo é obrigatório.', ['status' => 400]);
     }
 
     $descricao = isset($params['descricao']) && $params['descricao'] !== ''
@@ -123,6 +206,7 @@ class Followup_Handler
 
     $wpdb->insert(self::table(), [
       'lead_id'      => $lead_id,
+      'titulo'       => $titulo,
       'usuario_id'   => $user_id,
       'usuario_nome' => $user_nome,
       'agendado_para' => $agendado_para,
@@ -218,7 +302,8 @@ class Followup_Handler
   {
     return [
       'id'           => (int) $row['id'],
-      'lead_id'      => (int) $row['lead_id'],
+      'lead_id'      => isset($row['lead_id']) && $row['lead_id'] !== null ? (int) $row['lead_id'] : null,
+      'titulo'       => $row['titulo'] ?? null,
       'usuario_id'   => (int) $row['usuario_id'],
       'usuario_nome' => $row['usuario_nome'],
       'agendado_para' => $row['agendado_para'],

@@ -52,6 +52,23 @@ add_action('rest_api_init', function () {
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
   ]);
+
+  register_rest_route('api/v1', '/followups/calendar', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_followups_calendar',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
+  // POST /api/v1/followups — criar compromisso standalone (sem lead obrigatório)
+  register_rest_route('api/v1', '/followups', [
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_create_standalone_followup',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
 });
 
 function mytheme_api_list_overdue_followups(WP_REST_Request $request): WP_REST_Response
@@ -113,4 +130,29 @@ function mytheme_api_delete_followup(WP_REST_Request $request): WP_REST_Response
   }
 
   return new WP_REST_Response(['success' => true], 200);
+}
+
+function mytheme_api_create_standalone_followup(WP_REST_Request $request): WP_REST_Response
+{
+  $params = json_decode($request->get_body(), true) ?? [];
+  $result = Followup_Handler::create($params);
+
+  if (is_wp_error($result)) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => $result->get_error_message(),
+    ], $result->get_error_data()['status'] ?? 400);
+  }
+
+  return new WP_REST_Response(['success' => true, 'followup' => $result], 201);
+}
+
+function mytheme_api_followups_calendar(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = (int) get_current_user_id();
+  $year    = max(2020, min(2100, (int) ($request->get_param('year')  ?: (int) date('Y'))));
+  $month   = max(1,    min(12,   (int) ($request->get_param('month') ?: (int) date('n'))));
+
+  $followups = Followup_Handler::list_for_calendar($user_id, $year, $month);
+  return new WP_REST_Response(['success' => true, 'followups' => $followups], 200);
 }
