@@ -47,16 +47,16 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
   const [loading, setLoading] = useState(true);
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
   const [uploadando, setUploadando] = useState(false);
-  const [wpConfigured, setWpConfigured] = useState<boolean | null>(null);
+  const [wpState, setWpState] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/usuarios/me/whatsapp')
+    fetch('/api/usuarios/me/whatsapp/status')
       .then(r => r.json())
-      .then(d => setWpConfigured(d.configured === true))
-      .catch(() => setWpConfigured(true))
+      .then(d => setWpState(d.state ?? 'close'))
+      .catch(() => setWpState('open'))
   }, [])
 
   const buscarMensagens = useCallback(async () => {
@@ -206,7 +206,7 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
     }
   };
 
-  if (wpConfigured === null || loading) {
+  if (wpState === null || loading) {
     return (
       <div className="flex items-center justify-center h-48">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -214,19 +214,31 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
     );
   }
 
-  if (!wpConfigured) {
+  if (wpState === 'not_configured') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-12 text-center gap-3">
+        <FaWhatsapp className="h-12 w-12 text-emerald-500/20" />
+        <p className="text-sm font-medium">Instância não configurada</p>
+        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+          Sua instância do WhatsApp ainda não foi atribuída. Entre em contato com o administrador.
+        </p>
+      </div>
+    );
+  }
+
+  if (wpState !== 'open') {
     return (
       <div className="flex flex-col items-center justify-center h-full py-12 text-center gap-3">
         <FaWhatsapp className="h-12 w-12 text-emerald-500/30" />
-        <p className="text-sm font-medium">WhatsApp não configurado</p>
+        <p className="text-sm font-medium">WhatsApp não conectado</p>
         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-          Para enviar e receber mensagens, configure sua instância do WhatsApp nas configurações da conta.
+          Escaneie o QR code nas configurações da conta para conectar seu WhatsApp.
         </p>
         <a
           href="/configuracoes"
           className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
         >
-          Ir para Configurações
+          Conectar WhatsApp
         </a>
       </div>
     );
