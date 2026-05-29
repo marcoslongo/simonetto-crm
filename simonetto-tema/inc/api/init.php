@@ -21,6 +21,7 @@ require_once __DIR__ . '/handlers/stats-handler.php';
 require_once __DIR__ . '/handlers/mensagem-handler.php';
 require_once __DIR__ . '/handlers/nota-handler.php';
 require_once __DIR__ . '/handlers/followup-handler.php';
+require_once __DIR__ . '/handlers/render-handler.php';
 
 // Carregar endpoints
 require_once __DIR__ . '/endpoints/leads.php';
@@ -30,9 +31,11 @@ require_once __DIR__ . '/endpoints/lp-integration.php';
 require_once __DIR__ . '/endpoints/mensagens.php';
 require_once __DIR__ . '/endpoints/notas.php';
 require_once __DIR__ . '/endpoints/followups.php';
+require_once __DIR__ . '/endpoints/renders.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {
   Nota_Handler::maybe_create_table();
   Followup_Handler::maybe_create_table();
+  Render_Handler::maybe_create_table();
 }, 5);

@@ -20,6 +20,7 @@ import {
   TrendingUp,
   MousePointerClick,
   CalendarDays,
+  Wand2,
 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
