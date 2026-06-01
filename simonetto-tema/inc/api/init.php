@@ -32,6 +32,7 @@ require_once __DIR__ . '/endpoints/mensagens.php';
 require_once __DIR__ . '/endpoints/notas.php';
 require_once __DIR__ . '/endpoints/followups.php';
 require_once __DIR__ . '/endpoints/renders.php';
+require_once __DIR__ . '/endpoints/ai.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {

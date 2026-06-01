@@ -31,6 +31,7 @@ import {
   Check,
   X,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import { Lead, VendaNaoRealizada } from "@/lib/types";
 import Link from "next/link";
@@ -47,6 +48,7 @@ import { useRouter } from "next/navigation";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { NotasLead } from "@/components/leads/notas-lead";
 import { FollowupLead } from "@/components/leads/followup-lead";
+import { AiLeadPanel } from "@/components/leads/ai-lead-panel";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -404,6 +406,10 @@ export function LeadDetailsModal({
                 <TabsTrigger value="followup">Retornos</TabsTrigger>
                 <TabsTrigger value="historico" onClick={fetchActions}>
                   Histórico
+                </TabsTrigger>
+                <TabsTrigger value="ia" className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  IA
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -866,6 +872,21 @@ export function LeadDetailsModal({
                     currentUserId={currentUserId}
                     onFollowupChange={onFollowupUpdate}
                   />
+                </div>
+              </TabsContent>
+
+              {/* Assistente de IA */}
+              <TabsContent value="ia" className="mt-0">
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Assistente de IA
+                    </h3>
+                  </div>
+                  <AiLeadPanel lead={lead} />
                 </div>
               </TabsContent>
 

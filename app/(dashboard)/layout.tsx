@@ -1,10 +1,12 @@
 import React from "react"
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isAdmin } from '@/lib/auth'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { SidebarProvider } from '@/components/dashboard/sidebar-context'
 import { LayoutShell } from '@/components/dashboard/layout-shell'
 import { SessionTimeout } from '@/components/providers/session-timeout'
+import { AdminAiButton } from '@/components/admin/ai-admin-button'
+import { AiGerenteButton } from '@/components/gerente/ai-gerente-button'
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +27,8 @@ export default async function DashboardLayout({
         </LayoutShell>
       </div>
       <SessionTimeout />
+      {isAdmin(user) && <AdminAiButton />}
+      {!isAdmin(user) && user.is_gerente && <AiGerenteButton lojaNome={user.loja_nome} />}
     </SidebarProvider>
   )
 }
