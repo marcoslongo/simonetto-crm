@@ -123,19 +123,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Scrollbar visível no board do kanban */
-.kanban-board::-webkit-scrollbar {
-  height: 8px;
-}
-.kanban-board::-webkit-scrollbar-track {
-  background: oklch(0.922 0 0);
-  border-radius: 9999px;
-}
-.kanban-board::-webkit-scrollbar-thumb {
-  background: oklch(0.6 0 0);
-  border-radius: 9999px;
-}
-.kanban-board::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.4 0 0);
-}

@@ -851,16 +851,16 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         </div>
       )}
 
-      <div className={cn("kanban-board w-full overflow-x-auto h-[calc(100dvh-20rem)] min-h-100", searchQuery.trim() && "hidden")}>
+      <div className={cn("w-full overflow-x-auto pb-4", searchQuery.trim() && "hidden")}>
       <DndContext
         sensors={sensors}
         collisionDetection={columnCollision}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 items-stretch min-w-max h-full">
+        <div className="flex gap-6 items-start min-w-max">
           {colunas.map((coluna) => (
-            <div key={coluna.slug} className="w-72 shrink-0 flex flex-col h-full">
+            <div key={coluna.slug} className="min-w-70 flex-1">
               <KanbanColumn
                 coluna={coluna}
                 items={itemsByStatus[coluna.slug] ?? []}
@@ -883,7 +883,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           ))}
 
           {isGerente && (
-            <div className="w-48 shrink-0 flex items-center self-start pt-1">
+            <div className="min-w-50 shrink-0 flex items-start pt-1">
               <button
                 onClick={() => setIsAddColumnOpen(true)}
                 className="flex items-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/25 px-5 py-4 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground w-full justify-center"
@@ -1040,11 +1040,11 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
     <Card
       ref={setNodeRef}
       className={cn(
-        "flex flex-col h-full overflow-hidden bg-linear-to-br from-slate-50 to-slate-100 transition-all duration-200",
+        "bg-linear-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
         isOver && `ring-2 ${styles.dropzone}`
       )}
     >
-      <CardHeader className="pb-3 shrink-0">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon className={`h-4 w-4 ${styles.icon}`} />
@@ -1094,54 +1094,56 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
         <CardDescription />
       </CardHeader>
 
-      <CardContent className="p-0 flex-1 min-h-0 overflow-y-auto flex flex-col">
-        {items.length === 0 ? (
-          <div className="flex-1 flex justify-center items-center">
-            <p className={`px-6 py-8 text-center text-sm text-muted-foreground flex items-center gap-2`}>
-              {isOver ? 'Solte aqui' : 'Nenhum lead aqui'}
-              <CircleCheckBig size={16} className={styles.empty} />
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {visibleItems.map((lead) => (
-              <DraggableLeadRow
-                key={lead.id}
-                lead={lead}
-                onLeadClick={onLeadClick}
-                onLeadUpdate={onLeadUpdate}
-                isSaving={savingLeads?.has(String(lead.id)) ?? false}
-              />
-            ))}
+      <CardContent className="p-0">
+        <div className="divide-y min-h-25">
+          {items.length === 0 ? (
+            <div className="flex justify-center">
+              <p className={`px-6 py-8 text-center text-sm text-muted-foreground flex items-center gap-2`}>
+                {isOver ? 'Solte aqui' : 'Nenhum lead aqui'}
+                <CircleCheckBig size={16} className={styles.empty} />
+              </p>
+            </div>
+          ) : (
+            <>
+              {visibleItems.map((lead) => (
+                <DraggableLeadRow
+                  key={lead.id}
+                  lead={lead}
+                  onLeadClick={onLeadClick}
+                  onLeadUpdate={onLeadUpdate}
+                  isSaving={savingLeads?.has(String(lead.id)) ?? false}
+                />
+              ))}
 
-            {hasMore && (
-              <div className="px-5 py-3">
-                <button
-                  onClick={onLoadMore}
-                  disabled={isLoadingMore}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
-                    styles.loadMore
-                  )}
-                >
-                  {isLoadingMore ? (
-                    <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                  {isLoadingMore
-                    ? 'Carregando...'
-                    : remaining > 0
-                      ? `Ver mais (${remaining} restante${remaining !== 1 ? 's' : ''})`
-                      : 'Ver mais'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {hasMore && (
+                <div className="px-5 py-3">
+                  <button
+                    onClick={onLoadMore}
+                    disabled={isLoadingMore}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
+                      styles.loadMore
+                    )}
+                  >
+                    {isLoadingMore ? (
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    {isLoadingMore
+                      ? 'Carregando...'
+                      : remaining > 0
+                        ? `Ver mais (${remaining} restante${remaining !== 1 ? 's' : ''})`
+                        : 'Ver mais'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
