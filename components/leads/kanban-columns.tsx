@@ -171,6 +171,7 @@ interface KanbanColumnsProps {
   initialTotal?: number
   onLeadClick?: (lead: Lead) => void
   isAdmin?: boolean
+  isGerente?: boolean
   lojas?: Array<{ id: number; nome: string }>
   lojaId?: string | number
   lojaIds?: number[]
@@ -201,7 +202,7 @@ function playNotificationSound() {
   } catch {}
 }
 
-export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, isGerente, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
   const [fetchPage, setFetchPage] = useState(1)
@@ -720,6 +721,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           onOpenChange={setIsModalOpen}
           onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
+          isGerente={isGerente}
           lojas={lojas}
           currentUserId={currentUser?.id}
           onFollowupUpdate={(next) => {

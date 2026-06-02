@@ -23,10 +23,11 @@ interface LeadsRecentesProps {
   total: number
   lojaId: number
   isAdmin?: boolean
+  isGerente?: boolean
   currentUserId?: number
 }
 
-export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, currentUserId }: LeadsRecentesProps) {
+export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, isGerente, currentUserId }: LeadsRecentesProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [page, setPage] = useState(1)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -163,6 +164,7 @@ export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, cur
           open
           onOpenChange={(o: boolean) => { if (!o) setSelectedLead(null) }}
           isAdmin={isAdmin}
+          isGerente={isGerente}
           currentUserId={currentUserId}
         />
       )}

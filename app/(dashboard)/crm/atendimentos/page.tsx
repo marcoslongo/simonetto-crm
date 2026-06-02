@@ -65,6 +65,7 @@ export default async function CrmAtendimentoPage({ searchParams }: PageProps) {
         lojaIds={lojaIds}
         lojas={lojas}
         currentUser={{ id: user.id, nome: user.name }}
+        isGerente={user.is_gerente}
       />
     </div>
   )

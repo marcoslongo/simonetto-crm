@@ -80,6 +80,7 @@ interface LeadDialogProps {
   onContatoRealizado?: () => void;
   onMessagesRead?: (leadId: string) => void;
   isAdmin?: boolean;
+  isGerente?: boolean;
   lojas?: LojaOption[];
   currentUserId?: number;
   onFollowupUpdate?: (next: { em: string; descricao?: string | null } | null) => void;
@@ -112,6 +113,7 @@ export function LeadDetailsModal({
   onContatoRealizado,
   onMessagesRead,
   isAdmin,
+  isGerente,
   lojas = [],
   currentUserId,
   onFollowupUpdate,
@@ -353,7 +355,7 @@ export function LeadDetailsModal({
                       </div>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {(isAdmin || isGerente) && (
                     <div className="flex">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

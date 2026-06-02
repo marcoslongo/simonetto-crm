@@ -67,9 +67,9 @@ async function Leads12MonthsWrapper({ id }: { id: string }) {
   const data = await getLojaLeads12Months(id)
   return <ChartLeads12Months data={data} lojaId={id} />
 }
-async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
+async function LeadsRecentesWrapper({ id, currentUserId, isGerente }: { id: string; currentUserId: number; isGerente?: boolean }) {
   const { leads, total } = await getLojaLeads(id, 1, 10)
-  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin={false} currentUserId={currentUserId} />
+  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin={false} isGerente={isGerente} currentUserId={currentUserId} />
 }
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])
@@ -169,7 +169,7 @@ export default async function CrmUnidadePage({ params }: UnidadePageProps) {
         leads={
           <>
             <Suspense fallback={<ChartCardSkeleton height="h-48" />}>
-              <LeadsRecentesWrapper id={id} currentUserId={user.id} />
+              <LeadsRecentesWrapper id={id} currentUserId={user.id} isGerente={user.is_gerente} />
             </Suspense>
             <div className="grid gap-6 md:grid-cols-2">
               <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
