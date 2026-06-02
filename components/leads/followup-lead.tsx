@@ -32,7 +32,7 @@ interface FollowupLeadProps {
 function computeNext(followups: Followup[]): { em: string; descricao?: string | null } | null {
   const pending = followups
     .filter(f => !f.concluido)
-    .sort((a, b) => new Date(a.agendado_para).getTime() - new Date(b.agendado_para).getTime())
+    .sort((a, b) => new Date(a.agendado_para.replace(' ', 'T')).getTime() - new Date(b.agendado_para.replace(' ', 'T')).getTime())
   if (!pending.length) return null
   return { em: pending[0].agendado_para, descricao: pending[0].descricao }
 }
@@ -40,6 +40,12 @@ function computeNext(followups: Followup[]): { em: string; descricao?: string | 
 function defaultHora(): string {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// MySQL DATETIME strings use a space separator ("2024-06-02 14:30:00") which
+// Firefox and Safari reject as invalid. Replace with T for strict ISO 8601.
+function parseDate(dt: string): Date {
+  return new Date(dt.replace(' ', 'T'))
 }
 
 export function FollowupLead({ leadId, currentUserId, onFollowupChange }: FollowupLeadProps) {
@@ -148,14 +154,14 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
 
   const pending = followups
     .filter(f => !f.concluido)
-    .sort((a, b) => new Date(a.agendado_para).getTime() - new Date(b.agendado_para).getTime())
+    .sort((a, b) => parseDate(a.agendado_para).getTime() - parseDate(b.agendado_para).getTime())
 
   const completed = followups
     .filter(f => f.concluido)
-    .sort((a, b) => new Date(b.concluido_em ?? b.criado_em).getTime() - new Date(a.concluido_em ?? a.criado_em).getTime())
+    .sort((a, b) => parseDate(b.concluido_em ?? b.criado_em).getTime() - parseDate(a.concluido_em ?? a.criado_em).getTime())
 
   function getStatusInfo(agendado_para: string) {
-    const dt = new Date(agendado_para)
+    const dt = parseDate(agendado_para)
     const now = new Date()
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
     const isOverdue = dt < now
@@ -275,7 +281,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                             "text-sm font-semibold",
                             isOverdue ? "text-red-600" : isToday ? "text-amber-700" : "text-foreground"
                           )}>
-                            {format(new Date(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            {format(parseDate(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </span>
                           {isOverdue && (
                             <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">
@@ -361,7 +367,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
                 <div className="min-w-0 space-y-0.5">
                   <p className="text-xs font-medium text-muted-foreground line-through">
-                    {format(new Date(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {format(parseDate(f.agendado_para), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                   {f.descricao && (
                     <p className="text-xs text-muted-foreground/80 line-clamp-1">
@@ -371,7 +377,7 @@ export function FollowupLead({ leadId, currentUserId, onFollowupChange }: Follow
                   <p className="text-[10px] text-muted-foreground/60">
                     {f.usuario_nome}
                     {f.concluido_em && (
-                      <> · realizado {format(new Date(f.concluido_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
+                      <> · realizado {format(parseDate(f.concluido_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</>
                     )}
                   </p>
                 </div>
