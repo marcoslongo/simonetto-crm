@@ -16,6 +16,7 @@ require_once __DIR__ . '/utils/email.php';
 // Carregar handlers
 require_once __DIR__ . '/handlers/kanban-column-handler.php';
 require_once __DIR__ . '/handlers/lead-handler.php';
+require_once __DIR__ . '/handlers/lead-arquiteto-handler.php';
 require_once __DIR__ . '/handlers/lead-tracking-handler.php';
 require_once __DIR__ . '/handlers/loja-handler.php';
 require_once __DIR__ . '/handlers/stats-handler.php';
@@ -26,6 +27,7 @@ require_once __DIR__ . '/handlers/render-handler.php';
 
 // Carregar endpoints
 require_once __DIR__ . '/endpoints/leads.php';
+require_once __DIR__ . '/endpoints/leads-arquitetos.php';
 require_once __DIR__ . '/endpoints/lojas.php';
 require_once __DIR__ . '/endpoints/stats.php';
 require_once __DIR__ . '/endpoints/lp-integration.php';
