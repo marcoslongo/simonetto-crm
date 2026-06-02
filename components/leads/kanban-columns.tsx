@@ -851,7 +851,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         </div>
       )}
 
-      <div className={cn("overflow-x-auto pb-2", searchQuery.trim() && "hidden")}>
+      <div className={cn("w-full overflow-x-auto pb-4", searchQuery.trim() && "hidden")}>
       <DndContext
         sensors={sensors}
         collisionDetection={columnCollision}
