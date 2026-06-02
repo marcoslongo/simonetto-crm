@@ -14,6 +14,7 @@ require_once __DIR__ . '/utils/cors.php';
 require_once __DIR__ . '/utils/email.php';
 
 // Carregar handlers
+require_once __DIR__ . '/handlers/kanban-column-handler.php';
 require_once __DIR__ . '/handlers/lead-handler.php';
 require_once __DIR__ . '/handlers/lead-tracking-handler.php';
 require_once __DIR__ . '/handlers/loja-handler.php';
@@ -33,10 +34,22 @@ require_once __DIR__ . '/endpoints/notas.php';
 require_once __DIR__ . '/endpoints/followups.php';
 require_once __DIR__ . '/endpoints/renders.php';
 require_once __DIR__ . '/endpoints/ai.php';
+require_once __DIR__ . '/endpoints/kanban-columns.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {
   Nota_Handler::maybe_create_table();
   Followup_Handler::maybe_create_table();
   Render_Handler::maybe_create_table();
+  Kanban_Column_Handler::maybe_create_table();
 }, 5);
+
+// Migração única: semeia colunas fixas para todas as lojas existentes
+add_action('init', function () {
+  $option_key = 'simonetto_kanban_columns_seed_v1';
+  if (get_option($option_key)) {
+    return;
+  }
+  Kanban_Column_Handler::seed_all_existing_lojas();
+  update_option($option_key, true);
+}, 6);

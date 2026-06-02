@@ -634,23 +634,27 @@ class Lead_Handler
   {
     global $wpdb;
 
-    if (!in_array($status, self::STATUS_ALLOWED, true)) {
-      return new WP_Error(
-        'invalid_status',
-        'Status inválido. Valores aceitos: ' . implode(', ', self::STATUS_ALLOWED),
-        ['status' => 400]
-      );
-    }
-
     $table_leads = $wpdb->prefix . 'leads';
 
     $lead = $wpdb->get_row($wpdb->prepare(
-      "SELECT id FROM {$table_leads} WHERE id = %d",
+      "SELECT id, loja_id FROM {$table_leads} WHERE id = %d",
       $id
     ));
 
     if (!$lead) {
       return new WP_Error('lead_not_found', 'Lead não encontrado.', ['status' => 404]);
+    }
+
+    // Aceita os 4 status fixos OU qualquer coluna customizada (slug no formato c_[id])
+    $is_fixed  = in_array($status, self::STATUS_ALLOWED, true);
+    $is_custom = (bool) preg_match('/^c_\d+$/', $status);
+
+    if (!$is_fixed && !$is_custom) {
+      return new WP_Error(
+        'invalid_status',
+        'Status inválido.',
+        ['status' => 400]
+      );
     }
 
     $resultado = $wpdb->update(

@@ -12,6 +12,7 @@ import {
   useSensors,
   useDroppable,
   closestCenter,
+  pointerWithin,
 } from '@dnd-kit/core'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/tooltip'
 import {
   Clock,
+  ChevronLeft,
   ChevronRight,
   CircleCheckBig,
   Handshake,
@@ -51,12 +53,24 @@ import {
   Loader2,
   Search,
   X,
+  Plus,
+  Trash2,
+  LayoutGrid,
 } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -64,10 +78,16 @@ import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
 import { NovoLeadDialog } from './novo-lead-dialog'
 import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
-import { Lead } from '@/lib/types'
+import { Lead, KanbanColuna } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
 
-export type LeadStatus = 'nao_atendido' | 'em_negociacao' | 'venda_realizada' | 'venda_nao_realizada'
+export type LeadStatus = string
+
+function columnCollision(args: Parameters<typeof pointerWithin>[0]) {
+  const pointer = pointerWithin(args)
+  if (pointer.length > 0) return pointer
+  return closestCenter(args)
+}
 
 // ── SLA helpers ──────────────────────────────────────────────────────────────
 type SLALevel = 'warning' | 'critical'
@@ -93,43 +113,27 @@ function getSLAInfo(lead: Lead): { level: SLALevel; elapsed: string } | null {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const statusLabels: Record<string, string> = {
-  nao_atendido: 'Não Atendido',
-  em_negociacao: 'Em Negociação',
-  venda_realizada: 'Venda Realizada',
-  venda_nao_realizada: 'Venda Não Realizada',
+const SLUG_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  nao_atendido: Clock,
+  em_negociacao: Handshake,
+  venda_realizada: CheckCircle2,
+  venda_nao_realizada: XCircle,
 }
 
-const COLUNAS = [
-  {
-    key: 'nao_atendido',
-    label: 'Não Atendidos',
-    description: 'Leads aguardando primeiro contato',
-    color: 'amber',
-    Icon: Clock,
-  },
-  {
-    key: 'em_negociacao',
-    label: 'Em Negociação',
-    description: 'Leads em processo de negociação',
-    color: 'blue',
-    Icon: Handshake,
-  },
-  {
-    key: 'venda_realizada',
-    label: 'Venda Realizada',
-    description: 'Leads que fecharam negócio',
-    color: 'emerald',
-    Icon: CheckCircle2,
-  },
-  {
-    key: 'venda_nao_realizada',
-    label: 'Venda Não Realizada',
-    description: 'Leads que não fecharam negócio',
-    color: 'red',
-    Icon: XCircle,
-  },
-] as const
+function getColumnIcon(slug: string): React.ComponentType<{ className?: string }> {
+  return SLUG_ICONS[slug] ?? LayoutGrid
+}
+
+const CUSTOM_COLORS: { value: string; bg: string; label: string }[] = [
+  { value: 'purple', bg: 'bg-purple-400',  label: 'Roxo'      },
+  { value: 'indigo', bg: 'bg-indigo-400',  label: 'Índigo'    },
+  { value: 'teal',   bg: 'bg-teal-400',    label: 'Teal'      },
+  { value: 'orange', bg: 'bg-orange-400',  label: 'Laranja'   },
+  { value: 'pink',   bg: 'bg-pink-400',    label: 'Rosa'      },
+  { value: 'violet', bg: 'bg-violet-400',  label: 'Violeta'   },
+  { value: 'cyan',   bg: 'bg-cyan-400',    label: 'Ciano'     },
+  { value: 'gray',   bg: 'bg-gray-400',    label: 'Cinza'     },
+]
 
 const INITIAL_VISIBLE = 20
 const LOAD_MORE_STEP = 20
@@ -163,6 +167,62 @@ const colorStyles: Record<string, { icon: string; badge: string; empty: string; 
     empty: 'text-red-400',
     dropzone: 'ring-red-400 bg-red-50/50',
     loadMore: 'text-red-600 hover:text-red-800 hover:bg-red-50',
+  },
+  purple: {
+    icon: 'text-purple-500',
+    badge: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
+    empty: 'text-purple-400',
+    dropzone: 'ring-purple-400 bg-purple-50/50',
+    loadMore: 'text-purple-600 hover:text-purple-800 hover:bg-purple-50',
+  },
+  indigo: {
+    icon: 'text-indigo-500',
+    badge: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100',
+    empty: 'text-indigo-400',
+    dropzone: 'ring-indigo-400 bg-indigo-50/50',
+    loadMore: 'text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50',
+  },
+  teal: {
+    icon: 'text-teal-500',
+    badge: 'bg-teal-100 text-teal-700 hover:bg-teal-100',
+    empty: 'text-teal-400',
+    dropzone: 'ring-teal-400 bg-teal-50/50',
+    loadMore: 'text-teal-600 hover:text-teal-800 hover:bg-teal-50',
+  },
+  orange: {
+    icon: 'text-orange-500',
+    badge: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
+    empty: 'text-orange-400',
+    dropzone: 'ring-orange-400 bg-orange-50/50',
+    loadMore: 'text-orange-600 hover:text-orange-800 hover:bg-orange-50',
+  },
+  pink: {
+    icon: 'text-pink-500',
+    badge: 'bg-pink-100 text-pink-700 hover:bg-pink-100',
+    empty: 'text-pink-400',
+    dropzone: 'ring-pink-400 bg-pink-50/50',
+    loadMore: 'text-pink-600 hover:text-pink-800 hover:bg-pink-50',
+  },
+  violet: {
+    icon: 'text-violet-500',
+    badge: 'bg-violet-100 text-violet-700 hover:bg-violet-100',
+    empty: 'text-violet-400',
+    dropzone: 'ring-violet-400 bg-violet-50/50',
+    loadMore: 'text-violet-600 hover:text-violet-800 hover:bg-violet-50',
+  },
+  cyan: {
+    icon: 'text-cyan-500',
+    badge: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-100',
+    empty: 'text-cyan-400',
+    dropzone: 'ring-cyan-400 bg-cyan-50/50',
+    loadMore: 'text-cyan-600 hover:text-cyan-800 hover:bg-cyan-50',
+  },
+  gray: {
+    icon: 'text-gray-500',
+    badge: 'bg-gray-100 text-gray-700 hover:bg-gray-100',
+    empty: 'text-gray-400',
+    dropzone: 'ring-gray-400 bg-gray-50/50',
+    loadMore: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50',
   },
 }
 
@@ -207,7 +267,6 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
   const [fetchPage, setFetchPage] = useState(1)
   const [loadingAll, setLoadingAll] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({})
 
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
@@ -216,6 +275,16 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [pendingQuiz, setPendingQuiz] = useState<Lead | null>(null)
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({})
   const [savingLeads, setSavingLeads] = useState<Set<string>>(new Set())
+  const [colunas, setColunas] = useState<KanbanColuna[]>([
+    { id: 0, loja_id: 0, slug: 'nao_atendido',       label: 'Não Atendidos',      cor: 'amber',   ordem: 0, fixo: 1 },
+    { id: 0, loja_id: 0, slug: 'em_negociacao',      label: 'Em Negociação',      cor: 'blue',    ordem: 1, fixo: 1 },
+    { id: 0, loja_id: 0, slug: 'venda_realizada',    label: 'Venda Realizada',    cor: 'emerald', ordem: 2, fixo: 1 },
+    { id: 0, loja_id: 0, slug: 'venda_nao_realizada',label: 'Venda Não Realizada',cor: 'red',     ordem: 3, fixo: 1 },
+  ])
+  const [isAddColumnOpen, setIsAddColumnOpen] = useState(false)
+  const [novaColuna, setNovaColuna] = useState({ label: '', cor: 'gray', after_id: null as number | null })
+  const [savingColumn, setSavingColumn] = useState(false)
+
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Lead[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -237,6 +306,109 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   }, [leads])
 
   const ids = lojaIds?.length ? lojaIds : lojaId ? [Number(lojaId)] : []
+  const primaryLojaId = ids[0] ?? null
+
+  // Busca as colunas do kanban para a loja ativa
+  useEffect(() => {
+    if (!primaryLojaId) return
+    fetch(`/api/kanban/columns?loja_id=${primaryLojaId}`)
+      .then(r => r.json())
+      .then(data => { if (data.success) setColunas(data.data) })
+      .catch(() => {})
+  }, [primaryLojaId])
+
+  // statusLabels derivado das colunas carregadas
+  const statusLabels = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const col of colunas) {
+      map[col.slug] = col.label
+    }
+    return map
+  }, [colunas])
+
+  const addColuna = async () => {
+    if (!novaColuna.label.trim() || !primaryLojaId) return
+    setSavingColumn(true)
+    try {
+      const body: Record<string, unknown> = {
+        loja_id: primaryLojaId,
+        label: novaColuna.label.trim(),
+        cor: novaColuna.cor,
+      }
+      if (novaColuna.after_id !== null) body.after_id = novaColuna.after_id
+
+      const res = await fetch('/api/kanban/columns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (data.success) {
+        // Recarrega as colunas para refletir a ordem correta do servidor
+        const fresh = await fetch(`/api/kanban/columns?loja_id=${primaryLojaId}`).then(r => r.json())
+        if (fresh.success) setColunas(fresh.data)
+        else setColunas(prev => [...prev, data.data])
+        setNovaColuna({ label: '', cor: 'gray', after_id: null })
+        setIsAddColumnOpen(false)
+        toast.success('Coluna criada com sucesso.')
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao criar coluna.')
+      }
+    } catch {
+      toast.error('Erro ao criar coluna.')
+    } finally {
+      setSavingColumn(false)
+    }
+  }
+
+  const moveColuna = async (coluna: KanbanColuna, direction: 'left' | 'right') => {
+    if (!primaryLojaId) return
+    // Atualiza localmente de imediato (otimista)
+    setColunas(prev => {
+      const idx = prev.findIndex(c => c.id === coluna.id)
+      const target = direction === 'left' ? idx - 1 : idx + 1
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[idx], next[target]] = [next[target], next[idx]]
+      return next
+    })
+    try {
+      const res = await fetch(`/api/kanban/columns/${coluna.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loja_id: primaryLojaId, direction }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setColunas(data.data)
+      } else {
+        // Reverte buscando novamente do servidor
+        const fresh = await fetch(`/api/kanban/columns?loja_id=${primaryLojaId}`).then(r => r.json())
+        if (fresh.success) setColunas(fresh.data)
+        toast.error(data.mensagem ?? 'Erro ao mover coluna.')
+      }
+    } catch {
+      const fresh = await fetch(`/api/kanban/columns?loja_id=${primaryLojaId}`).then(r => r.json())
+      if (fresh.success) setColunas(fresh.data)
+      toast.error('Erro ao mover coluna.')
+    }
+  }
+
+  const deleteColuna = async (coluna: KanbanColuna) => {
+    if (!primaryLojaId) return
+    try {
+      const res = await fetch(`/api/kanban/columns/${coluna.id}?loja_id=${primaryLojaId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        setColunas(prev => prev.filter(c => c.id !== coluna.id))
+        toast.success('Coluna excluída.')
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao excluir coluna.')
+      }
+    } catch {
+      toast.error('Erro ao excluir coluna.')
+    }
+  }
 
   const fetchAllLeads = useCallback(async (isManualRefresh = false) => {
     if (!ids.length) return
@@ -313,7 +485,6 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     setLeads([])
     setFetchPage(1)
     setTotalLeads(0)
-    setRefreshKey(k => k + 1)
     fetchAllLeads(true)
   }, [fetchAllLeads])
 
@@ -453,11 +624,11 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
   const itemsByStatus = useMemo(() => {
     const map: Record<string, Lead[]> = {}
-    for (const col of COLUNAS) {
-      map[col.key] = leads.filter(l => (l.status ?? 'nao_atendido') === col.key)
+    for (const col of colunas) {
+      map[col.slug] = leads.filter(l => (l.status ?? 'nao_atendido') === col.slug)
     }
     return map
-  }, [leads])
+  }, [leads, colunas])
 
   const registrarContato = async (leadId: string | number, tipoContato: string, observacao?: string) => {
     try {
@@ -493,7 +664,10 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         body: JSON.stringify({ lead_id: lead.id, status: novoStatus }),
       })
 
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData?.mensagem || `HTTP ${res.status}`)
+      }
 
       await registrarContato(
         lead.id,
@@ -677,29 +851,48 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         </div>
       )}
 
+      <div className={cn("overflow-x-auto pb-2", searchQuery.trim() && "hidden")}>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={columnCollision}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4", searchQuery.trim() && "hidden")}>
-          {COLUNAS.map((coluna) => (
-            <KanbanColumn
-              key={coluna.key}
-              coluna={coluna}
-              items={itemsByStatus[coluna.key] ?? []}
-              styles={colorStyles[coluna.color]}
-              onLeadClick={handleLeadClick}
-              onLeadUpdate={handleLeadUpdate}
-              visibleCount={getVisible(coluna.key)}
-              onLoadMore={() => loadMore(coluna.key)}
-              isLoadingMore={columnLoading[coluna.key] ?? false}
-              hasMoreGlobal={leads.length < totalLeads}
-              isLoadingAll={loadingAll}
-              savingLeads={savingLeads}
-            />
+        <div className="flex gap-6 items-start min-w-max">
+          {colunas.map((coluna) => (
+            <div key={coluna.slug} className="min-w-70 flex-1">
+              <KanbanColumn
+                coluna={coluna}
+                items={itemsByStatus[coluna.slug] ?? []}
+                styles={colorStyles[coluna.cor] ?? colorStyles.gray}
+                onLeadClick={handleLeadClick}
+                onLeadUpdate={handleLeadUpdate}
+                visibleCount={getVisible(coluna.slug)}
+                onLoadMore={() => loadMore(coluna.slug)}
+                isLoadingMore={columnLoading[coluna.slug] ?? false}
+                hasMoreGlobal={leads.length < totalLeads}
+                isLoadingAll={loadingAll}
+                savingLeads={savingLeads}
+                isGerente={isGerente}
+                onDeleteColuna={deleteColuna}
+                onMoveColuna={moveColuna}
+                isFirst={colunas.indexOf(coluna) === 0}
+                isLast={colunas.indexOf(coluna) === colunas.length - 1}
+              />
+            </div>
           ))}
+
+          {isGerente && (
+            <div className="min-w-50 shrink-0 flex items-start pt-1">
+              <button
+                onClick={() => setIsAddColumnOpen(true)}
+                className="flex items-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/25 px-5 py-4 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground w-full justify-center"
+              >
+                <Plus className="h-4 w-4" />
+                Nova coluna
+              </button>
+            </div>
+          )}
         </div>
 
         <DragOverlay>
@@ -713,6 +906,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           )}
         </DragOverlay>
       </DndContext>
+      </div>
 
       {selectedLead && (
         <LeadDetailsModal
@@ -746,12 +940,75 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           }}
         />
       )}
+
+      {/* Modal: nova coluna customizada */}
+      <Dialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nova coluna</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="col-label">Nome da coluna</Label>
+              <Input
+                id="col-label"
+                value={novaColuna.label}
+                onChange={e => setNovaColuna(prev => ({ ...prev, label: e.target.value }))}
+                placeholder="Ex: Aguardando Projeto"
+                onKeyDown={e => { if (e.key === 'Enter') addColuna() }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="col-position">Inserir após</Label>
+              <select
+                id="col-position"
+                value={novaColuna.after_id ?? ''}
+                onChange={e => setNovaColuna(prev => ({ ...prev, after_id: e.target.value ? Number(e.target.value) : null }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">No final</option>
+                {colunas.map(c => (
+                  <option key={c.id} value={c.id}>Após: {c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cor</Label>
+              <div className="flex flex-wrap gap-2">
+                {CUSTOM_COLORS.map(({ value, bg, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setNovaColuna(prev => ({ ...prev, cor: value }))}
+                    className={cn(
+                      "h-7 w-7 rounded-full border-2 transition-transform hover:scale-110",
+                      novaColuna.cor === value ? "border-foreground scale-110" : "border-transparent",
+                      bg
+                    )}
+                    title={label}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddColumnOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={addColuna}
+              disabled={savingColumn || !novaColuna.label.trim()}
+              className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
+            >
+              {savingColumn ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar coluna'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
 interface KanbanColumnProps {
-  coluna: typeof COLUNAS[number]
+  coluna: KanbanColuna
   items: Lead[]
   styles: typeof colorStyles[string]
   onLeadClick?: (lead: Lead) => void
@@ -762,16 +1019,22 @@ interface KanbanColumnProps {
   hasMoreGlobal?: boolean
   isLoadingAll?: boolean
   savingLeads?: Set<string>
+  isGerente?: boolean
+  onDeleteColuna?: (coluna: KanbanColuna) => void
+  onMoveColuna?: (coluna: KanbanColuna, direction: 'left' | 'right') => void
+  isFirst?: boolean
+  isLast?: boolean
 }
 
-const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads }: KanbanColumnProps) {
+const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
-    id: coluna.key,
+    id: coluna.slug,
   })
 
   const visibleItems = items.slice(0, visibleCount)
   const remaining = items.length - visibleCount
   const hasMore = remaining > 0 || (hasMoreGlobal ?? false)
+  const Icon = getColumnIcon(coluna.slug)
 
   return (
     <Card
@@ -784,14 +1047,51 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <coluna.Icon className={`h-4 w-4 ${styles.icon}`} />
+            <Icon className={`h-4 w-4 ${styles.icon}`} />
             <CardTitle className="text-base">{coluna.label}</CardTitle>
           </div>
           <Badge variant="secondary" className={styles.badge}>
             {items.length}{isLoadingAll ? '+' : ''}
           </Badge>
         </div>
-        <CardDescription>{coluna.description}</CardDescription>
+
+        {isGerente && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Mover</span>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onMoveColuna?.(coluna, 'left')}
+                disabled={isFirst}
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-white hover:text-foreground hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-25"
+                title="Mover para esquerda"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => onMoveColuna?.(coluna, 'right')}
+                disabled={isLast}
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-white hover:text-foreground hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-25"
+                title="Mover para direita"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {Number(coluna.fixo) === 0 && (
+              <>
+                <div className="mx-1 h-3.5 w-px bg-border" />
+                <button
+                  onClick={() => onDeleteColuna?.(coluna)}
+                  className="ml-auto flex items-center gap-1.5 rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 ring-1 ring-red-200 transition-all hover:bg-red-600 hover:text-white hover:ring-red-600"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Excluir
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        <CardDescription />
       </CardHeader>
 
       <CardContent className="p-0">

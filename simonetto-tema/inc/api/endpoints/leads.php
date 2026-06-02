@@ -43,7 +43,7 @@ add_action('rest_api_init', function () {
   ));
 
   // GET    /api/v1/leads/{id} — buscar lead
-  // DELETE /api/v1/leads/{id} — excluir lead (somente administrador)
+  // DELETE /api/v1/leads/{id} — excluir lead
   // PATCH  /api/v1/leads/{id} — atualizar loja ou status do lead (somente administrador)
   register_rest_route('api/v1', '/leads/(?P<id>\d+)', array(
     array(
@@ -54,7 +54,7 @@ add_action('rest_api_init', function () {
     array(
       'methods' => 'DELETE',
       'callback' => 'mytheme_api_delete_lead',
-      'permission_callback' => 'mytheme_api_is_administrator',
+      'permission_callback' => 'mytheme_api_is_authenticated',
     ),
     array(
       'methods' => 'PATCH',
@@ -207,6 +207,37 @@ add_action('rest_api_init', function () {
 
 
 
+
+/**
+ * Verifica se o usuário é administrador OU gerente (is_gerente = true via ACF)
+ */
+function mytheme_api_is_gerente()
+{
+  if (!is_user_logged_in()) {
+    return new WP_Error(
+      'unauthorized',
+      'Você precisa estar autenticado.',
+      ['status' => 401]
+    );
+  }
+
+  $user_id = get_current_user_id();
+
+  if (current_user_can('administrator')) {
+    return true;
+  }
+
+  $is_gerente = (bool) get_field('is_gerente', 'user_' . $user_id);
+  if ($is_gerente) {
+    return true;
+  }
+
+  return new WP_Error(
+    'forbidden',
+    'Acesso negado. Apenas administradores e gerentes podem realizar esta ação.',
+    ['status' => 403]
+  );
+}
 
 /**
  * Verifica se o usuário autenticado é administrador WordPress
@@ -914,19 +945,25 @@ function mytheme_api_leads_status_total(WP_REST_Request $request)
     ], 500);
   }
 
-  // Inicializa todos os status com zero para manter a consistência no front-end
-  $data = [
-    'nao_atendido' => 0,
-    'em_negociacao' => 0,
-    'venda_realizada' => 0,
-    'venda_nao_realizada' => 0,
-  ];
+  // Inicializa com as colunas da loja (fixas + customizadas), garantindo zeros
+  $data = [];
+  if ($loja_id) {
+    $colunas = Kanban_Column_Handler::get_columns($loja_id);
+    foreach ($colunas as $col) {
+      $data[$col['slug']] = 0;
+    }
+  } else {
+    $data = [
+      'nao_atendido'        => 0,
+      'em_negociacao'       => 0,
+      'venda_realizada'     => 0,
+      'venda_nao_realizada' => 0,
+    ];
+  }
 
   // Preenche com os valores reais do banco
   foreach ($rows as $row) {
-    if (array_key_exists($row['status'], $data)) {
-      $data[$row['status']] = (int) $row['total'];
-    }
+    $data[$row['status']] = (int) $row['total'];
   }
 
   return new WP_REST_Response([

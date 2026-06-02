@@ -4,11 +4,17 @@
 
 export type UserRole = 'administrator' | 'loja';
 
-export type LeadStatus =
-  | 'nao_atendido'
-  | 'em_negociacao'
-  | 'venda_realizada'
-  | 'venda_nao_realizada';
+export type LeadStatus = string;
+
+export interface KanbanColuna {
+  id: number
+  loja_id: number
+  slug: string
+  label: string
+  cor: string
+  ordem: number
+  fixo: boolean | 0 | 1
+}
 
 export interface AuthResponse {
   token: string;
