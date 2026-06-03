@@ -4,10 +4,9 @@ import { StatsCardsSkeleton, ChartCardSkeleton } from '@/components/dashboard/da
 import { StatusStatsSection } from '@/components/dashboard/dashboard-sections'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
 import { getLojasServer } from '@/lib/server-lojas-service'
-import { getVnrStats, getConversaoPorLoja, getTempoPorEtapa } from '@/lib/api-loja'
+import { getVnrStats, getConversaoPorLoja } from '@/lib/api-loja'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
 import { ChartConversaoPorLoja } from '@/components/dashboard/chart-conversao-por-loja'
-import { ChartTempoPorEtapa } from '@/components/dashboard/chart-tempo-por-etapa'
 
 export const metadata = { title: 'Conversão | Noxus' }
 
@@ -18,11 +17,6 @@ interface ConversaoPageProps {
 async function ConversaoChart() {
   const data = await getConversaoPorLoja()
   return <ChartConversaoPorLoja data={data} />
-}
-
-async function TempoPorEtapaChart() {
-  const data = await getTempoPorEtapa()
-  return <ChartTempoPorEtapa data={data} />
 }
 
 async function VnrMotivosWrapper() {
@@ -57,18 +51,9 @@ export default async function ConversaoPage({ searchParams }: ConversaoPageProps
         <VnrMotivosWrapper />
       </Suspense>
 
-      <div>
-        <h3 className="text-xl font-bold tracking-tight text-[#16255c] mb-4">Análise de Desempenho</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-            <ConversaoChart />
-          </Suspense>
-
-          <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-            <TempoPorEtapaChart />
-          </Suspense>
-        </div>
-      </div>
+      <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
+        <ConversaoChart />
+      </Suspense>
 
     </div>
   )
