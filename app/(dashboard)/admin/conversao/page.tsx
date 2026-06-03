@@ -4,10 +4,9 @@ import { StatsCardsSkeleton, ChartCardSkeleton } from '@/components/dashboard/da
 import { StatusStatsSection } from '@/components/dashboard/dashboard-sections'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
 import { getLojasServer } from '@/lib/server-lojas-service'
-import { getVnrStats, getConversaoPorLoja, getFunilPorAtendente, getTempoPorEtapa } from '@/lib/api-loja'
+import { getVnrStats, getConversaoPorLoja, getTempoPorEtapa } from '@/lib/api-loja'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
 import { ChartConversaoPorLoja } from '@/components/dashboard/chart-conversao-por-loja'
-import { ChartFunilPorAtendente } from '@/components/dashboard/chart-funil-por-atendente'
 import { ChartTempoPorEtapa } from '@/components/dashboard/chart-tempo-por-etapa'
 
 export const metadata = { title: 'Conversão | Noxus' }
@@ -19,11 +18,6 @@ interface ConversaoPageProps {
 async function ConversaoChart() {
   const data = await getConversaoPorLoja()
   return <ChartConversaoPorLoja data={data} />
-}
-
-async function FunilAtendenteChart() {
-  const data = await getFunilPorAtendente()
-  return <ChartFunilPorAtendente data={data} />
 }
 
 async function TempoPorEtapaChart() {
@@ -76,9 +70,6 @@ export default async function ConversaoPage({ searchParams }: ConversaoPageProps
         </div>
       </div>
 
-      <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-        <FunilAtendenteChart />
-      </Suspense>
     </div>
   )
 }
