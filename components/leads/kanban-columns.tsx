@@ -289,6 +289,9 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [searchResults, setSearchResults] = useState<Lead[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchTotal, setSearchTotal] = useState(0)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isModalOpenRef = useRef(isModalOpen)
   const prevUnreadRef = useRef<Set<string>>(new Set())
@@ -300,6 +303,28 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
   }, [isModalOpen])
+
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const update = () => {
+      setCanScrollLeft(el.scrollLeft > 0)
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+    }
+    update()
+    el.addEventListener('scroll', update)
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', update); ro.disconnect() }
+  }, [])
+
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+    })
+  }, [colunas])
 
   useEffect(() => {
     leadsRef.current = leads
@@ -851,7 +876,30 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         </div>
       )}
 
-      <div className={cn("w-full overflow-x-auto pb-4", searchQuery.trim() && "hidden")}>
+      <div className={cn("relative", searchQuery.trim() && "hidden")}>
+        <button
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+          className={cn(
+            "absolute left-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
+            canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Rolar para esquerda"
+        >
+          <ChevronLeft className="h-4 w-4 text-slate-600" />
+        </button>
+
+        <button
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+          className={cn(
+            "absolute right-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
+            canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Rolar para direita"
+        >
+          <ChevronRight className="h-4 w-4 text-slate-600" />
+        </button>
+
+      <div ref={scrollContainerRef} className="w-full overflow-x-auto pb-4 kanban-scroll">
       <DndContext
         sensors={sensors}
         collisionDetection={columnCollision}
@@ -906,6 +954,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           )}
         </DragOverlay>
       </DndContext>
+      </div>
       </div>
 
       {selectedLead && (

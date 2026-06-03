@@ -123,3 +123,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.75 0 0) oklch(0.95 0 0);
+}
+.kanban-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: oklch(0.95 0 0);
+  border-radius: 999px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.72 0 0);
+  border-radius: 999px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0);
+}

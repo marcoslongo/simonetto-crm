@@ -321,8 +321,9 @@ class Lead_Handler
 
     $table_name = $wpdb->prefix . 'leads';
 
-    $origem_raw = sanitize_text_field($params['origem'] ?? 'industria');
-    $origem     = in_array($origem_raw, self::ORIGEM_ALLOWED, true) ? $origem_raw : 'industria';
+    $default_origem = is_user_logged_in() ? 'proprio' : 'industria';
+    $origem_raw     = sanitize_text_field($params['origem'] ?? $default_origem);
+    $origem         = in_array($origem_raw, self::ORIGEM_ALLOWED, true) ? $origem_raw : $default_origem;
 
     $dados = [
       'nome'                     => sanitize_text_field($params['nome']),
