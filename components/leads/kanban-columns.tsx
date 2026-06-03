@@ -858,9 +858,9 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-6 items-start min-w-max">
+        <div className="flex gap-6 items-stretch min-w-max">
           {colunas.map((coluna) => (
-            <div key={coluna.slug} className="min-w-70 flex-1">
+            <div key={coluna.slug} className="min-w-70 flex-1 flex flex-col">
               <KanbanColumn
                 coluna={coluna}
                 items={itemsByStatus[coluna.slug] ?? []}
@@ -1040,11 +1040,11 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
     <Card
       ref={setNodeRef}
       className={cn(
-        "bg-linear-to-br from-slate-50 to-slate-100 transition-all duration-200 min-h-75",
+        "bg-linear-to-br from-slate-50 to-slate-100 transition-all duration-200 flex flex-col h-full max-h-[calc(100vh-300px)] overflow-y-auto pt-0",
         isOver && `ring-2 ${styles.dropzone}`
       )}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pt-4 pb-3 sticky top-0 z-10 bg-slate-50 border-b border-slate-200 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon className={`h-4 w-4 ${styles.icon}`} />
