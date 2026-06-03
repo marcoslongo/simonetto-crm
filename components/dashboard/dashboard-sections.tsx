@@ -78,11 +78,13 @@ export async function StatusStatsSection({ from, to }: StatusStatsSectionProps) 
   return (
     <KanbanStatsCards
       data={{
-        nao_atendido: statusTotal.nao_atendido,
-        em_negociacao: statusTotal.em_negociacao,
         venda_realizada: statusTotal.venda_realizada,
         venda_nao_realizada: statusTotal.venda_nao_realizada,
       }}
+      colunas={[
+        { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Vendas Realizadas', cor: 'emerald', ordem: 0, fixo: 1 },
+        { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Vendas Perdidas',   cor: 'rose',    ordem: 1, fixo: 1 },
+      ]}
       from={from}
       to={to}
     />
