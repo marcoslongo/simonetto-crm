@@ -299,6 +299,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const leadsRef = useRef<Lead[]>(initialLeads)
   const isDraggingRef = useRef(false)
   const isFirstKanbanPollRef = useRef(true)
+  const [lastUnreadAt, setLastUnreadAt] = useState<Record<string, number>>({})
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
@@ -579,6 +580,19 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           if (hasNew) playNotificationSound()
         }
 
+        // Registra timestamp para leads que acabaram de receber mensagem
+        if (!isFirstPollRef.current) {
+          const newlyUnread = [...currentUnreadIds].filter(id => !prevUnreadRef.current.has(id))
+          if (newlyUnread.length > 0) {
+            const now = Date.now()
+            setLastUnreadAt(prev => {
+              const next = { ...prev }
+              for (const id of newlyUnread) next[id] = now
+              return next
+            })
+          }
+        }
+
         prevUnreadRef.current = currentUnreadIds
         isFirstPollRef.current = false
 
@@ -650,10 +664,22 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const itemsByStatus = useMemo(() => {
     const map: Record<string, Lead[]> = {}
     for (const col of colunas) {
-      map[col.slug] = leads.filter(l => (l.status ?? 'nao_atendido') === col.slug)
+      const colLeads = leads.filter(l => (l.status ?? 'nao_atendido') === col.slug)
+      map[col.slug] = colLeads.sort((a, b) => {
+        const aUnread = (a.unread_count ?? 0) > 0
+        const bUnread = (b.unread_count ?? 0) > 0
+        if (aUnread && !bUnread) return -1
+        if (!aUnread && bUnread) return 1
+        if (aUnread && bUnread) {
+          const aTime = lastUnreadAt[String(a.id)] ?? 0
+          const bTime = lastUnreadAt[String(b.id)] ?? 0
+          return bTime - aTime
+        }
+        return new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()
+      })
     }
     return map
-  }, [leads, colunas])
+  }, [leads, colunas, lastUnreadAt])
 
   const registrarContato = async (leadId: string | number, tipoContato: string, observacao?: string) => {
     try {
