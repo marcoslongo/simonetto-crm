@@ -12,6 +12,7 @@ import {
   getVnrStats,
   getFunilPorAtendente,
   getTempoPorEtapa,
+  getKanbanColumns,
 } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
@@ -52,8 +53,11 @@ async function UnidadeMetricasWrapper({ id }: { id: string }) {
   return <MetricasAtendimento data={data} />
 }
 async function UnidadeFunilWrapper({ id }: { id: string }) {
-  const data = await getLojaStatusFunil(id)
-  return <FunilStatus data={data} />
+  const [data, colunas] = await Promise.all([
+    getLojaStatusFunil(id),
+    getKanbanColumns(id),
+  ])
+  return <FunilStatus data={data} colunas={colunas} />
 }
 async function UnidadeTemperaturaWrapper({ id }: { id: string }) {
   const data = await getLojaClassificacao(id)

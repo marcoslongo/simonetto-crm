@@ -379,9 +379,7 @@ function mytheme_api_get_loja_status_funil($request)
   ];
 
   foreach ($rows as $row) {
-    if (array_key_exists($row['status'], $data)) {
-      $data[$row['status']] = (int) $row['total'];
-    }
+    $data[$row['status']] = (int) $row['total'];
   }
 
   return new WP_REST_Response([

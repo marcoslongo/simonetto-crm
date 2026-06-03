@@ -1,6 +1,7 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaServiceStats, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
-import type { Lead } from './types'
+import type { Lead, KanbanColuna } from './types'
 import type { VnrStatsData } from '@/components/dashboard/chart-vnr-motivos'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
@@ -211,16 +212,17 @@ export async function getMultiLojaStats(lojaIds: number[]): Promise<LojaStats> {
   }))
 }
 
-export async function getMultiLojaStatusFunil(lojaIds: number[]): Promise<LojaStatusFunil> {
-  const zero: LojaStatusFunil = { nao_atendido: 0, em_negociacao: 0, venda_realizada: 0, venda_nao_realizada: 0 }
+export async function getMultiLojaStatusFunil(lojaIds: number[]): Promise<Record<string, number>> {
+  const zero: Record<string, number> = { nao_atendido: 0, em_negociacao: 0, venda_realizada: 0, venda_nao_realizada: 0 }
   if (!lojaIds.length) return zero
   const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaStatusFunil(id), zero)))
-  return results.reduce((acc, s) => ({
-    nao_atendido: acc.nao_atendido + s.nao_atendido,
-    em_negociacao: acc.em_negociacao + s.em_negociacao,
-    venda_realizada: acc.venda_realizada + s.venda_realizada,
-    venda_nao_realizada: acc.venda_nao_realizada + s.venda_nao_realizada,
-  }))
+  const merged: Record<string, number> = {}
+  for (const result of results) {
+    for (const [key, val] of Object.entries(result)) {
+      merged[key] = (merged[key] ?? 0) + (val as number)
+    }
+  }
+  return merged
 }
 
 export async function getMultiLojaClassificacao(lojaIds: number[]): Promise<LojaClassificacao> {
@@ -378,4 +380,30 @@ export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {
   } catch {
     return { total: 0, motivos: [] }
   }
+}
+
+const DEFAULT_KANBAN_COLUMNS: KanbanColuna[] = [
+  { id: 0, loja_id: 0, slug: 'nao_atendido',        label: 'Não Atendidos',      cor: 'amber',   ordem: 0, fixo: 1 },
+  { id: 0, loja_id: 0, slug: 'em_negociacao',       label: 'Em Negociação',      cor: 'blue',    ordem: 1, fixo: 1 },
+  { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Venda Realizada',    cor: 'emerald', ordem: 2, fixo: 1 },
+  { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Venda Não Realizada',cor: 'red',     ordem: 3, fixo: 1 },
+]
+
+export const getKanbanColumns = cache(async (lojaId: string | number): Promise<KanbanColuna[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/kanban-columns?loja_id=${lojaId}`, {
+      cache: 'no-store',
+      headers: await getAuthHeaders(),
+    })
+    if (!response.ok) return DEFAULT_KANBAN_COLUMNS
+    const data = await response.json()
+    return data.data?.length ? data.data : DEFAULT_KANBAN_COLUMNS
+  } catch {
+    return DEFAULT_KANBAN_COLUMNS
+  }
+})
+
+export async function getMultiLojaKanbanColumns(lojaIds: number[]): Promise<KanbanColuna[]> {
+  if (!lojaIds.length) return DEFAULT_KANBAN_COLUMNS
+  return getKanbanColumns(lojaIds[0])
 }

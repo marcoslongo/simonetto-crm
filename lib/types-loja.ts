@@ -13,6 +13,7 @@ export interface LojaStatusFunil {
   em_negociacao: number
   venda_realizada: number
   venda_nao_realizada: number
+  [key: string]: number
 }
 
 export interface LojaClassificacao {

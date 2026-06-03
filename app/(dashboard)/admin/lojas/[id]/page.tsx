@@ -13,6 +13,7 @@ import {
   getVnrStats,
   getFunilPorAtendente,
   getTempoPorEtapa,
+  getKanbanColumns,
 } from '@/lib/api-loja'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
@@ -58,8 +59,11 @@ async function LojaMetricasWrapper({ id }: { id: string }) {
   return <MetricasAtendimento data={data} />
 }
 async function LojaFunilWrapper({ id }: { id: string }) {
-  const data = await getLojaStatusFunil(id)
-  return <FunilStatus data={data} />
+  const [data, colunas] = await Promise.all([
+    getLojaStatusFunil(id),
+    getKanbanColumns(id),
+  ])
+  return <FunilStatus data={data} colunas={colunas} />
 }
 async function LojaTemperaturaWrapper({ id }: { id: string }) {
   const data = await getLojaClassificacao(id)

@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { requireAuth } from '@/lib/auth'
-import { getMultiLojaStats, getMultiLojaStatusFunil, getMultiLojaClassificacao } from '@/lib/api-loja'
+import { getMultiLojaStats, getMultiLojaStatusFunil, getMultiLojaClassificacao, getMultiLojaKanbanColumns } from '@/lib/api-loja'
 import { getLojas } from '@/lib/api'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
@@ -20,18 +20,25 @@ async function StatsCardsWrapper({ lojaIds }: { lojaIds: number[] }) {
 }
 
 async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
-  const statusFunil = await getMultiLojaStatusFunil(lojaIds)
+  const [statusFunil, colunas] = await Promise.all([
+    getMultiLojaStatusFunil(lojaIds),
+    getMultiLojaKanbanColumns(lojaIds),
+  ])
   return (
     <KanbanStatsCards
       data={statusFunil}
+      colunas={colunas}
       description="Acompanhamento da jornada de vendas da sua unidade"
     />
   )
 }
 
 async function FunilStatusWrapper({ lojaIds }: { lojaIds: number[] }) {
-  const statusFunil = await getMultiLojaStatusFunil(lojaIds)
-  return <FunilStatus data={statusFunil} />
+  const [statusFunil, colunas] = await Promise.all([
+    getMultiLojaStatusFunil(lojaIds),
+    getMultiLojaKanbanColumns(lojaIds),
+  ])
+  return <FunilStatus data={statusFunil} colunas={colunas} />
 }
 
 async function LeadsTemperatureWrapper({ lojaIds }: { lojaIds: number[] }) {
