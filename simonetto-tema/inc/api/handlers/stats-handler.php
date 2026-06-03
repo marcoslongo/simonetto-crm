@@ -377,6 +377,8 @@ class Stats_Handler
       GROUP BY status
     ";
 
+    // Busca labels e ordem das colunas na tabela wp_kanban_columns
+    $col_table = $wpdb->prefix . 'kanban_columns';
     $label_map = [
       'nao_atendido'        => 'Não atendido',
       'em_negociacao'       => 'Em negociação',
@@ -387,6 +389,23 @@ class Stats_Handler
       'nao_atendido' => 0, 'em_negociacao' => 1,
       'venda_realizada' => 2, 'venda_nao_realizada' => 3,
     ];
+
+    if (!empty($loja_ids)) {
+      $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+      $col_rows = $wpdb->get_results(
+        $wpdb->prepare("SELECT slug, label, ordem FROM {$col_table} WHERE loja_id IN ($placeholders)", ...$loja_ids),
+        ARRAY_A
+      );
+    } else {
+      $col_rows = $wpdb->get_results("SELECT slug, label, ordem FROM {$col_table}", ARRAY_A);
+    }
+
+    foreach ($col_rows as $col) {
+      $label_map[$col['slug']] = $col['label'];
+      if (!isset($order_map[$col['slug']])) {
+        $order_map[$col['slug']] = (int) $col['ordem'] + 4;
+      }
+    }
 
     $results = [];
     foreach ($wpdb->get_results($sql_ativos, ARRAY_A) as $row) {
