@@ -84,10 +84,10 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
 
   return (
     <>
-      {/* Floating tab on the right edge */}
+      {/* Botão flutuante — acima do bottom-nav no mobile, centralizado no desktop */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-2 text-white px-2.5 py-5 rounded-l-2xl shadow-xl transition-all hover:pr-3"
+        className="fixed right-0 z-50 flex flex-col items-center gap-2 text-white px-2.5 py-5 rounded-l-2xl shadow-xl transition-all hover:pr-3 bottom-20 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2"
         style={{ backgroundColor: BLUE }}
         title="Consultor de IA da Loja"
       >
@@ -101,22 +101,23 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
+        {/* Mobile: tela cheia. Desktop: painel lateral de 500px */}
         <SheetContent
           side="right"
-          className="w-125 sm:max-w-125 flex flex-col p-0 gap-0"
+          className="w-full sm:w-125 sm:max-w-125 flex flex-col p-0 gap-0"
         >
           {/* Header */}
-          <SheetHeader className="px-6 py-5 border-b border-border shrink-0">
+          <SheetHeader className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
                 style={{ backgroundColor: `${BLUE}1a` }}
               >
                 <Sparkles className="h-5 w-5" style={{ color: BLUE }} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <SheetTitle className="text-base">Consultor de IA</SheetTitle>
-                <SheetDescription className="text-xs mt-0.5">
+                <SheetDescription className="text-xs mt-0.5 truncate">
                   {lojaNome
                     ? `Analisando dados da ${lojaNome}`
                     : "Analisando dados da sua loja"}
@@ -126,7 +127,7 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
           </SheetHeader>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
             {mensagens.length === 0 && !loading && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -136,7 +137,7 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
                   <button
                     key={i}
                     onClick={() => setPrompt(ex)}
-                    className="w-full text-left text-sm p-3.5 rounded-xl border border-border bg-muted/20 hover:bg-[#16255c]/5 hover:border-[#16255c]/30 transition-all text-card-foreground leading-relaxed"
+                    className="w-full text-left text-sm p-3 sm:p-3.5 rounded-xl border border-border bg-muted/20 hover:bg-[#16255c]/5 hover:border-[#16255c]/30 transition-all text-card-foreground leading-relaxed"
                   >
                     {ex}
                   </button>
@@ -190,7 +191,7 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-border px-6 py-4 space-y-3 shrink-0">
+          <div className="border-t border-border px-4 sm:px-6 py-3 sm:py-4 space-y-2 sm:space-y-3 shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
             {mensagens.length > 0 && (
               <button
                 onClick={() => setMensagens([])}
@@ -206,7 +207,7 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Faça uma pergunta sobre os leads da sua loja..."
-                className="min-h-20 resize-none text-sm flex-1"
+                className="min-h-14 sm:min-h-20 max-h-36 resize-none text-sm flex-1"
                 disabled={loading}
               />
               <Button
@@ -223,7 +224,7 @@ export function AiGerenteButton({ lojaNome }: AiGerenteButtonProps) {
                 )}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="hidden sm:block text-[11px] text-muted-foreground">
               Enter para enviar · Shift+Enter para nova linha
             </p>
           </div>
