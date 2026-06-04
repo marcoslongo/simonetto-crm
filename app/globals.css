@@ -138,6 +138,36 @@
   }
 }
 
+/* ── Entry animations ───────────────────────────────────────────────────── */
+/* Applied to dashboard sections/cards on mount (after Suspense resolves).
+   Uses tw-animate-css primitives: animate-in fade-in slide-in-from-bottom-N */
+
+.animate-section {
+  animation: section-reveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card {
+  animation: card-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Stagger delays for sibling cards */
+.animate-card:nth-child(1) { animation-delay: 0ms; }
+.animate-card:nth-child(2) { animation-delay: 60ms; }
+.animate-card:nth-child(3) { animation-delay: 120ms; }
+.animate-card:nth-child(4) { animation-delay: 180ms; }
+.animate-card:nth-child(5) { animation-delay: 240ms; }
+.animate-card:nth-child(6) { animation-delay: 300ms; }
+
+@keyframes section-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes card-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
 /* ── Dashboard card surface ─────────────────────────────────────────────── */
 /* Replaces the near-invisible from-slate-50 to-slate-100 gradient.
    Use instead of bg-gradient-to-br from-slate-50 to-slate-100 on dashboard cards. */

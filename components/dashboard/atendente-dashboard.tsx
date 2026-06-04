@@ -106,7 +106,7 @@ export function AtendenteDashboard({ stats, userName, colunas }: AtendenteDashbo
   const firstName = userName.split(' ')[0]
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-section">
       {/* Header pessoal */}
       <div className="flex items-center justify-between">
         <div>

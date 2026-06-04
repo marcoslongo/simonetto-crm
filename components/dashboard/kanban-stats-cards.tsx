@@ -8,6 +8,7 @@ import {
 import { LeadsStatusModal } from './leads-status-modal'
 import type { KanbanColuna } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { DEFAULT_KANBAN_COLUNAS } from '@/lib/kanban-config'
 
 interface KanbanStatsCardsProps {
   data: Record<string, number>
@@ -45,12 +46,6 @@ const COLOR_STYLES: Record<string, { icon: string; bg: string; badge: string; ac
   gray:    { icon: 'text-gray-600',    bg: 'bg-gray-50',    badge: 'bg-gray-100 text-gray-700',    accent: '#6b7280' },
 }
 
-const DEFAULT_COLUNAS: KanbanColuna[] = [
-  { id: 0, loja_id: 0, slug: 'nao_atendido',        label: 'Não Atendidos',     cor: 'slate',   ordem: 0, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'em_negociacao',       label: 'Em Negociação',     cor: 'blue',    ordem: 1, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Vendas Realizadas', cor: 'emerald', ordem: 2, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Vendas Perdidas',   cor: 'rose',    ordem: 3, fixo: 1 },
-]
 
 function gridClass(count: number): string {
   if (count <= 2) return 'grid-cols-2'
@@ -68,13 +63,13 @@ export function KanbanStatsCards({
 }: KanbanStatsCardsProps) {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
 
-  const stats = colunas ?? DEFAULT_COLUNAS
+  const stats = colunas ?? DEFAULT_KANBAN_COLUNAS
   const selected = stats.find(s => s.slug === selectedStatus)
   const total = stats.reduce((s, c) => s + (data[c.slug] ?? 0), 0)
 
   return (
     <>
-      <div className="card-surface-elevated p-6">
+      <div className="card-surface-elevated p-6 animate-section">
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-[#16255c]">Status do Funil</h2>

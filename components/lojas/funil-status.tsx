@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { KanbanColuna } from '@/lib/types'
+import { DEFAULT_KANBAN_COLUNAS } from '@/lib/kanban-config'
 
 interface FunilStatusProps {
   data: Record<string, number>
@@ -23,19 +24,13 @@ const COLOR_BARS: Record<string, { color: string; text: string; dot: string }> =
   gray:    { color: 'bg-gray-400',    text: 'text-gray-600',    dot: 'bg-gray-400'    },
 }
 
-const DEFAULT_COLUNAS: KanbanColuna[] = [
-  { id: 0, loja_id: 0, slug: 'nao_atendido',        label: 'Não Atendido',       cor: 'slate',   ordem: 0, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'em_negociacao',       label: 'Em Negociação',      cor: 'amber',   ordem: 1, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Venda Realizada',    cor: 'emerald', ordem: 2, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Venda Não Realizada', cor: 'red',    ordem: 3, fixo: 1 },
-]
 
 export function FunilStatus({ data, colunas }: FunilStatusProps) {
-  const columns = colunas ?? DEFAULT_COLUNAS
+  const columns = colunas ?? DEFAULT_KANBAN_COLUNAS
   const total = columns.reduce((s, col) => s + (data[col.slug] ?? 0), 0)
 
   return (
-    <Card className="border-0 shadow-lg bg-linear-to-br from-slate-50 to-slate-100">
+    <Card className="border-0 card-surface-elevated animate-section">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-bold text-[#16255c]">
           Funil de Atendimentos

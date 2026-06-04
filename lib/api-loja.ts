@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { Leads12MonthsResponse, Leads30DaysResponse, LeadsByDay, LeadsByMonth, LojaClassificacao, LojaServiceStats, LojaStats, LojaStatsResponse, LojaStatusFunil } from "./types-loja"
 import type { Lead, KanbanColuna } from './types'
 import type { VnrStatsData } from '@/components/dashboard/chart-vnr-motivos'
+import { DEFAULT_KANBAN_COLUNAS } from './kanban-config'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://manager.simonetto.com.br/wp-json/api/v1'
 
@@ -20,7 +21,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
  */
 export async function getLojaStats(lojaId: string | number): Promise<LojaStats> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/stats`, {
-    cache: 'no-store',
+    next: { revalidate: 60 },
     headers: await getAuthHeaders(),
   })
 
@@ -42,7 +43,7 @@ export async function getLojaStats(lojaId: string | number): Promise<LojaStats> 
  */
 export async function getLojaLeads30Days(lojaId: string | number): Promise<LeadsByDay[]> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/leads-30-days`, {
-    cache: 'no-store',
+    next: { revalidate: 300 },
     headers: await getAuthHeaders(),
   })
 
@@ -64,7 +65,7 @@ export async function getLojaLeads30Days(lojaId: string | number): Promise<Leads
  */
 export async function getLojaLeads12Months(lojaId: string | number): Promise<LeadsByMonth[]> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/leads-12-months`, {
-    cache: 'no-store',
+    next: { revalidate: 300 },
     headers: await getAuthHeaders(),
   })
 
@@ -94,7 +95,7 @@ export async function getLojaStatusFunil(lojaId: string | number): Promise<LojaS
 
 export async function getLojaClassificacao(lojaId: string | number): Promise<LojaClassificacao> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/classificacao`, {
-    cache: 'no-store',
+    next: { revalidate: 60 },
     headers: await getAuthHeaders(),
   })
 
@@ -105,7 +106,7 @@ export async function getLojaClassificacao(lojaId: string | number): Promise<Loj
 
 export async function getLojaServiceStats(lojaId: string | number): Promise<LojaServiceStats> {
   const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/service-stats`, {
-    cache: 'no-store',
+    next: { revalidate: 60 },
     headers: await getAuthHeaders(),
   })
 
@@ -329,7 +330,7 @@ export async function getConversaoPorLoja(lojaIds: number[] = []): Promise<Conve
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/conversao-por-loja${qs.toString() ? `?${qs}` : ''}`,
-      { cache: 'no-store', headers }
+      { next: { revalidate: 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -344,7 +345,7 @@ export async function getFunilPorAtendente(lojaIds: number[] = []): Promise<Funi
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/funil-por-atendente${qs.toString() ? `?${qs}` : ''}`,
-      { cache: 'no-store', headers }
+      { next: { revalidate: 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -359,7 +360,7 @@ export async function getTempoPorEtapa(lojaIds: number[] = []): Promise<TempoPor
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/tempo-por-etapa${qs.toString() ? `?${qs}` : ''}`,
-      { cache: 'no-store', headers }
+      { next: { revalidate: 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -375,7 +376,7 @@ export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {
   try {
     const res = await fetch(
       `${API_BASE_URL}/leads-vnr-stats${qs.toString() ? `?${qs}` : ''}`,
-      { cache: 'no-store', headers }
+      { next: { revalidate: 60 }, headers }
     )
     if (!res.ok) return { total: 0, motivos: [] }
     const data = await res.json()
@@ -386,12 +387,6 @@ export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {
   }
 }
 
-const DEFAULT_KANBAN_COLUMNS: KanbanColuna[] = [
-  { id: 0, loja_id: 0, slug: 'nao_atendido',        label: 'Não Atendidos',      cor: 'amber',   ordem: 0, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'em_negociacao',       label: 'Em Negociação',      cor: 'blue',    ordem: 1, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Venda Realizada',    cor: 'emerald', ordem: 2, fixo: 1 },
-  { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Venda Não Realizada',cor: 'red',     ordem: 3, fixo: 1 },
-]
 
 export interface AtendanteStats {
   total_atribuidos: number
@@ -476,18 +471,18 @@ function mergeStatusCounts(a: Record<string, number>, b: Record<string, number>)
 export const getKanbanColumns = cache(async (lojaId: string | number): Promise<KanbanColuna[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/kanban-columns?loja_id=${lojaId}`, {
-      cache: 'no-store',
+      next: { revalidate: 300 },
       headers: await getAuthHeaders(),
     })
-    if (!response.ok) return DEFAULT_KANBAN_COLUMNS
+    if (!response.ok) return DEFAULT_KANBAN_COLUNAS
     const data = await response.json()
-    return data.data?.length ? data.data : DEFAULT_KANBAN_COLUMNS
+    return data.data?.length ? data.data : DEFAULT_KANBAN_COLUNAS
   } catch {
-    return DEFAULT_KANBAN_COLUMNS
+    return DEFAULT_KANBAN_COLUNAS
   }
 })
 
 export async function getMultiLojaKanbanColumns(lojaIds: number[]): Promise<KanbanColuna[]> {
-  if (!lojaIds.length) return DEFAULT_KANBAN_COLUMNS
+  if (!lojaIds.length) return DEFAULT_KANBAN_COLUNAS
   return getKanbanColumns(lojaIds[0])
 }

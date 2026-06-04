@@ -10,24 +10,26 @@ import { LeadDetailsModal } from "@/components/leads/lead-dialog"
 import { Users, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchLojaLeadsPaginated } from "@/actions/leads-actions"
 import type { Lead, KanbanColuna } from "@/lib/types"
+import { STATUS_LABELS, STATUS_BADGE_CLASSES, COR_TO_BADGE_CLASS } from "@/lib/kanban-config"
 
 const DEFAULT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  nao_atendido:        { label: "Não Atendido",       className: "bg-amber-100 text-amber-800 border-amber-200" },
-  em_negociacao:       { label: "Em Negociação",       className: "bg-blue-100 text-blue-800 border-blue-200" },
-  venda_realizada:     { label: "Venda Realizada",     className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  venda_nao_realizada: { label: "Venda Não Realizada", className: "bg-red-100 text-red-800 border-red-200" },
+  nao_atendido:        { label: STATUS_LABELS.nao_atendido,        className: STATUS_BADGE_CLASSES.nao_atendido },
+  em_negociacao:       { label: STATUS_LABELS.em_negociacao,       className: STATUS_BADGE_CLASSES.em_negociacao },
+  venda_realizada:     { label: STATUS_LABELS.venda_realizada,     className: STATUS_BADGE_CLASSES.venda_realizada },
+  venda_nao_realizada: { label: STATUS_LABELS.venda_nao_realizada, className: STATUS_BADGE_CLASSES.venda_nao_realizada },
 }
 
+// kept for backward compat — use COR_TO_BADGE_CLASS from kanban-config instead
 const COR_TO_CLASS: Record<string, string> = {
-  amber:   "bg-amber-100 text-amber-800 border-amber-200",
-  blue:    "bg-blue-100 text-blue-800 border-blue-200",
-  emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  red:     "bg-red-100 text-red-800 border-red-200",
-  rose:    "bg-rose-100 text-rose-800 border-rose-200",
-  slate:   "bg-slate-100 text-slate-700 border-slate-200",
-  purple:  "bg-purple-100 text-purple-800 border-purple-200",
-  indigo:  "bg-indigo-100 text-indigo-800 border-indigo-200",
-  teal:    "bg-teal-100 text-teal-800 border-teal-200",
+  amber:   COR_TO_BADGE_CLASS.amber,
+  blue:    COR_TO_BADGE_CLASS.blue,
+  emerald: COR_TO_BADGE_CLASS.emerald,
+  red:     COR_TO_BADGE_CLASS.red,
+  rose:    COR_TO_BADGE_CLASS.rose,
+  slate:   COR_TO_BADGE_CLASS.slate,
+  purple:  COR_TO_BADGE_CLASS.purple,
+  indigo:  COR_TO_BADGE_CLASS.indigo,
+  teal:    COR_TO_BADGE_CLASS.teal,
   orange:  "bg-orange-100 text-orange-800 border-orange-200",
   pink:    "bg-pink-100 text-pink-800 border-pink-200",
   violet:  "bg-violet-100 text-violet-800 border-violet-200",

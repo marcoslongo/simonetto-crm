@@ -380,10 +380,10 @@ class Stats_Handler
     // Busca labels e ordem das colunas na tabela wp_kanban_columns
     $col_table = $wpdb->prefix . 'kanban_columns';
     $label_map = [
-      'nao_atendido'        => 'Não atendido',
-      'em_negociacao'       => 'Em negociação',
-      'venda_realizada'     => 'Venda realizada',
-      'venda_nao_realizada' => 'Venda não realizada',
+      'nao_atendido'        => 'Não Atendido',
+      'em_negociacao'       => 'Em Negociação',
+      'venda_realizada'     => 'Venda Realizada',
+      'venda_nao_realizada' => 'Venda Não Realizada',
     ];
     $order_map = [
       'nao_atendido' => 0, 'em_negociacao' => 1,
