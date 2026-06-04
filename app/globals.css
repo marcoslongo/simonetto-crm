@@ -4,7 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
+  /* Page background: subtle cool off-white creates depth below white cards */
+  --background: oklch(0.966 0.007 249);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -20,8 +21,8 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.916 0.006 249);
+  --input: oklch(0.916 0.006 249);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -29,14 +30,18 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.966 0.007 249);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-border: oklch(0.916 0.006 249);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Brand */
+  --brand: #16255c;
+  --brand-light: #eef0f8;
+  --brand-border: #c7cfe8;
 }
 
 .dark {
@@ -75,8 +80,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,16 +126,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Typographic scale */
+  h1, .text-display { letter-spacing: -0.025em; }
+  h2, h3           { letter-spacing: -0.015em; }
+  /* Tabular numbers for data/KPIs */
+  .tabular-nums, [data-kpi] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 }
 
+/* ── Dashboard card surface ─────────────────────────────────────────────── */
+/* Replaces the near-invisible from-slate-50 to-slate-100 gradient.
+   Use instead of bg-gradient-to-br from-slate-50 to-slate-100 on dashboard cards. */
+.card-surface {
+  background-color: oklch(1 0 0);
+  border: 1px solid oklch(0.916 0.006 249);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  border-radius: 1rem;
+}
+
+.card-surface-elevated {
+  background-color: oklch(1 0 0);
+  border: 1px solid oklch(0.916 0.006 249);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  border-radius: 1rem;
+}
+
+/* ── Kanban scrollbar ───────────────────────────────────────────────────── */
 .kanban-scroll {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.75 0 0) oklch(0.95 0 0);
 }
-.kanban-scroll::-webkit-scrollbar {
-  height: 6px;
-}
+.kanban-scroll::-webkit-scrollbar { height: 6px; }
 .kanban-scroll::-webkit-scrollbar-track {
   background: oklch(0.95 0 0);
   border-radius: 999px;

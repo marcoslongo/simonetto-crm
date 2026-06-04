@@ -10,6 +10,7 @@ import {
 import { TrendingUp, Store, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { ConversaoPorLojaItem } from "@/lib/api-loja"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const PAGE_SIZE = 10
 
@@ -54,15 +55,17 @@ export function ChartConversaoPorLoja({ data }: Props) {
 
   if (!data.length) {
     return (
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
+      <Card className="border-0 card-surface-elevated">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-[#16255c]">Taxa de Conversão por Loja</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex flex-col items-center justify-center gap-2">
-            <Store className="h-8 w-8 text-slate-300" />
-            <p className="text-slate-400 text-sm">Nenhum dado disponível</p>
-          </div>
+          <EmptyState
+            icon={Store}
+            title="Nenhum dado de conversão"
+            description="Os dados de conversão por unidade aparecerão aqui após o primeiro fechamento."
+            size="md"
+          />
         </CardContent>
       </Card>
     )
@@ -74,7 +77,7 @@ export function ChartConversaoPorLoja({ data }: Props) {
   const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
+    <Card className="border-0 card-surface-elevated">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card"
 import { Users } from "lucide-react"
 import type { FunilPorAtendenteItem } from "@/lib/api-loja"
+import { EmptyState } from "@/components/ui/empty-state"
 
 interface Props {
   data: FunilPorAtendenteItem[]
@@ -49,15 +50,17 @@ function CustomTooltip({ active, payload }: any) {
 export function ChartFunilPorAtendente({ data }: Props) {
   if (!data.length) {
     return (
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
+      <Card className="border-0 card-surface-elevated">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-[#16255c]">Funil por Atendente</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex flex-col items-center justify-center gap-2">
-            <Users className="h-8 w-8 text-slate-300" />
-            <p className="text-slate-400 text-sm">Nenhum dado disponível</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="Nenhum atendente com leads"
+            description="Atribua responsáveis aos leads no Kanban para ver o desempenho individual."
+            size="md"
+          />
         </CardContent>
       </Card>
     )
@@ -67,7 +70,7 @@ export function ChartFunilPorAtendente({ data }: Props) {
   const top = sorted[0]
 
   return (
-    <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
+    <Card className="border-0 card-surface-elevated">
       <CardHeader>
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
