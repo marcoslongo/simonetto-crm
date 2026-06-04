@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
-import { DualChartSkeleton } from '@/components/dashboard/dashboard-skeletons'
-import { GeoInvestSection } from '@/components/dashboard/dashboard-sections'
+import { DualChartSkeleton, ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { GeoInvestSection, CoberturaFranqueadosSection } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
   title: 'Geografia | Noxus',
@@ -17,12 +17,16 @@ export default async function GeografiaPage() {
           Geografia
         </h2>
         <p className="text-muted-foreground mt-1">
-          Distribuição geográfica dos leads
+          Distribuição geográfica dos leads e cobertura de franqueados
         </p>
       </div>
 
       <Suspense fallback={<DualChartSkeleton />}>
         <GeoInvestSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[400px]" />}>
+        <CoberturaFranqueadosSection />
       </Suspense>
     </div>
   )

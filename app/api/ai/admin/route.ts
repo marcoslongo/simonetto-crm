@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession, isAdmin } from '@/lib/auth'
 import { fetchAiContexto } from '@/lib/ai-context'
+import { buildRedeContext } from '@/lib/ai-rede-context'
 import Groq from 'groq-sdk'
 
 export const maxDuration = 60
@@ -17,7 +18,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Missing pergunta' }, { status: 400 })
   }
 
-  const context = await fetchAiContexto(session.token)
+  const [context, redeContext] = await Promise.all([
+    fetchAiContexto(session.token).catch(() => ''),
+    buildRedeContext(session.token).catch(() => ''),
+  ])
+
+  const fullContext = [context, redeContext].filter(Boolean).join('\n\n')
 
   const completion = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
@@ -25,14 +31,18 @@ export async function POST(req: Request) {
       {
         role: 'system',
         content:
-          'Você é um analista de dados especializado em CRM de vendas de móveis planejados da Simonetto. Responda sempre em português brasileiro, de forma clara, estruturada e com insights acionáveis. Use os números exatos fornecidos nos dados.',
+          'Você é um analista especializado em gestão de redes de franquias de móveis planejados da Simonetto. ' +
+          'Você gerencia uma rede de 80 franqueados e tem acesso a dados em tempo real de performance, SLA e conversão. ' +
+          'Responda sempre em português brasileiro. Seja direto, use os números exatos dos dados e dê insights acionáveis. ' +
+          'Quando identificar franqueados com problemas, cite-os pelo nome. ' +
+          'Priorize sempre: 1) Alertas operacionais urgentes, 2) Comparativos entre franqueados, 3) Recomendações concretas.',
       },
       {
         role: 'user',
-        content: `Dados atuais do CRM:\n${context}\n\nPergunta do administrador:\n${pergunta}`,
+        content: `Dados em tempo real da rede:\n${fullContext}\n\nPergunta do administrador:\n${pergunta}`,
       },
     ],
-    temperature: 0.5,
+    temperature: 0.4,
     max_tokens: 2048,
   })
 

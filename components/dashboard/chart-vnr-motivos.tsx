@@ -15,8 +15,10 @@ import { Calendar } from "@/components/ui/calendar"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { CalendarIcon, Eraser, TrendingDown, AlertCircle } from "lucide-react"
+import { CalendarIcon, Eraser, TrendingDown, AlertCircle, BarChart2, GitCompare } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+type VnrView = 'chart' | 'comparativo'
 
 export interface VnrMotivoItem {
   key: string
@@ -81,31 +83,95 @@ async function fetchVnrStats(params: {
   return { total: json.total, motivos: json.motivos }
 }
 
+function ComparativoTable({ lojaData, redeData, lojaNome }: {
+  lojaData: VnrStatsData
+  redeData: VnrStatsData
+  lojaNome: string
+}) {
+  const redeMap = Object.fromEntries(redeData.motivos.map(m => [m.key, m]))
+  const motivos = lojaData.motivos.filter(m => m.total > 0 || (redeMap[m.key]?.total ?? 0) > 0)
+
+  if (!motivos.length) return (
+    <p className="text-sm text-slate-400 text-center py-8">Sem dados de VNR para comparar</p>
+  )
+
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-4 gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider pb-2 border-b">
+        <span className="col-span-2">Motivo</span>
+        <span className="text-right truncate">{lojaNome}</span>
+        <span className="text-right">Rede</span>
+      </div>
+      {motivos.map((m) => {
+        const rede = redeMap[m.key]
+        const redePct = rede?.pct ?? 0
+        const diff = m.pct - redePct
+        const isCritical = diff > 15
+        const isWarning  = diff > 5 && !isCritical
+        return (
+          <div key={m.key} className={cn(
+            "grid grid-cols-4 gap-2 text-xs py-2 px-2 rounded-lg transition-colors",
+            isCritical ? "bg-red-50 border border-red-200" :
+            isWarning  ? "bg-amber-50 border border-amber-100" :
+            "hover:bg-slate-50 border border-transparent"
+          )}>
+            <span className={cn("col-span-2 font-medium", isCritical ? "text-red-700" : isWarning ? "text-amber-700" : "text-slate-700")}>
+              {m.label}
+            </span>
+            <span className={cn("text-right font-bold tabular-nums", isCritical ? "text-red-600" : isWarning ? "text-amber-600" : "text-slate-600")}>
+              {m.pct}%
+            </span>
+            <div className="text-right">
+              <span className="text-slate-500 tabular-nums">{redePct}%</span>
+              {diff !== 0 && (
+                <span className={cn("ml-1 text-[10px] font-semibold", diff > 0 ? "text-red-500" : "text-emerald-500")}>
+                  {diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0)}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+      <p className="text-xs text-slate-400 pt-2 text-center">
+        Valores em % dos registros VNR · Vermelho = loja +15pp acima da rede
+      </p>
+    </div>
+  )
+}
+
 export function ChartVnrMotivos({
   initialData,
   isAdmin = false,
   lojas = [],
   lojaIds = [],
 }: ChartVnrMotivosProps) {
-  const [data, setData]       = useState<VnrStatsData>(initialData)
-  const [loading, setLoading] = useState(false)
-  const [from, setFrom]       = useState<Date | undefined>()
-  const [to, setTo]           = useState<Date | undefined>()
-  const [lojaId, setLojaId]   = useState<string>("all")
+  const [data, setData]         = useState<VnrStatsData>(initialData)
+  const [redeData, setRedeData] = useState<VnrStatsData | null>(null)
+  const [loading, setLoading]   = useState(false)
+  const [from, setFrom]         = useState<Date | undefined>()
+  const [to, setTo]             = useState<Date | undefined>()
+  const [lojaId, setLojaId]     = useState<string>("all")
+  const [view, setView]         = useState<VnrView>('chart')
 
   const isFiltered = !!(from || to || (isAdmin && lojaId !== "all"))
+  const lojaName   = lojas.find(l => String(l.id) === lojaId)?.nome ?? ''
 
   const refetch = useCallback(async (opts: {
     from?: Date; to?: Date; lojaId?: string
   }) => {
     setLoading(true)
     try {
-      const result = await fetchVnrStats({
-        lojaId:  opts.lojaId,
-        from:    opts.from ? format(opts.from, "yyyy-MM-dd") : undefined,
-        to:      opts.to   ? format(opts.to,   "yyyy-MM-dd") : undefined,
-      })
+      const fromStr = opts.from ? format(opts.from, "yyyy-MM-dd") : undefined
+      const toStr   = opts.to   ? format(opts.to,   "yyyy-MM-dd") : undefined
+
+      const [result, rede] = await Promise.all([
+        fetchVnrStats({ lojaId: opts.lojaId, from: fromStr, to: toStr }),
+        opts.lojaId && opts.lojaId !== "all"
+          ? fetchVnrStats({ from: fromStr, to: toStr })
+          : Promise.resolve(null),
+      ])
       setData(result)
+      setRedeData(rede)
     } finally {
       setLoading(false)
     }
@@ -125,6 +191,8 @@ export function ChartVnrMotivos({
     setFrom(undefined)
     setTo(undefined)
     setLojaId("all")
+    setView('chart')
+    setRedeData(null)
     refetch({})
   }
 
@@ -229,21 +297,47 @@ export function ChartVnrMotivos({
           )}
         </div>
 
-        {/* Destaque do principal motivo */}
-        {top && top.total > 0 && (
-          <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-red-800">
-              <span className="font-semibold">Principal gargalo:</span>{" "}
-              {top.label}{" "}
-              <span className="text-red-600 font-bold">({top.pct}%)</span>
-            </p>
-          </div>
-        )}
+        {/* Toggle comparativo + destaque */}
+        <div className="flex flex-wrap items-center gap-3">
+          {top && top.total > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex-1">
+              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-800">
+                <span className="font-semibold">Principal gargalo:</span>{" "}
+                {top.label}{" "}
+                <span className="text-red-600 font-bold">({top.pct}%)</span>
+              </p>
+            </div>
+          )}
+          {redeData && lojaId !== "all" && (
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg shrink-0">
+              <button
+                onClick={() => setView('chart')}
+                className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                  view === 'chart' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                <BarChart2 className="h-3.5 w-3.5" />
+                Gráfico
+              </button>
+              <button
+                onClick={() => setView('comparativo')}
+                className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                  view === 'comparativo' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                <GitCompare className="h-3.5 w-3.5" />
+                vs. Rede
+              </button>
+            </div>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent>
-        {activeMotivos.length === 0 ? (
+        {view === 'comparativo' && redeData && lojaId !== "all" ? (
+          <ComparativoTable lojaData={data} redeData={redeData} lojaNome={lojaName} />
+        ) : activeMotivos.length === 0 ? (
           <div className="h-48 flex flex-col items-center justify-center gap-2">
             <TrendingDown className="h-8 w-8 text-slate-300" />
             <p className="text-slate-400 text-sm">Nenhum dado disponível</p>
@@ -279,8 +373,8 @@ export function ChartVnrMotivos({
           </div>
         )}
 
-        {/* Tabela legenda */}
-        {activeMotivos.length > 0 && (
+        {/* Tabela legenda — só no modo gráfico */}
+        {view !== 'comparativo' && activeMotivos.length > 0 && (
           <div className="mt-4 space-y-1.5 border-t pt-4">
             {activeMotivos.map((item, i) => (
               <div key={item.key} className="flex items-center gap-3 text-sm">

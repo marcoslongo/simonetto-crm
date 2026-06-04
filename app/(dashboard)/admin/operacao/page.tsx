@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
 import { DualChartSkeleton, ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
-import { ContatoRankingSection, SlaRedeSection } from '@/components/dashboard/dashboard-sections'
+import { ContatoRankingSection, SlaRedeSection, CapacidadeMonitorSection } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = {
   title: 'Operação | Noxus',
@@ -27,6 +27,10 @@ export default async function OperacaoPage() {
 
       <Suspense fallback={<DualChartSkeleton />}>
         <ContatoRankingSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-[400px]" />}>
+        <CapacidadeMonitorSection />
       </Suspense>
     </div>
   )

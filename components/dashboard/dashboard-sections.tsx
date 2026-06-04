@@ -94,6 +94,72 @@ export async function StatusStatsSection({ from, to }: StatusStatsSectionProps) 
   )
 }
 
+export async function CapacidadeMonitorSection() {
+  const lojas = await getLojasServer()
+  const lojasInput = lojas.map((l: any) => ({ id: Number(l.id), nome: l.nome })).filter((l: any) => l.id)
+  const todasSaude = await getTodasLojasSaude(lojasInput)
+
+  const comAtivos = todasSaude.filter(l => l.active_leads > 0)
+  if (!comAtivos.length) return null
+
+  const avg = comAtivos.reduce((s, l) => s + l.active_leads, 0) / comAtivos.length
+  const sorted = [...comAtivos].sort((a, b) => b.active_leads - a.active_leads).slice(0, 15)
+  const maxLeads = sorted[0]?.active_leads ?? 1
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-linear-to-br from-slate-50 to-slate-100 shadow-md overflow-hidden">
+      <div className="p-5 border-b border-border/40 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+            <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-[#16255c]">Monitor de Capacidade</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Leads ativos por franqueado · média da rede:{" "}
+              <span className="font-semibold text-blue-600">{avg.toFixed(0)} leads</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 text-xs">
+          <span className="flex items-center gap-1 text-red-600"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Sobrecarregado (&gt;2× média)</span>
+          <span className="flex items-center gap-1 text-amber-600"><span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />Atenção (&gt;1.5×)</span>
+        </div>
+      </div>
+      <div className="p-5 space-y-2">
+        {sorted.map(l => {
+          const ratio = avg > 0 ? l.active_leads / avg : 0
+          const isOverload = ratio >= 2
+          const isWarning = !isOverload && ratio >= 1.5
+          const barPct = Math.min(100, Math.round(l.active_leads / maxLeads * 100))
+          const barColor = isOverload ? 'bg-red-500' : isWarning ? 'bg-amber-400' : 'bg-blue-400'
+          const textColor = isOverload ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600'
+          return (
+            <Link key={l.loja_id} href={`/admin/lojas/${l.loja_id}`} className="flex items-center gap-3 rounded-lg hover:bg-white/60 transition-colors px-2 py-1.5 -mx-2 group">
+              <span className="text-xs text-slate-500 w-4 shrink-0 font-medium">{sorted.indexOf(l) + 1}.</span>
+              <span className="text-sm font-medium text-slate-700 w-36 shrink-0 truncate group-hover:text-[#16255c]">{l.loja_nome}</span>
+              <div className="flex-1 h-3 bg-slate-200/60 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${barPct}%` }} />
+              </div>
+              <span className={`text-sm font-bold tabular-nums w-8 text-right shrink-0 ${textColor}`}>{l.active_leads}</span>
+              {(isOverload || isWarning) && (
+                <span className={`text-xs font-medium shrink-0 ${textColor}`}>{ratio.toFixed(1)}×</span>
+              )}
+            </Link>
+          )
+        })}
+        {comAtivos.length > 15 && (
+          <p className="text-xs text-slate-400 text-center pt-2">
+            Exibindo 15 de {comAtivos.length} franqueados com leads ativos
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export async function ContatoRankingSection() {
   const [contatoStats, tempoPorLoja] = await Promise.all([
     getLeadsStatsServiceServer(),
@@ -408,6 +474,112 @@ export async function TopBottomConversoesSection({ from, to }: TopBottomConverso
               </div>
             </Link>
           ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export async function CoberturaFranqueadosSection() {
+  const [lojas, estadosGeo] = await Promise.all([
+    getLojasServer(),
+    getLeadsGeoStatsServer(),
+  ])
+
+  function parseEstado(loc: string): string {
+    const parts = loc.split(',')
+    const uf = parts[parts.length - 1].trim().toUpperCase()
+    return uf.length === 2 ? uf : ''
+  }
+
+  const lojasPorEstado: Record<string, { count: number; nomes: string[] }> = {}
+  for (const loja of lojas as any[]) {
+    const uf = parseEstado(loja.localizacao || '')
+    if (!uf) continue
+    if (!lojasPorEstado[uf]) lojasPorEstado[uf] = { count: 0, nomes: [] }
+    lojasPorEstado[uf].count++
+    lojasPorEstado[uf].nomes.push(loja.nome)
+  }
+
+  type Row = { estado: string; leads: number; lojas: number; ratio: number; gap: boolean }
+  const rows: Row[] = Object.entries(estadosGeo)
+    .map(([estado, info]: any) => {
+      const cobertura = lojasPorEstado[estado] ?? { count: 0 }
+      return {
+        estado,
+        leads: info.total,
+        lojas: cobertura.count,
+        ratio: cobertura.count > 0 ? Math.round(info.total / cobertura.count) : info.total,
+        gap: cobertura.count === 0,
+      }
+    })
+    .sort((a, b) => b.leads - a.leads)
+    .slice(0, 20)
+
+  const gaps = rows.filter(r => r.gap)
+  const cobertos = rows.filter(r => !r.gap)
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-linear-to-br from-slate-50 to-slate-100 shadow-md overflow-hidden">
+      <div className="p-5 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+            <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-[#16255c]">Cobertura de Franqueados por Estado</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {cobertos.length} estados cobertos · {gaps.length} gaps (leads sem loja local)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {gaps.length > 0 && (
+        <div className="px-5 pt-4 pb-2">
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">
+            Gaps — estados com leads mas sem franqueado
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {gaps.map(r => (
+              <div key={r.estado} className="flex items-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs">
+                <span className="font-bold text-red-700">{r.estado}</span>
+                <span className="text-red-500">{r.leads} leads</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="p-5">
+        <div className="grid grid-cols-5 gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider pb-2 border-b mb-1">
+          <span>Estado</span>
+          <span className="text-right">Leads</span>
+          <span className="text-right">Lojas</span>
+          <span className="text-right">Leads/Loja</span>
+          <span className="text-right">Status</span>
+        </div>
+        <div className="space-y-0.5">
+          {cobertos.slice(0, 15).map(r => {
+            const highLoad = r.lojas > 0 && r.ratio > 200
+            return (
+              <div key={r.estado} className="grid grid-cols-5 gap-2 text-xs py-1.5 rounded-md px-1 hover:bg-white/60 transition-colors">
+                <span className="font-semibold text-slate-700">{r.estado}</span>
+                <span className="text-right text-slate-600 tabular-nums">{r.leads}</span>
+                <span className="text-right text-blue-600 font-medium tabular-nums">{r.lojas}</span>
+                <span className={`text-right font-medium tabular-nums ${highLoad ? 'text-amber-600' : 'text-slate-500'}`}>{r.ratio}</span>
+                <span className="text-right">
+                  {highLoad
+                    ? <span className="text-amber-600 font-medium">Alta demanda</span>
+                    : <span className="text-emerald-600">OK</span>
+                  }
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

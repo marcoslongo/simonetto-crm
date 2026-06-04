@@ -16,10 +16,10 @@ import { toast } from "sonner"
 const BLUE = "#16255c"
 
 const EXEMPLOS = [
-  "Quantos leads a cidade de Curitiba recebeu, separando por lojas da região? Compare o perfil dos leads por orçamento e ambientes.",
-  "Qual o perfil mais comum dos nossos leads? Analise orçamento, ambientes de interesse e temperatura.",
-  "Quais cidades estão enviando mais leads quentes? Faça um ranking.",
-  "Compare a performance das lojas: qual recebe mais leads e qual tem mais leads em negociação?",
+  "Quais são os 5 franqueados com menor conversão agora? Qual o principal motivo de perda de cada um?",
+  "Quantos franqueados estão com SLA crítico? Quais devo contatar primeiro?",
+  "Compare Indústria vs Próprio: qual origem traz leads que convertem mais?",
+  "Qual franqueado está sobrecarregado com mais leads ativos? Preciso redistribuir?",
 ]
 
 interface Mensagem {
