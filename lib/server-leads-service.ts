@@ -133,9 +133,9 @@ export async function getLeadsLast30DaysServer(from?: string, to?: string, orige
   return getLeadsLast30Days(from, to, token, origem)
 }
 
-export async function getLeadsStatusTotalServer(from?: string, to?: string, lojaId?: number) {
+export async function getLeadsStatusTotalServer(from?: string, to?: string, lojaId?: number, origem?: 'industria' | 'proprio') {
   const token = await getToken()
-  return getLeadsStatusTotal(from, to, lojaId, token)
+  return getLeadsStatusTotal(from, to, lojaId, token, origem)
 }
 
 export async function getLeadsGeoStatsServer(

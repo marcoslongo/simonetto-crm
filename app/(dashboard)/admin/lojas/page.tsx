@@ -1,7 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { buscarLojasServer } from '@/lib/server-lojas-service'
 import type { SortBy } from '@/lib/lojas-service'
-import { getLojaFunilSaude } from '@/lib/api-loja'
+import { getLojaFunilSaude, getConversaoPorLoja } from '@/lib/api-loja'
 
 import {
   Card,
@@ -26,18 +26,39 @@ import { Input } from '@/components/ui/input'
 
 type HealthStatus = 'verde' | 'amarelo' | 'vermelho' | 'neutro'
 
-function getHealthStatus(slaBreachPct: number, activeLeads: number): HealthStatus {
-  if (activeLeads === 0) return 'neutro'
-  if (slaBreachPct >= 30) return 'vermelho'
-  if (slaBreachPct >= 15) return 'amarelo'
+function getHealthStatus(
+  slaBreachPct: number,
+  activeLeads: number,
+  taxaConversao?: number,
+  avgConversao?: number,
+): HealthStatus {
+  if (activeLeads === 0 && !taxaConversao) return 'neutro'
+  const slaCritico = slaBreachPct >= 30
+  const slaAtencao = slaBreachPct >= 15
+  const conversaoCritica = avgConversao !== undefined && taxaConversao !== undefined && taxaConversao < avgConversao * 0.5
+  const conversaoAtencao = avgConversao !== undefined && taxaConversao !== undefined && taxaConversao < avgConversao * 0.75
+  if (slaCritico || conversaoCritica) return 'vermelho'
+  if (slaAtencao || conversaoAtencao) return 'amarelo'
   return 'verde'
 }
 
-const healthConfig: Record<HealthStatus, { dot: string; badge: string; label: string }> = {
-  verde:    { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'SLA OK' },
-  amarelo:  { dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 border-amber-200',       label: 'Atenção' },
-  vermelho: { dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 border-red-200',             label: 'Crítico' },
-  neutro:   { dot: 'bg-slate-300',   badge: 'bg-slate-50 text-slate-500 border-slate-200',       label: 'Sem ativos' },
+function getHealthLabel(
+  slaBreachPct: number,
+  taxaConversao?: number,
+  avgConversao?: number,
+): string {
+  if (slaBreachPct >= 30) return 'SLA Crítico'
+  if (avgConversao && taxaConversao !== undefined && taxaConversao < avgConversao * 0.5) return 'Conv. Crítica'
+  if (slaBreachPct >= 15) return 'SLA Atenção'
+  if (avgConversao && taxaConversao !== undefined && taxaConversao < avgConversao * 0.75) return 'Conv. Atenção'
+  return 'Saudável'
+}
+
+const healthConfig: Record<HealthStatus, { dot: string; badge: string }> = {
+  verde:    { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  amarelo:  { dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700 border-amber-200'       },
+  vermelho: { dot: 'bg-red-500',     badge: 'bg-red-50 text-red-700 border-red-200'             },
+  neutro:   { dot: 'bg-slate-300',   badge: 'bg-slate-50 text-slate-500 border-slate-200'       },
 }
 
 export const metadata = {
@@ -74,11 +95,16 @@ export default async function AdminLojasPage({
 
   const { items: lojasPaginadas, total, totalPages } = resultado
 
-  const saudeMap = Object.fromEntries(
-    await Promise.all(
-      lojasPaginadas.map(async (loja) => [loja.id, await getLojaFunilSaude(loja.id)] as const)
-    )
-  )
+  const [saudeResults, conversaoData] = await Promise.all([
+    Promise.all(lojasPaginadas.map(async (loja) => [loja.id, await getLojaFunilSaude(loja.id)] as const)),
+    getConversaoPorLoja(),
+  ])
+
+  const saudeMap = Object.fromEntries(saudeResults)
+  const conversaoMap = Object.fromEntries(conversaoData.map(c => [c.loja_id, c]))
+  const avgConversao = conversaoData.length
+    ? conversaoData.reduce((s, c) => s + c.taxa_conversao, 0) / conversaoData.length
+    : 0
 
   return (
     <div className="space-y-6">
@@ -142,8 +168,14 @@ export default async function AdminLojasPage({
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {lojasPaginadas.map((loja) => {
               const saude = saudeMap[loja.id]
-              const health = getHealthStatus(saude?.sla_breach_pct ?? 0, saude?.active_leads ?? 0)
+              const conv = conversaoMap[Number(loja.id)]
+              const taxaConversao = conv?.taxa_conversao
+              const health = getHealthStatus(saude?.sla_breach_pct ?? 0, saude?.active_leads ?? 0, taxaConversao, avgConversao)
               const hc = healthConfig[health]
+              const label = getHealthLabel(saude?.sla_breach_pct ?? 0, taxaConversao, avgConversao)
+              const vsMedia = taxaConversao !== undefined && avgConversao > 0
+                ? Math.round((taxaConversao - avgConversao) * 10) / 10
+                : null
               return (
                 <Card
                   key={loja.id}
@@ -166,7 +198,7 @@ export default async function AdminLojasPage({
                       </div>
                       <span className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border ${hc.badge}`}>
                         <span className={`h-2 w-2 rounded-full ${hc.dot}`} />
-                        {hc.label}
+                        {label}
                       </span>
                     </div>
                   </CardHeader>
@@ -194,18 +226,15 @@ export default async function AdminLojasPage({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium">Total</p>
-                        <p className="text-xl font-bold">{loja.totalLeads}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium">Hoje</p>
-                        {loja.leadsHoje > 0 ? (
-                          <p className="text-xl font-bold text-green-600">+{loja.leadsHoje}</p>
-                        ) : (
-                          <p className="text-xl font-bold text-muted-foreground">0</p>
-                        )}
+                        <p className="text-xs text-muted-foreground font-medium">Total / Hoje</p>
+                        <p className="text-xl font-bold">
+                          {loja.totalLeads}
+                          {loja.leadsHoje > 0 && (
+                            <span className="text-sm font-medium text-green-600 ml-1.5">+{loja.leadsHoje}</span>
+                          )}
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-medium">Ativos</p>
@@ -214,6 +243,25 @@ export default async function AdminLojasPage({
                         </p>
                       </div>
                     </div>
+
+                    {taxaConversao !== undefined && (
+                      <div className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 border border-border/40">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Conversão</p>
+                          <p className={`text-lg font-bold ${taxaConversao >= avgConversao ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {taxaConversao}%
+                          </p>
+                        </div>
+                        {vsMedia !== null && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">vs. rede</p>
+                            <p className={`text-sm font-semibold ${vsMedia >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {vsMedia >= 0 ? '+' : ''}{vsMedia}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <Link
                       href={`/admin/lojas/${loja.id}`}

@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
-import { KeyRound, User, ShieldCheck } from 'lucide-react'
+import { KeyRound, User, ShieldCheck, ImageIcon } from 'lucide-react'
 import { ConfiguracoesForm } from './configuracoes-form'
+import { AvatarForm } from './avatar-form'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
@@ -29,8 +30,26 @@ export default async function ConfiguracoesPage() {
         <p className="text-muted-foreground mt-1">Gerencie as configurações da sua conta</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border bg-white shadow-sm bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Card: Avatar */}
+        <div className="rounded-xl border bg-white shadow-sm bg-linear-to-br from-slate-50 to-slate-100">
+          <div className="flex items-center gap-3 border-b px-6 py-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#16255c]">
+              <ImageIcon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Foto de perfil</p>
+              <p className="text-xs text-muted-foreground">Visível nos cards de atendimento</p>
+            </div>
+          </div>
+          <div className="px-6 py-6">
+            <AvatarForm currentAvatarUrl={user.avatar_url} userName={user.name} />
+          </div>
+        </div>
+
+        {/* Card: Perfil */}
+        <div className="rounded-xl border bg-white shadow-sm bg-linear-to-br from-slate-50 to-slate-100">
           <div className="flex items-center gap-3 border-b px-6 py-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#16255c]">
               <User className="h-5 w-5 text-white" />
@@ -71,7 +90,8 @@ export default async function ConfiguracoesPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border shadow-sm bg-gradient-to-br from-slate-50 to-slate-100">
+        {/* Card: Alterar senha */}
+        <div className="rounded-xl border shadow-sm bg-linear-to-br from-slate-50 to-slate-100">
           <div className="flex items-center gap-3 border-b px-6 py-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#16255c] shadow-sm">
               <KeyRound className="h-5 w-5 text-white" />

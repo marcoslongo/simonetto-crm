@@ -35,12 +35,14 @@ function add_loja_role_userid_to_jwt($data, $user) {
 
     $roles      = $user->roles;
     $is_gerente = (bool) get_field('is_gerente', 'user_' . $user_id);
+    $avatar_url = get_user_meta($user_id, '_crm_avatar_url', true) ?: null;
 
     $data['user_id'] = $user_id;
     $data['role']    = $roles;
     $data['acf']     = [
         'loja_ids'   => $loja_ids,
         'is_gerente' => $is_gerente,
+        'avatar_url' => $avatar_url,
     ];
 
     return $data;
@@ -74,6 +76,7 @@ function crm_login_user(WP_REST_Request $request) {
   $loja_nome  = get_user_meta($user->ID, 'loja_nome', true);
   $role       = $user->roles[0] ?? 'subscriber';
   $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
+  $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
 
   return new WP_REST_Response([
     'token' => wp_create_nonce('crm_auth_' . $user->ID),
@@ -85,6 +88,7 @@ function crm_login_user(WP_REST_Request $request) {
       'loja_ids'   => $loja_ids,
       'loja_nome'  => $loja_nome ?: null,
       'is_gerente' => $is_gerente,
+      'avatar_url' => $avatar_url,
     ],
     'expires' => date('c', time() + WEEK_IN_SECONDS),
   ]);

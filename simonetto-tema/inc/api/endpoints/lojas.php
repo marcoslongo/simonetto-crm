@@ -148,6 +148,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
+  // POST /api/v1/usuarios/me/avatar — upload de foto de perfil
+  register_rest_route('api/v1', '/usuarios/me/avatar', [
+    'methods'             => 'POST',
+    'callback'            => 'mytheme_api_upload_user_avatar',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET/POST /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
   register_rest_route('api/v1', '/usuarios/me/whatsapp-config', [
     [
@@ -508,6 +515,87 @@ function mytheme_api_get_loja_usuarios(WP_REST_Request $request): WP_REST_Respon
   return new WP_REST_Response([
     'success'  => true,
     'usuarios' => $usuarios,
+  ], 200);
+}
+
+// -------------------------------------------------------------------------
+// Avatar de perfil
+// -------------------------------------------------------------------------
+
+/**
+ * POST /api/v1/usuarios/me/avatar
+ * Recebe multipart/form-data com campo "avatar" (jpg/png/webp/gif).
+ * Salva o arquivo, cria attachment e persiste URL em user_meta.
+ */
+function mytheme_api_upload_user_avatar(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = get_current_user_id();
+
+  $files = $request->get_file_params();
+  if (empty($files['avatar'])) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Nenhum arquivo enviado.'], 400);
+  }
+
+  $file = $files['avatar'];
+
+  // Valida tipo MIME
+  $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  $finfo = finfo_open(FILEINFO_MIME_TYPE);
+  $mime  = finfo_file($finfo, $file['tmp_name']);
+  finfo_close($finfo);
+
+  if (!in_array($mime, $allowed_mimes, true)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Formato inválido. Use JPG, PNG ou WEBP.'], 400);
+  }
+
+  // Valida tamanho (máx 5 MB)
+  if ($file['size'] > 5 * 1024 * 1024) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Arquivo muito grande. Máximo 5 MB.'], 400);
+  }
+
+  require_once ABSPATH . 'wp-admin/includes/file.php';
+  require_once ABSPATH . 'wp-admin/includes/media.php';
+  require_once ABSPATH . 'wp-admin/includes/image.php';
+
+  $overrides = [
+    'test_form' => false,
+    'mimes'     => [
+      'jpg|jpeg' => 'image/jpeg',
+      'png'      => 'image/png',
+      'webp'     => 'image/webp',
+      'gif'      => 'image/gif',
+    ],
+  ];
+
+  $uploaded = wp_handle_upload($file, $overrides);
+
+  if (isset($uploaded['error'])) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $uploaded['error']], 500);
+  }
+
+  // Remove attachment anterior
+  $old_id = (int) get_user_meta($user_id, '_crm_avatar_attachment_id', true);
+  if ($old_id) {
+    wp_delete_attachment($old_id, true);
+  }
+
+  // Cria attachment no media library
+  $attachment_id = wp_insert_attachment([
+    'post_mime_type' => $uploaded['type'],
+    'post_title'     => 'avatar-user-' . $user_id,
+    'post_status'    => 'inherit',
+  ], $uploaded['file']);
+
+  if (!is_wp_error($attachment_id)) {
+    wp_update_attachment_metadata($attachment_id, wp_generate_attachment_metadata($attachment_id, $uploaded['file']));
+    update_user_meta($user_id, '_crm_avatar_attachment_id', $attachment_id);
+  }
+
+  update_user_meta($user_id, '_crm_avatar_url', $uploaded['url']);
+
+  return new WP_REST_Response([
+    'success'    => true,
+    'avatar_url' => $uploaded['url'],
   ], 200);
 }
 

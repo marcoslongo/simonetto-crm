@@ -85,6 +85,7 @@ export async function authenticateUser(
     loja_ids,
     loja_nome: data.user_display_name,
     is_gerente: data.acf?.is_gerente === true,
+    avatar_url: data.acf?.avatar_url ?? null,
   }
 
   return {

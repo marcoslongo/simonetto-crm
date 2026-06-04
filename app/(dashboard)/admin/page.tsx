@@ -11,6 +11,8 @@ import {
   StatsByOrigemSection,
   ComparativoSemanalSection,
   SlaRedeSection,
+  ConversaoRedeSection,
+  TopBottomConversoesSection,
 } from '@/components/dashboard/dashboard-sections'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
 
@@ -53,6 +55,14 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
       <Suspense fallback={<ChartCardSkeleton height="h-20" />}>
         <SlaRedeSection />
+      </Suspense>
+
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <ConversaoRedeSection from={from} to={to} />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-64" />}>
+        <TopBottomConversoesSection from={from} to={to} />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>

@@ -26,6 +26,7 @@ export interface AuthResponse {
   acf: {
     loja_ids: number[];
     is_gerente?: boolean;
+    avatar_url?: string | null;
   };
 }
 
@@ -38,6 +39,7 @@ export interface User {
   loja_ids: number[];
   loja_nome?: string;
   is_gerente: boolean;
+  avatar_url?: string | null;
 }
 
 export interface Session {
@@ -84,6 +86,7 @@ export interface Lead {
   unread_count?: number;
   responsavel_id?: number | null;
   responsavel_nome?: string | null;
+  responsavel_avatar_url?: string | null;
   proximo_followup_em?: string | null;
   proximo_followup_descricao?: string | null;
 }

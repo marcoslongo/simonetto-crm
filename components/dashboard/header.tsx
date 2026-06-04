@@ -82,13 +82,22 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 size="sm"
                 className="gap-1.5 border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white lg:border-gray-200 lg:bg-background lg:text-gray-900 lg:hover:bg-gray-50 lg:hover:text-gray-900 h-9 px-2 lg:px-3"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 lg:bg-primary/10">
-                  {isAdmin ? (
-                    <Shield className="h-3.5 w-3.5 text-white lg:text-primary" />
-                  ) : (
-                    <User className="h-3.5 w-3.5 text-white lg:text-primary" />
-                  )}
-                </div>
+                {/* Avatar: foto se existir, senão ícone/iniciais */}
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="h-7 w-7 rounded-full object-cover ring-1 ring-white/20 lg:ring-gray-200 shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 lg:bg-primary/10 shrink-0">
+                    {isAdmin ? (
+                      <Shield className="h-3.5 w-3.5 text-white lg:text-primary" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-white lg:text-primary" />
+                    )}
+                  </div>
+                )}
                 <span className="hidden sm:inline-block text-sm max-w-28 truncate">
                   {user.name}
                 </span>
@@ -96,9 +105,25 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                <div className="flex items-center gap-3">
+                  {user.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.name}
+                      className="h-9 w-9 rounded-full object-cover ring-1 ring-border shrink-0"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                      {isAdmin
+                        ? <Shield className="h-4 w-4 text-primary" />
+                        : <User className="h-4 w-4 text-primary" />
+                      }
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-sm font-medium truncate">{user.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

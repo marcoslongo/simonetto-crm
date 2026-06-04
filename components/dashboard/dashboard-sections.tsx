@@ -21,7 +21,8 @@ import {
   getLeadsLast12MonthsServer,
 } from '@/lib/server-leads-service'
 import { getLojasServer } from '@/lib/server-lojas-service'
-import { getMultiLojaFunilSaude } from '@/lib/api-loja'
+import { getMultiLojaFunilSaude, getConversaoPorLoja, getTodasLojasSaude } from '@/lib/api-loja'
+import Link from 'next/link'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { StatsCardsOrigem } from '@/components/dashboard/stats-cards-origem'
@@ -187,55 +188,99 @@ export async function ComparativoSemanalSection() {
 
 export async function SlaRedeSection() {
   const lojas = await getLojasServer()
-  const lojaIds = lojas.map((l: any) => Number(l.id)).filter(Boolean)
-  const saude = await getMultiLojaFunilSaude(lojaIds)
+  const lojasInput = lojas.map((l: any) => ({ id: Number(l.id), nome: l.nome })).filter((l: any) => l.id)
+
+  const todasSaude = await getTodasLojasSaude(lojasInput)
+
+  const saude = todasSaude.reduce(
+    (acc, s) => ({
+      active_leads:        acc.active_leads        + s.active_leads,
+      sla_breach_count:    acc.sla_breach_count    + s.sla_breach_count,
+      sla_nao_atendido:    acc.sla_nao_atendido    + s.sla_nao_atendido,
+      sla_parados:         acc.sla_parados         + s.sla_parados,
+      sla_breach_pct:      0,
+      score_medio:         0,
+      followup_total:      acc.followup_total      + s.followup_total,
+      followup_concluidos: acc.followup_concluidos + s.followup_concluidos,
+      followup_compliance: null,
+    }),
+    { active_leads: 0, sla_breach_count: 0, sla_nao_atendido: 0, sla_parados: 0, sla_breach_pct: 0, score_medio: 0, followup_total: 0, followup_concluidos: 0, followup_compliance: null as null }
+  )
+  saude.sla_breach_pct = saude.active_leads > 0
+    ? Math.round(saude.sla_breach_count / saude.active_leads * 1000) / 10
+    : 0
 
   if (saude.active_leads === 0) return null
 
   const isCritical = saude.sla_breach_pct >= 20
   const isWarning = !isCritical && saude.sla_breach_pct >= 10
+  const colorKey = isCritical ? 'red' : isWarning ? 'amber' : 'emerald'
+  const colorMap = {
+    red:     { border: 'border-red-200',     bg: 'bg-red-50',     icon: 'bg-red-100',     text: 'text-red-800',     sub: 'text-red-600',     num: 'text-red-700',     title: 'Nível Crítico' },
+    amber:   { border: 'border-amber-200',   bg: 'bg-amber-50',   icon: 'bg-amber-100',   text: 'text-amber-800',   sub: 'text-amber-600',   num: 'text-amber-700',   title: 'Atenção Necessária' },
+    emerald: { border: 'border-emerald-200', bg: 'bg-emerald-50', icon: 'bg-emerald-100', text: 'text-emerald-800', sub: 'text-emerald-600', num: 'text-emerald-700', title: 'Dentro do Normal' },
+  }
+  const c = colorMap[colorKey]
+
+  const criticas = todasSaude
+    .filter(l => l.sla_breach_count > 0)
+    .sort((a, b) => b.sla_breach_pct - a.sla_breach_pct)
+    .slice(0, 5)
 
   return (
-    <div className={`rounded-2xl border p-5 ${
-      isCritical
-        ? 'bg-red-50 border-red-200'
-        : isWarning
-        ? 'bg-amber-50 border-amber-200'
-        : 'bg-emerald-50 border-emerald-200'
-    }`}>
+    <div className={`rounded-2xl border p-5 space-y-4 ${c.bg} ${c.border}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-            isCritical ? 'bg-red-100' : isWarning ? 'bg-amber-100' : 'bg-emerald-100'
-          }`}>
-            <svg className={`h-5 w-5 ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-emerald-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.icon}`}>
+            <svg className={`h-5 w-5 ${c.sub}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
           </div>
           <div>
-            <p className={`font-semibold text-sm ${isCritical ? 'text-red-800' : isWarning ? 'text-amber-800' : 'text-emerald-800'}`}>
-              SLA da Rede — {isCritical ? 'Nível Crítico' : isWarning ? 'Atenção Necessária' : 'Dentro do Normal'}
+            <p className={`font-semibold text-sm ${c.text}`}>
+              SLA da Rede — {c.title}
             </p>
-            <p className={`text-xs mt-0.5 ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-emerald-600'}`}>
+            <p className={`text-xs mt-0.5 ${c.sub}`}>
               {saude.sla_breach_count} leads em breach de SLA ({saude.sla_breach_pct}% dos ativos)
             </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 sm:gap-6">
           <div className="text-center">
-            <p className={`text-2xl font-bold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-emerald-700'}`}>{saude.active_leads}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{saude.active_leads}</p>
             <p className="text-xs text-slate-500 mt-0.5">Leads ativos</p>
           </div>
           <div className="text-center">
-            <p className={`text-2xl font-bold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-emerald-700'}`}>{saude.sla_nao_atendido}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{saude.sla_nao_atendido}</p>
             <p className="text-xs text-slate-500 mt-0.5">Sem contato</p>
           </div>
           <div className="text-center">
-            <p className={`text-2xl font-bold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-emerald-700'}`}>{saude.sla_parados}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{saude.sla_parados}</p>
             <p className="text-xs text-slate-500 mt-0.5">Parados</p>
           </div>
         </div>
       </div>
+
+      {criticas.length > 0 && (isCritical || isWarning) && (
+        <div className="border-t border-current/10 pt-4">
+          <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${c.sub}`}>
+            Lojas com maior SLA breach
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {criticas.map(l => (
+              <Link
+                key={l.loja_id}
+                href={`/admin/lojas/${l.loja_id}`}
+                className={`flex items-center gap-2 rounded-lg bg-white/70 border px-2.5 py-1.5 hover:bg-white transition-colors ${c.border}`}
+              >
+                <span className="text-xs font-medium text-slate-700 truncate max-w-28">{l.loja_nome}</span>
+                <span className={`text-xs font-bold ${c.sub}`}>{l.sla_breach_pct}%</span>
+                <span className="text-xs text-slate-400">({l.sla_breach_count} leads)</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -244,6 +289,129 @@ export async function Leads12MonthsSection() {
   const data = await getLeadsLast12MonthsServer()
 
   return <ChartLeads12Months data={data} />
+}
+
+interface ConversaoRedeSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function ConversaoRedeSection({ from, to }: ConversaoRedeSectionProps = {}) {
+  const [statusTotal, conversaoPorLoja] = await Promise.all([
+    getLeadsStatusTotalServer(from, to),
+    getConversaoPorLoja([], from, to),
+  ])
+
+  const total =
+    statusTotal.venda_realizada +
+    statusTotal.venda_nao_realizada +
+    statusTotal.em_negociacao +
+    statusTotal.nao_atendido
+
+  const taxaConversao = total > 0
+    ? Math.round(statusTotal.venda_realizada / total * 1000) / 10
+    : 0
+
+  const lojasComDados = conversaoPorLoja.filter(l => l.total_leads > 0)
+  const lojasAcimaMedia = lojasComDados.filter(l => l.taxa_conversao >= taxaConversao).length
+  const lojasAbaixoMedia = lojasComDados.length - lojasAcimaMedia
+
+  return (
+    <div className="shadow-md bg-linear-to-br from-slate-50 to-slate-100 rounded-2xl border border-border/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border/50">
+        <div className="p-5">
+          <p className="text-xs font-medium text-[#16255c]/70 uppercase tracking-wide mb-2">Taxa de Conversão</p>
+          <p className="text-4xl font-bold text-[#16255c]">{taxaConversao}%</p>
+          <p className="text-xs text-[#16255c]/60 mt-1">Média da rede</p>
+        </div>
+        <div className="p-5">
+          <p className="text-xs font-medium text-[#16255c]/70 uppercase tracking-wide mb-2">Vendas Realizadas</p>
+          <p className="text-4xl font-bold text-emerald-600">{statusTotal.venda_realizada.toLocaleString('pt-BR')}</p>
+          <p className="text-xs text-[#16255c]/60 mt-1">de {total.toLocaleString('pt-BR')} leads</p>
+        </div>
+        <div className="p-5">
+          <p className="text-xs font-medium text-[#16255c]/70 uppercase tracking-wide mb-2">Em Negociação</p>
+          <p className="text-4xl font-bold text-blue-600">{statusTotal.em_negociacao.toLocaleString('pt-BR')}</p>
+          <p className="text-xs text-[#16255c]/60 mt-1">Pipeline ativo</p>
+        </div>
+        <div className="p-5">
+          <p className="text-xs font-medium text-[#16255c]/70 uppercase tracking-wide mb-2">Lojas vs Média</p>
+          <div className="flex items-end gap-2">
+            <p className="text-2xl font-bold text-emerald-600">{lojasAcimaMedia}↑</p>
+            <p className="text-2xl font-bold text-red-500">{lojasAbaixoMedia}↓</p>
+          </div>
+          <p className="text-xs text-[#16255c]/60 mt-1">acima / abaixo da média</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface TopBottomConversoesSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function TopBottomConversoesSection({ from, to }: TopBottomConversoesSectionProps = {}) {
+  const conversaoPorLoja = await getConversaoPorLoja([], from, to)
+
+  const comDados = conversaoPorLoja.filter(l => l.total_leads >= 3)
+  if (comDados.length < 2) return null
+
+  const sorted = [...comDados].sort((a, b) => b.taxa_conversao - a.taxa_conversao)
+  const top5 = sorted.slice(0, 5)
+  const bottom5 = sorted.slice(-5).reverse()
+  const avg = comDados.reduce((s, l) => s + l.taxa_conversao, 0) / comDados.length
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Top 5 */}
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+          <p className="font-semibold text-emerald-800">Top 5 Conversores</p>
+          <span className="ml-auto text-xs text-emerald-600">média: {avg.toFixed(1)}%</span>
+        </div>
+        <div className="space-y-2">
+          {top5.map((loja, i) => (
+            <Link key={loja.loja_id} href={`/admin/lojas/${loja.loja_id}`} className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2.5 hover:bg-white transition-colors">
+              <span className="text-xs font-bold text-emerald-600 w-5">{i + 1}º</span>
+              <span className="flex-1 text-sm font-medium text-slate-700 truncate">{loja.loja_nome}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400">{loja.vendas_realizadas}/{loja.total_leads}</span>
+                <span className="text-sm font-bold text-emerald-600 w-12 text-right">{loja.taxa_conversao}%</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom 5 */}
+      <div className="rounded-2xl border border-red-200 bg-red-50/50 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+          <p className="font-semibold text-red-700">Precisam de Atenção</p>
+          <span className="ml-auto text-xs text-red-500">abaixo de {avg.toFixed(1)}%</span>
+        </div>
+        <div className="space-y-2">
+          {bottom5.map((loja, i) => (
+            <Link key={loja.loja_id} href={`/admin/lojas/${loja.loja_id}`} className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2.5 hover:bg-white transition-colors">
+              <span className="text-xs font-bold text-red-500 w-5">{sorted.length - bottom5.length + i + 1}º</span>
+              <span className="flex-1 text-sm font-medium text-slate-700 truncate">{loja.loja_nome}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400">{loja.vendas_realizadas}/{loja.total_leads}</span>
+                <span className="text-sm font-bold text-red-500 w-12 text-right">{loja.taxa_conversao}%</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export async function GeoInvestSection() {
@@ -426,6 +594,94 @@ export async function ScoreCampanhasSection({ from, to }: ScoreCampanhasSectionP
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+interface OrigemConversaoSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function OrigemConversaoSection({ from, to }: OrigemConversaoSectionProps = {}) {
+  const [industria, proprio, statusIndustria, statusProprio] = await Promise.all([
+    getLeadsStatsGeralServer('industria'),
+    getLeadsStatsGeralServer('proprio'),
+    getLeadsStatusTotalServer(from, to, undefined, 'industria'),
+    getLeadsStatusTotalServer(from, to, undefined, 'proprio'),
+  ])
+
+  const calcTaxa = (status: typeof statusIndustria) => {
+    const total = status.venda_realizada + status.venda_nao_realizada + status.em_negociacao + status.nao_atendido
+    return total > 0 ? Math.round(status.venda_realizada / total * 1000) / 10 : null
+  }
+
+  const taxaIndustria = calcTaxa(statusIndustria)
+  const taxaProprio = calcTaxa(statusProprio)
+  const totalLeads = (industria.total || 0) + (proprio.total || 0)
+
+  const pctIndustria = totalLeads > 0 ? Math.round((industria.total || 0) / totalLeads * 100) : 0
+  const pctProprio = totalLeads > 0 ? Math.round((proprio.total || 0) / totalLeads * 100) : 0
+
+  const melhorOrigem =
+    taxaIndustria !== null && taxaProprio !== null
+      ? taxaIndustria >= taxaProprio ? 'industria' : 'proprio'
+      : null
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-linear-to-br from-slate-50 to-slate-100 shadow-md overflow-hidden">
+      <div className="p-5 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+            <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-[#16255c]">ROI por Origem de Lead</p>
+            <p className="text-xs text-slate-500 mt-0.5">Indústria vs Próprio — volume e conversão</p>
+          </div>
+          {melhorOrigem && (
+            <span className="ml-auto text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+              {melhorOrigem === 'industria' ? 'Indústria' : 'Próprio'} converte mais
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { label: 'Indústria', total: industria.total || 0, pct: pctIndustria, taxa: taxaIndustria, status: statusIndustria, color: 'blue', melhor: melhorOrigem === 'industria' },
+            { label: 'Próprio',   total: proprio.total || 0,   pct: pctProprio,   taxa: taxaProprio,   status: statusProprio,   color: 'purple', melhor: melhorOrigem === 'proprio' },
+          ].map(({ label, total, pct, taxa, status, color, melhor }) => (
+            <div key={label} className={`rounded-xl border p-4 ${melhor ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white/60'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <p className={`font-semibold text-sm text-${color}-700`}>{label}</p>
+                {melhor && <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Melhor ROI</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500">Total leads</p>
+                  <p className="text-2xl font-bold text-slate-800">{total.toLocaleString('pt-BR')}</p>
+                  <p className="text-xs text-slate-400">{pct}% do total</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Conversão</p>
+                  {taxa !== null ? (
+                    <p className={`text-2xl font-bold ${melhor ? 'text-emerald-600' : 'text-slate-600'}`}>{taxa}%</p>
+                  ) : (
+                    <p className="text-lg font-medium text-slate-400">—</p>
+                  )}
+                  <p className="text-xs text-slate-400">{status.venda_realizada} vendas</p>
+                </div>
+              </div>
+              {taxa === null && total > 0 && (
+                <p className="text-xs text-slate-400 mt-2 pt-2 border-t">Conversão por origem disponível após atualização do backend</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

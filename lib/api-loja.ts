@@ -395,13 +395,31 @@ const SAUDE_ZERO: SaudeFunilData = {
 export async function getLojaFunilSaude(lojaId: string | number): Promise<SaudeFunilData> {
   try {
     const res = await fetch(`${API_BASE_URL}/lojas/${lojaId}/saude-funil`, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: await getAuthHeaders(),
     })
     if (!res.ok) return SAUDE_ZERO
     const data = await res.json()
     return data.data ?? SAUDE_ZERO
   } catch { return SAUDE_ZERO }
+}
+
+export interface LojaSaudeItem extends SaudeFunilData {
+  loja_id: number
+  loja_nome: string
+}
+
+export async function getTodasLojasSaude(
+  lojas: { id: number | string; nome: string }[],
+): Promise<LojaSaudeItem[]> {
+  if (!lojas.length) return []
+  const results = await Promise.all(
+    lojas.map(async (loja) => {
+      const saude = await safeCall(() => getLojaFunilSaude(loja.id), SAUDE_ZERO)
+      return { ...saude, loja_id: Number(loja.id), loja_nome: loja.nome }
+    })
+  )
+  return results
 }
 
 export async function getMultiLojaFunilSaude(lojaIds: number[]): Promise<SaudeFunilData> {

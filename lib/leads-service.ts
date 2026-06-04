@@ -518,17 +518,19 @@ export function getLastLeadDate(leads: Lead[]): string | null {
 }
 
 export async function getLeadsStatusTotal(
-  from?: string, 
-  to?: string, 
-  lojaId?: number, 
-  token?: string
+  from?: string,
+  to?: string,
+  lojaId?: number,
+  token?: string,
+  origem?: 'industria' | 'proprio',
 ): Promise<{ nao_atendido: number; em_negociacao: number; venda_realizada: number; venda_nao_realizada: number }> {
   let endpoint = 'leads-status-total';
   const params: string[] = [];
 
-  if (from) params.push(`from=${encodeURIComponent(from)}`);
-  if (to)   params.push(`to=${encodeURIComponent(to)}`);
-  if (lojaId) params.push(`loja_id=${lojaId}`);
+  if (from)    params.push(`from=${encodeURIComponent(from)}`);
+  if (to)      params.push(`to=${encodeURIComponent(to)}`);
+  if (lojaId)  params.push(`loja_id=${lojaId}`);
+  if (origem)  params.push(`origem=${encodeURIComponent(origem)}`);
 
   if (params.length) endpoint += `?${params.join('&')}`;
 

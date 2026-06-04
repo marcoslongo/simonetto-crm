@@ -774,9 +774,13 @@ class Lead_Handler
 
     if ($lead['responsavel_id']) {
       $responsavel = get_userdata($lead['responsavel_id']);
-      $lead['responsavel_nome'] = $responsavel ? $responsavel->display_name : null;
+      $lead['responsavel_nome']       = $responsavel ? $responsavel->display_name : null;
+      $lead['responsavel_avatar_url'] = $responsavel
+        ? (get_user_meta($responsavel->ID, '_crm_avatar_url', true) ?: null)
+        : null;
     } else {
-      $lead['responsavel_nome'] = null;
+      $lead['responsavel_nome']       = null;
+      $lead['responsavel_avatar_url'] = null;
     }
 
     $lead['proximo_followup_em']        = $lead['proximo_followup_em'] ?? null;

@@ -87,6 +87,33 @@ import { useIsMobile } from '@/components/ui/use-mobile'
 
 export type LeadStatus = string
 
+// ── Avatar helper ─────────────────────────────────────────────────────────────
+function getInitials(name: string) {
+  return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
+}
+
+interface AvatarBadgeProps {
+  name: string
+  avatarUrl?: string | null
+  size?: 'sm' | 'md'
+}
+
+function AvatarBadge({ name, avatarUrl, size = 'sm' }: AvatarBadgeProps) {
+  const dim = size === 'md' ? 'h-7 w-7 text-xs' : 'h-5 w-5 text-[9px]'
+  return avatarUrl ? (
+    <img
+      src={avatarUrl}
+      alt={name}
+      className={cn('rounded-full object-cover shrink-0 ring-1 ring-white', dim)}
+    />
+  ) : (
+    <span className={cn('inline-flex items-center justify-center rounded-full bg-[#2463eb]/15 text-[#2463eb] font-semibold shrink-0', dim)}>
+      {getInitials(name)}
+    </span>
+  )
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function columnCollision(args: Parameters<typeof pointerWithin>[0]) {
   const pointer = pointerWithin(args)
   if (pointer.length > 0) return pointer
