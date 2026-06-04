@@ -82,8 +82,11 @@ async function IntegracaoWrapper({ id }: { id: string }) {
   return <IntegracaoLP lojaId={id} initialData={data} isAdmin />
 }
 async function LeadsRecentesWrapper({ id, currentUserId }: { id: string; currentUserId: number }) {
-  const { leads, total } = await getLojaLeads(id, 1, 10)
-  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin currentUserId={currentUserId} />
+  const [{ leads, total }, colunas] = await Promise.all([
+    getLojaLeads(id, 1, 10),
+    getKanbanColumns(id),
+  ])
+  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin currentUserId={currentUserId} colunas={colunas} />
 }
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])

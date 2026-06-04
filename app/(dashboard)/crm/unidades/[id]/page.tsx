@@ -72,8 +72,11 @@ async function Leads12MonthsWrapper({ id }: { id: string }) {
   return <ChartLeads12Months data={data} lojaId={id} />
 }
 async function LeadsRecentesWrapper({ id, currentUserId, isGerente }: { id: string; currentUserId: number; isGerente?: boolean }) {
-  const { leads, total } = await getLojaLeads(id, 1, 10)
-  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin={false} isGerente={isGerente} currentUserId={currentUserId} />
+  const [{ leads, total }, colunas] = await Promise.all([
+    getLojaLeads(id, 1, 10),
+    getKanbanColumns(id),
+  ])
+  return <LeadsRecentes leads={leads} total={total} lojaId={Number(id)} isAdmin={false} isGerente={isGerente} currentUserId={currentUserId} colunas={colunas} />
 }
 async function VnrWrapper({ id }: { id: string }) {
   const data = await getVnrStats([Number(id)])

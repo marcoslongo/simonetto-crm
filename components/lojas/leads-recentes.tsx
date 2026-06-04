@@ -9,13 +9,30 @@ import { Button } from "@/components/ui/button"
 import { LeadDetailsModal } from "@/components/leads/lead-dialog"
 import { Users, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchLojaLeadsPaginated } from "@/actions/leads-actions"
-import type { Lead } from "@/lib/types"
+import type { Lead, KanbanColuna } from "@/lib/types"
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+const DEFAULT_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   nao_atendido:        { label: "Não Atendido",       className: "bg-amber-100 text-amber-800 border-amber-200" },
   em_negociacao:       { label: "Em Negociação",       className: "bg-blue-100 text-blue-800 border-blue-200" },
   venda_realizada:     { label: "Venda Realizada",     className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   venda_nao_realizada: { label: "Venda Não Realizada", className: "bg-red-100 text-red-800 border-red-200" },
+}
+
+const COR_TO_CLASS: Record<string, string> = {
+  amber:   "bg-amber-100 text-amber-800 border-amber-200",
+  blue:    "bg-blue-100 text-blue-800 border-blue-200",
+  emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  red:     "bg-red-100 text-red-800 border-red-200",
+  rose:    "bg-rose-100 text-rose-800 border-rose-200",
+  slate:   "bg-slate-100 text-slate-700 border-slate-200",
+  purple:  "bg-purple-100 text-purple-800 border-purple-200",
+  indigo:  "bg-indigo-100 text-indigo-800 border-indigo-200",
+  teal:    "bg-teal-100 text-teal-800 border-teal-200",
+  orange:  "bg-orange-100 text-orange-800 border-orange-200",
+  pink:    "bg-pink-100 text-pink-800 border-pink-200",
+  violet:  "bg-violet-100 text-violet-800 border-violet-200",
+  cyan:    "bg-cyan-100 text-cyan-800 border-cyan-200",
+  gray:    "bg-gray-100 text-gray-700 border-gray-200",
 }
 
 interface LeadsRecentesProps {
@@ -25,13 +42,24 @@ interface LeadsRecentesProps {
   isAdmin?: boolean
   isGerente?: boolean
   currentUserId?: number
+  colunas?: KanbanColuna[]
 }
 
-export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, isGerente, currentUserId }: LeadsRecentesProps) {
+export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, isGerente, currentUserId, colunas }: LeadsRecentesProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [page, setPage] = useState(1)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const statusConfig: Record<string, { label: string; className: string }> = { ...DEFAULT_STATUS_CONFIG }
+  if (colunas) {
+    for (const col of colunas) {
+      statusConfig[col.slug] = {
+        label: col.label,
+        className: COR_TO_CLASS[col.cor] ?? "bg-slate-100 text-slate-600 border-slate-200",
+      }
+    }
+  }
 
   const totalPages = Math.ceil(total / 10) || 1
 
@@ -90,7 +118,7 @@ export function LeadsRecentes({ leads: initialLeads, total, lojaId, isAdmin, isG
               </thead>
               <tbody>
                 {leads.map(lead => {
-                  const s = STATUS_CONFIG[lead.status] ?? { label: lead.status, className: "bg-slate-100 text-slate-600 border-slate-200" }
+                  const s = statusConfig[lead.status] ?? { label: lead.status, className: "bg-slate-100 text-slate-600 border-slate-200" }
                   return (
                     <tr
                       key={lead.id}
