@@ -185,6 +185,10 @@
   border-radius: 1rem;
 }
 
+/* ── Hide scrollbar (tabs, chips) ──────────────────────────────────────── */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* ── Kanban scrollbar ───────────────────────────────────────────────────── */
 .kanban-scroll {
   scrollbar-width: thin;

@@ -56,6 +56,9 @@ import {
   Plus,
   Trash2,
   LayoutGrid,
+  Phone,
+  MessageCircle,
+  CalendarPlus,
 } from 'lucide-react'
 import {
   Popover,
@@ -80,6 +83,7 @@ import { NovoLeadDialog } from './novo-lead-dialog'
 import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
 import { Lead, KanbanColuna } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
+import { useIsMobile } from '@/components/ui/use-mobile'
 
 export type LeadStatus = string
 
@@ -263,6 +267,8 @@ function playNotificationSound() {
 }
 
 export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, isGerente, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
+  const isMobile = useIsMobile()
+  const [mobileActiveTab, setMobileActiveTab] = useState<string>('nao_atendido')
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [totalLeads, setTotalLeads] = useState(initialTotal ?? initialLeads.length)
   const [fetchPage, setFetchPage] = useState(1)
@@ -806,183 +812,106 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     ? lojas.filter(l => lojaIds.includes(l.id))
     : lojas
 
-  return (
-    <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 shrink-0">
-          {loadingAll ? (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              Carregando leads…
-            </span>
-          ) : (
-            <Button
-              onClick={handleRefresh}
-              className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </Button>
-          )}
-          {lojasSeletor.length > 0 && (
-            <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
-          )}
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou telefone…"
-            className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+  // ── Shared toolbar ────────────────────────────────────────────────────────
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2 shrink-0">
+        {loadingAll ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            Carregando leads…
+          </span>
+        ) : (
+          <Button
+            onClick={handleRefresh}
+            size={isMobile ? 'sm' : 'default'}
+            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Atualizar</span>
+          </Button>
+        )}
+        {lojasSeletor.length > 0 && (
+          <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
+        )}
       </div>
 
-      {/* Resultados de busca */}
-      {searchQuery.trim() && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            {searchLoading
-              ? <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Buscando…</span>
-              : <span className="text-xs text-muted-foreground">{searchTotal} resultado{searchTotal !== 1 ? 's' : ''} para <strong className="text-foreground">"{searchQuery.trim()}"</strong></span>
-            }
-          </div>
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar por nome, e-mail ou telefone…"
+          className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
 
-          {!searchLoading && searchResults.length === 0 && (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-muted-foreground">
-              <Search className="h-7 w-7 opacity-30" />
-              <p className="text-sm">Nenhum lead encontrado</p>
-            </div>
-          )}
+  // ── Shared search results ──────────────────────────────────────────────────
+  const searchResultsBlock = searchQuery.trim() && (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {searchLoading
+          ? <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Buscando…</span>
+          : <span className="text-xs text-muted-foreground">{searchTotal} resultado{searchTotal !== 1 ? 's' : ''} para <strong className="text-foreground">"{searchQuery.trim()}"</strong></span>
+        }
+      </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {searchResults.map(lead => {
-              const sla = getSLAInfo(lead)
-              const statusLabel = statusLabels[lead.status ?? 'nao_atendido']
-              return (
-                <button
-                  key={lead.id}
-                  onClick={() => handleLeadClick(lead)}
-                  className={cn(
-                    "group text-left rounded-xl border bg-card px-4 py-3 shadow-sm transition-shadow hover:shadow-md space-y-1.5",
-                    "border-l-[3px]",
-                    sla?.level === 'critical' ? "border-l-red-500" :
-                    sla?.level === 'warning'  ? "border-l-orange-400" :
-                    "border-l-slate-200"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">{lead.nome}</p>
-                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {statusLabel}
-                    </span>
-                  </div>
-                  {lead.email && <p className="truncate text-xs text-muted-foreground">{lead.email}</p>}
-                  {lead.telefone && <p className="text-xs text-muted-foreground">{lead.telefone}</p>}
-                  {lead.loja_nome && <p className="text-[10px] text-muted-foreground/70">{lead.loja_nome}</p>}
-                </button>
-              )
-            })}
-          </div>
+      {!searchLoading && searchResults.length === 0 && (
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-muted-foreground">
+          <Search className="h-7 w-7 opacity-30" />
+          <p className="text-sm">Nenhum lead encontrado</p>
         </div>
       )}
 
-      <div className={cn("relative", searchQuery.trim() && "hidden")}>
-        <button
-          onClick={() => scrollContainerRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
-          className={cn(
-            "absolute left-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
-            canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-          aria-label="Rolar para esquerda"
-        >
-          <ChevronLeft className="h-4 w-4 text-slate-600" />
-        </button>
-
-        <button
-          onClick={() => scrollContainerRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
-          className={cn(
-            "absolute right-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
-            canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-          aria-label="Rolar para direita"
-        >
-          <ChevronRight className="h-4 w-4 text-slate-600" />
-        </button>
-
-      <div ref={scrollContainerRef} className="w-full overflow-x-auto pb-4 kanban-scroll">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={columnCollision}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-6 items-stretch min-w-max">
-          {colunas.map((coluna) => (
-            <div key={coluna.slug} className="min-w-70 flex-1 flex flex-col">
-              <KanbanColumn
-                coluna={coluna}
-                items={itemsByStatus[coluna.slug] ?? []}
-                styles={colorStyles[coluna.cor] ?? colorStyles.gray}
-                onLeadClick={handleLeadClick}
-                onLeadUpdate={handleLeadUpdate}
-                visibleCount={getVisible(coluna.slug)}
-                onLoadMore={() => loadMore(coluna.slug)}
-                isLoadingMore={columnLoading[coluna.slug] ?? false}
-                hasMoreGlobal={leads.length < totalLeads}
-                isLoadingAll={loadingAll}
-                savingLeads={savingLeads}
-                isGerente={isGerente}
-                onDeleteColuna={deleteColuna}
-                onMoveColuna={moveColuna}
-                isFirst={colunas.indexOf(coluna) === 0}
-                isLast={colunas.indexOf(coluna) === colunas.length - 1}
-              />
-            </div>
-          ))}
-
-          {isGerente && (
-            <div className="min-w-50 shrink-0 flex items-start pt-1">
-              <button
-                onClick={() => setIsAddColumnOpen(true)}
-                className="flex items-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/25 px-5 py-4 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground w-full justify-center"
-              >
-                <Plus className="h-4 w-4" />
-                Nova coluna
-              </button>
-            </div>
-          )}
-        </div>
-
-        <DragOverlay>
-          {activeLead && (
-            <div className="rounded-lg border bg-card p-4 shadow-lg opacity-90">
-              <p className="truncate text-sm font-medium text-foreground">{activeLead.nome}</p>
-              {activeLead.email && (
-                <p className="truncate text-xs text-muted-foreground">{activeLead.email}</p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {searchResults.map(lead => {
+          const sla = getSLAInfo(lead)
+          const statusLabel = statusLabels[lead.status ?? 'nao_atendido']
+          return (
+            <button
+              key={lead.id}
+              onClick={() => handleLeadClick(lead)}
+              className={cn(
+                "group text-left rounded-xl border bg-card px-4 py-3 shadow-sm transition-shadow hover:shadow-md space-y-1.5",
+                "border-l-[3px]",
+                sla?.level === 'critical' ? "border-l-red-500" :
+                sla?.level === 'warning'  ? "border-l-orange-400" :
+                "border-l-slate-200"
               )}
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-sm font-semibold text-foreground">{lead.nome}</p>
+                <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {statusLabel}
+                </span>
+              </div>
+              {lead.email && <p className="truncate text-xs text-muted-foreground">{lead.email}</p>}
+              {lead.telefone && <p className="text-xs text-muted-foreground">{lead.telefone}</p>}
+              {lead.loja_nome && <p className="text-[10px] text-muted-foreground/70">{lead.loja_nome}</p>}
+            </button>
+          )
+        })}
       </div>
-      </div>
+    </div>
+  )
 
+  // ── Shared modals ──────────────────────────────────────────────────────────
+  const modals = (
+    <>
       {selectedLead && (
         <LeadDetailsModal
           lead={selectedLead}
@@ -1016,7 +945,6 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         />
       )}
 
-      {/* Modal: nova coluna customizada */}
       <Dialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -1078,6 +1006,181 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  // ── Mobile: tab list view ──────────────────────────────────────────────────
+  if (isMobile) {
+    const activeColuna = colunas.find(c => c.slug === mobileActiveTab) ?? colunas[0]
+    const activeItems = activeColuna ? (itemsByStatus[activeColuna.slug] ?? []) : []
+
+    return (
+      <>
+        {toolbar}
+        {searchResultsBlock}
+
+        {!searchQuery.trim() && (
+          <div className="flex flex-col gap-0 -mx-4">
+            {/* Status tabs — horizontal scroll */}
+            <div className="flex overflow-x-auto no-scrollbar border-b bg-white sticky top-14 z-20">
+              {colunas.map((col) => {
+                const count = (itemsByStatus[col.slug] ?? []).length
+                const active = col.slug === mobileActiveTab
+                const styles = colorStyles[col.cor] ?? colorStyles.gray
+                return (
+                  <button
+                    key={col.slug}
+                    onClick={() => setMobileActiveTab(col.slug)}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap shrink-0 transition-colors border-b-2',
+                      active
+                        ? 'border-[#2463eb] text-[#2463eb]'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <span>{col.label}</span>
+                    <Badge
+                      variant="secondary"
+                      className={cn('text-[10px] px-1.5 py-0', active ? styles.badge : '')}
+                    >
+                      {count}{loadingAll ? '+' : ''}
+                    </Badge>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Lead list for active tab */}
+            <div className="divide-y bg-white">
+              {activeItems.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-16 text-muted-foreground">
+                  <CircleCheckBig className="h-8 w-8 opacity-20" />
+                  <p className="text-sm">Nenhum lead nesta etapa</p>
+                </div>
+              ) : (
+                activeItems.map((lead) => (
+                  <MobileLeadCard
+                    key={lead.id}
+                    lead={lead}
+                    onLeadClick={handleLeadClick}
+                    isSaving={savingLeads.has(String(lead.id))}
+                  />
+                ))
+              )}
+
+              {/* Load more */}
+              {activeColuna && leads.length < totalLeads && (
+                <div className="px-4 py-3">
+                  <button
+                    onClick={() => loadMore(activeColuna.slug)}
+                    disabled={columnLoading[activeColuna.slug]}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-2.5 rounded-xl border border-dashed text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50"
+                  >
+                    {columnLoading[activeColuna.slug]
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <ChevronDown className="h-3.5 w-3.5" />
+                    }
+                    Ver mais leads
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {modals}
+      </>
+    )
+  }
+
+  // ── Desktop: classic kanban ────────────────────────────────────────────────
+  return (
+    <>
+      {toolbar}
+      {searchResultsBlock}
+
+      <div className={cn("relative", searchQuery.trim() && "hidden")}>
+        <button
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+          className={cn(
+            "absolute left-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
+            canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Rolar para esquerda"
+        >
+          <ChevronLeft className="h-4 w-4 text-slate-600" />
+        </button>
+
+        <button
+          onClick={() => scrollContainerRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+          className={cn(
+            "absolute right-0 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow-md transition-all duration-200",
+            canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Rolar para direita"
+        >
+          <ChevronRight className="h-4 w-4 text-slate-600" />
+        </button>
+
+        <div ref={scrollContainerRef} className="w-full overflow-x-auto pb-4 kanban-scroll">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={columnCollision}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-6 items-stretch min-w-max">
+              {colunas.map((coluna) => (
+                <div key={coluna.slug} className="min-w-70 flex-1 flex flex-col">
+                  <KanbanColumn
+                    coluna={coluna}
+                    items={itemsByStatus[coluna.slug] ?? []}
+                    styles={colorStyles[coluna.cor] ?? colorStyles.gray}
+                    onLeadClick={handleLeadClick}
+                    onLeadUpdate={handleLeadUpdate}
+                    visibleCount={getVisible(coluna.slug)}
+                    onLoadMore={() => loadMore(coluna.slug)}
+                    isLoadingMore={columnLoading[coluna.slug] ?? false}
+                    hasMoreGlobal={leads.length < totalLeads}
+                    isLoadingAll={loadingAll}
+                    savingLeads={savingLeads}
+                    isGerente={isGerente}
+                    onDeleteColuna={deleteColuna}
+                    onMoveColuna={moveColuna}
+                    isFirst={colunas.indexOf(coluna) === 0}
+                    isLast={colunas.indexOf(coluna) === colunas.length - 1}
+                  />
+                </div>
+              ))}
+
+              {isGerente && (
+                <div className="min-w-50 shrink-0 flex items-start pt-1">
+                  <button
+                    onClick={() => setIsAddColumnOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/25 px-5 py-4 text-sm text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground w-full justify-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nova coluna
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <DragOverlay>
+              {activeLead && (
+                <div className="rounded-lg border bg-card p-4 shadow-lg opacity-90">
+                  <p className="truncate text-sm font-medium text-foreground">{activeLead.nome}</p>
+                  {activeLead.email && (
+                    <p className="truncate text-xs text-muted-foreground">{activeLead.email}</p>
+                  )}
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      </div>
+
+      {modals}
     </>
   )
 }
@@ -1524,5 +1627,160 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
         </div>
       </div>
     </TooltipProvider>
+  )
+})
+
+// ── Mobile Lead Card ──────────────────────────────────────────────────────────
+
+interface MobileLeadCardProps {
+  lead: Lead
+  onLeadClick: (lead: Lead) => void
+  isSaving?: boolean
+}
+
+const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, isSaving }: MobileLeadCardProps) {
+  const sla = getSLAInfo(lead)
+
+  const followupInfo = useMemo(() => {
+    if (!lead.proximo_followup_em) return null
+    const dt = new Date(lead.proximo_followup_em)
+    const now = new Date()
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+    const isOverdue = dt < now
+    const isToday = dt <= todayEnd && !isOverdue
+    return { dt, isOverdue, isToday }
+  }, [lead.proximo_followup_em])
+
+  const criado = formatDistanceToNow(new Date(lead.data_criacao), { addSuffix: true, locale: ptBR })
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!lead.telefone) return
+    const num = lead.telefone.replace(/\D/g, '')
+    window.open(`https://wa.me/55${num}`, '_blank')
+  }
+
+  const handleCall = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!lead.telefone) return
+    window.location.href = `tel:${lead.telefone}`
+  }
+
+  return (
+    <div
+      className={cn(
+        'relative flex flex-col gap-3 px-4 py-4 bg-white active:bg-muted/40 transition-colors border-l-[3px]',
+        sla?.level === 'critical' ? 'border-l-red-500' :
+        sla?.level === 'warning'  ? 'border-l-orange-400' :
+        'border-l-transparent',
+        isSaving && 'opacity-60'
+      )}
+      onClick={() => onLeadClick(lead)}
+    >
+      {isSaving && (
+        <span className="absolute top-3 right-3">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground/60" />
+        </span>
+      )}
+
+      {/* Row 1: name + badges */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            <OrigemBadge lead={lead} size="xs" />
+            {lead.classificacao === 'quente' && (
+              <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                <Flame size={10} /> Quente
+              </span>
+            )}
+            {lead.classificacao === 'morno' && (
+              <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                <Thermometer size={10} /> Morno
+              </span>
+            )}
+            {lead.classificacao === 'frio' && (
+              <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                <Snowflake size={10} /> Frio
+              </span>
+            )}
+          </div>
+          <p className="text-base font-semibold text-foreground leading-tight">{lead.nome}</p>
+          {lead.telefone && (
+            <p className="text-sm text-muted-foreground mt-0.5">{lead.telefone}</p>
+          )}
+        </div>
+
+        {/* SLA + follow-up badges */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {followupInfo && (
+            <span className={cn(
+              'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              followupInfo.isOverdue ? 'bg-red-100 text-red-600' :
+              followupInfo.isToday   ? 'bg-orange-100 text-orange-600' :
+                                       'bg-blue-100 text-blue-600'
+            )}>
+              <Bell className="h-2.5 w-2.5" />
+              {format(followupInfo.dt, 'dd/MM HH:mm')}
+            </span>
+          )}
+          {sla && (
+            <span className={cn(
+              'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              sla.level === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+            )}>
+              <AlertTriangle className="h-2.5 w-2.5" />
+              {sla.elapsed}
+            </span>
+          )}
+          {(lead.unread_count ?? 0) > 0 && (
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: meta */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        {lead.responsavel_nome && (
+          <span className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            {lead.responsavel_nome}
+          </span>
+        )}
+        {lead.expectativa_investimento && (
+          <span className="font-medium text-emerald-600">{lead.expectativa_investimento}</span>
+        )}
+        <span className="ml-auto">{criado}</span>
+      </div>
+
+      {/* Row 3: quick actions */}
+      {lead.telefone && (
+        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={handleWhatsApp}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100 active:bg-emerald-200 transition-colors min-h-[40px]"
+          >
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp
+          </button>
+          <button
+            onClick={handleCall}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-50 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 active:bg-blue-200 transition-colors min-h-[40px]"
+          >
+            <Phone className="h-4 w-4" />
+            Ligar
+          </button>
+          <button
+            onClick={() => onLeadClick(lead)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 active:bg-slate-300 transition-colors min-h-[40px]"
+          >
+            <ChevronRight className="h-4 w-4" />
+            Abrir
+          </button>
+        </div>
+      )}
+    </div>
   )
 })

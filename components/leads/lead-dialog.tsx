@@ -334,89 +334,116 @@ export function LeadDetailsModal({
   return (
     <TooltipProvider>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex flex-col h-[90vh] overflow-hidden w-[90vw] sm:max-w-[90vw]">
-          <div className="px-6 pt-6">
-            <DialogHeader className="border-b border-border pb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-4">
-                  <div className="space-y-2">
-                    <DialogTitle className="text-2xl font-semibold text-card-foreground">
-                      {lead.nome}
-                    </DialogTitle>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4" />
-                        <span>{lead.cidade}, {lead.estado}</span>
+        <DialogContent className={[
+          "flex flex-col overflow-hidden p-0 gap-0",
+          // Mobile: tela cheia
+          "max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:top-0 max-sm:left-0 max-sm:w-screen max-sm:max-w-none max-sm:h-dvh max-sm:rounded-none",
+          // Desktop
+          "sm:h-[90vh] sm:w-[90vw] sm:max-w-[90vw]",
+        ].join(" ")}>
+
+          {/* ── Header ───────────────────────────────────────────────────── */}
+          <div className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-0">
+            <DialogHeader className="border-b border-border pb-3 sm:pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-lg sm:text-2xl font-semibold text-card-foreground truncate">
+                    {lead.nome}
+                  </DialogTitle>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
+                    {(lead.cidade || lead.estado) && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}</span>
                       </div>
-                      <Separator orientation="vertical" className="h-4" />
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
-                        <span>Criado em {formatDate(lead.data_criacao)}</span>
-                      </div>
+                    )}
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      <Separator orientation="vertical" className="h-3.5" />
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      <span>Criado em {formatDate(lead.data_criacao)}</span>
                     </div>
                   </div>
-                  {(isAdmin || isGerente) && (
-                    <div className="flex">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="gap-2 mt-1 cursor-pointer"
-                          >
-                            <Trash2 size={16} />
-                            Excluir
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Essa ação não pode ser desfeita.
-                              <br />
-                              Lead: <strong>{lead.nome}</strong>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDeleteLead}
-                              disabled={loadingDelete}
-                              className="bg-destructive text-white"
-                            >
-                              {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
+                </div>
+
+                {/* Mobile quick-actions: WhatsApp + Call */}
+                <div className="flex items-center gap-2 shrink-0 sm:hidden">
+                  <Link
+                    href={`https://wa.me/55${cleanPhone}`}
+                    target="_blank"
+                    onClick={() => registrarContato("whatsapp")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 active:bg-emerald-500/20 transition-colors"
+                    aria-label="WhatsApp"
+                  >
+                    <FaWhatsapp className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href={`tel:${cleanPhone}`}
+                    onClick={() => registrarContato("telefone")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 active:bg-blue-500/20 transition-colors"
+                    aria-label="Ligar"
+                  >
+                    <Phone className="h-4.5 w-4.5" />
+                  </Link>
                 </div>
               </div>
+
+              {(isAdmin || isGerente) && (
+                <div className="flex mt-3">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2 cursor-pointer">
+                        <Trash2 size={14} />
+                        Excluir lead
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Essa ação não pode ser desfeita.
+                          <br />
+                          Lead: <strong>{lead.nome}</strong>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteLead}
+                          disabled={loadingDelete}
+                          className="bg-destructive text-white"
+                        >
+                          {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </DialogHeader>
           </div>
 
-          <Tabs defaultValue="detalhes" className="flex flex-col flex-1 overflow-hidden">
-            <div className="px-6 border-b border-border">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-                {lead.mensagem && (
-                  <TabsTrigger value="mensagem">Mensagem</TabsTrigger>
-                )}
-                <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
-                <TabsTrigger value="notas">Notas</TabsTrigger>
-                <TabsTrigger value="followup">Retornos</TabsTrigger>
-                <TabsTrigger value="historico" onClick={fetchActions}>
-                  Histórico
-                </TabsTrigger>
-                <TabsTrigger value="ia" className="gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  IA
-                </TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="detalhes" className="flex flex-col flex-1 overflow-hidden min-h-0">
+            {/* Tabs — scroll horizontal no mobile */}
+            <div className="shrink-0 border-b border-border">
+              <div className="overflow-x-auto no-scrollbar px-4 sm:px-6">
+                <TabsList className="w-max min-w-full justify-start rounded-none bg-transparent p-0 h-auto gap-0">
+                  <TabsTrigger value="detalhes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Detalhes</TabsTrigger>
+                  {lead.mensagem && (
+                    <TabsTrigger value="mensagem" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Mensagem</TabsTrigger>
+                  )}
+                  <TabsTrigger value="atendimento" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Atendimento</TabsTrigger>
+                  <TabsTrigger value="notas" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Notas</TabsTrigger>
+                  <TabsTrigger value="followup" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Retornos</TabsTrigger>
+                  <TabsTrigger value="historico" onClick={fetchActions} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Histórico</TabsTrigger>
+                  <TabsTrigger value="ia" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    IA
+                  </TabsTrigger>
+                </TabsList>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
               <TabsContent value="detalhes" className="mt-0 space-y-6">
                 {/* Informações de Contato */}
                 <div className="rounded-xl border border-border bg-card p-5">
