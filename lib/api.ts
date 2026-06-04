@@ -136,7 +136,7 @@ export async function getLeads(filters: LeadsFilters = {}): Promise<LeadsRespons
 // =====================================
 
 export async function getLojas(): Promise<LojasResponse> {
-  return fetchApi<LojasResponse>('/api/v1/lojas', {}, false)
+  return fetchApi<LojasResponse>('/api/v1/lojas', { next: { revalidate: 300 } } as RequestInit, false)
 }
 
 // =====================================

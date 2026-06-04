@@ -323,14 +323,16 @@ export interface TempoPorEtapaItem {
   tipo: 'ativo' | 'fechado'
 }
 
-export async function getConversaoPorLoja(lojaIds: number[] = []): Promise<ConversaoPorLojaItem[]> {
+export async function getConversaoPorLoja(lojaIds: number[] = [], from?: string, to?: string): Promise<ConversaoPorLojaItem[]> {
   const qs = new URLSearchParams()
   if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  if (from) qs.set('from', from)
+  if (to)   qs.set('to', to)
   const headers = await getAuthHeaders()
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/conversao-por-loja${qs.toString() ? `?${qs}` : ''}`,
-      { next: { revalidate: 60 }, headers }
+      { next: { revalidate: from || to ? 0 : 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -338,14 +340,16 @@ export async function getConversaoPorLoja(lojaIds: number[] = []): Promise<Conve
   } catch { return [] }
 }
 
-export async function getFunilPorAtendente(lojaIds: number[] = []): Promise<FunilPorAtendenteItem[]> {
+export async function getFunilPorAtendente(lojaIds: number[] = [], from?: string, to?: string): Promise<FunilPorAtendenteItem[]> {
   const qs = new URLSearchParams()
   if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  if (from) qs.set('from', from)
+  if (to)   qs.set('to', to)
   const headers = await getAuthHeaders()
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/funil-por-atendente${qs.toString() ? `?${qs}` : ''}`,
-      { next: { revalidate: 60 }, headers }
+      { next: { revalidate: from || to ? 0 : 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
@@ -353,19 +357,77 @@ export async function getFunilPorAtendente(lojaIds: number[] = []): Promise<Funi
   } catch { return [] }
 }
 
-export async function getTempoPorEtapa(lojaIds: number[] = []): Promise<TempoPorEtapaItem[]> {
+export async function getTempoPorEtapa(lojaIds: number[] = [], from?: string, to?: string): Promise<TempoPorEtapaItem[]> {
   const qs = new URLSearchParams()
   if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  if (from) qs.set('from', from)
+  if (to)   qs.set('to', to)
   const headers = await getAuthHeaders()
   try {
     const res = await fetch(
       `${API_BASE_URL}/stats/tempo-por-etapa${qs.toString() ? `?${qs}` : ''}`,
-      { next: { revalidate: 60 }, headers }
+      { next: { revalidate: from || to ? 0 : 60 }, headers }
     )
     if (!res.ok) return []
     const data = await res.json()
     return data.data ?? []
   } catch { return [] }
+}
+
+export interface SaudeFunilData {
+  active_leads:        number
+  sla_breach_count:    number
+  sla_nao_atendido:    number
+  sla_parados:         number
+  sla_breach_pct:      number
+  score_medio:         number
+  followup_total:      number
+  followup_concluidos: number
+  followup_compliance: number | null
+}
+
+const SAUDE_ZERO: SaudeFunilData = {
+  active_leads: 0, sla_breach_count: 0, sla_nao_atendido: 0,
+  sla_parados: 0, sla_breach_pct: 0, score_medio: 0,
+  followup_total: 0, followup_concluidos: 0, followup_compliance: null,
+}
+
+export async function getLojaFunilSaude(lojaId: string | number): Promise<SaudeFunilData> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/lojas/${lojaId}/saude-funil`, {
+      cache: 'no-store',
+      headers: await getAuthHeaders(),
+    })
+    if (!res.ok) return SAUDE_ZERO
+    const data = await res.json()
+    return data.data ?? SAUDE_ZERO
+  } catch { return SAUDE_ZERO }
+}
+
+export async function getMultiLojaFunilSaude(lojaIds: number[]): Promise<SaudeFunilData> {
+  if (!lojaIds.length) return SAUDE_ZERO
+  const results = await Promise.all(lojaIds.map(id => safeCall(() => getLojaFunilSaude(id), SAUDE_ZERO)))
+  const merged = results.reduce((acc, s) => ({
+    active_leads:        acc.active_leads        + s.active_leads,
+    sla_breach_count:    acc.sla_breach_count    + s.sla_breach_count,
+    sla_nao_atendido:    acc.sla_nao_atendido    + s.sla_nao_atendido,
+    sla_parados:         acc.sla_parados         + s.sla_parados,
+    sla_breach_pct:      0,
+    score_medio:         0,
+    followup_total:      acc.followup_total      + s.followup_total,
+    followup_concluidos: acc.followup_concluidos + s.followup_concluidos,
+    followup_compliance: null,
+  }), SAUDE_ZERO)
+  merged.sla_breach_pct = merged.active_leads > 0
+    ? Math.round(merged.sla_breach_count / merged.active_leads * 1000) / 10
+    : 0
+  merged.followup_compliance = merged.followup_total > 0
+    ? Math.round(merged.followup_concluidos / merged.followup_total * 1000) / 10
+    : null
+  // Score médio: média dos scores individuais
+  const scores = results.filter(r => r.score_medio > 0).map(r => r.score_medio)
+  merged.score_medio = scores.length > 0 ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length * 10) / 10 : 0
+  return merged
 }
 
 export async function getVnrStats(lojaIds?: number[]): Promise<VnrStatsData> {

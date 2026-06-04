@@ -134,6 +134,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
 
+  // GET /api/v1/lojas/{id}/saude-funil — saúde operacional da loja (SLA, score médio, follow-up)
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/saude-funil', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_get_saude_funil',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET /api/v1/lojas/{id}/atendente-stats — métricas pessoais do atendente
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/atendente-stats', [
     'methods'             => 'GET',
@@ -842,6 +849,92 @@ function mytheme_api_get_atendente_stats(WP_REST_Request $request): WP_REST_Resp
       'sla_nao_atendido'          => $sla_nao_atendido,
       'sla_negociacao'            => $sla_negociacao,
       'leads_hoje'                => $leads_hoje,
+    ],
+  ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/saude-funil
+ * Saúde operacional da loja: SLA breach rate, score médio, follow-up compliance.
+ */
+function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
+{
+  global $wpdb;
+
+  $loja_id         = intval($request['id']);
+  $table_leads     = $wpdb->prefix . 'leads';
+  $table_followups = $wpdb->prefix . 'leads_followups';
+
+  if (!$loja_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id inválido.'], 400);
+  }
+
+  // Total de leads ativos
+  $active_leads = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND status NOT IN ('venda_realizada', 'venda_nao_realizada')",
+    $loja_id
+  ));
+
+  // SLA: nao_atendido há mais de 2h
+  $sla_nao_atendido = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND status = 'nao_atendido'
+       AND data_criacao < DATE_SUB(NOW(), INTERVAL 2 HOUR)",
+    $loja_id
+  ));
+
+  // SLA: em etapas ativas sem movimentação há mais de 3 dias
+  $sla_parados = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d
+       AND status NOT IN ('nao_atendido', 'venda_realizada', 'venda_nao_realizada')
+       AND data_atualizacao < DATE_SUB(NOW(), INTERVAL 3 DAY)",
+    $loja_id
+  ));
+
+  $sla_breach      = $sla_nao_atendido + $sla_parados;
+  $sla_breach_pct  = $active_leads > 0 ? round($sla_breach / $active_leads * 100, 1) : 0.0;
+
+  // Score médio dos leads ativos
+  $score_medio = (float) ($wpdb->get_var($wpdb->prepare(
+    "SELECT ROUND(AVG(score), 1) FROM {$table_leads}
+     WHERE loja_id = %d AND status NOT IN ('venda_realizada', 'venda_nao_realizada')
+       AND score IS NOT NULL AND score > 0",
+    $loja_id
+  )) ?? 0);
+
+  // Follow-up compliance: vencidos (passado) vs concluídos
+  $followups_vencidos = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_followups} f
+     INNER JOIN {$table_leads} l ON l.id = f.lead_id
+     WHERE l.loja_id = %d AND f.agendado_para < NOW()",
+    $loja_id
+  ));
+
+  $followups_concluidos = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_followups} f
+     INNER JOIN {$table_leads} l ON l.id = f.lead_id
+     WHERE l.loja_id = %d AND f.concluido = 1 AND f.agendado_para < NOW()",
+    $loja_id
+  ));
+
+  $compliance_pct = $followups_vencidos > 0
+    ? round($followups_concluidos / $followups_vencidos * 100, 1)
+    : null;
+
+  return new WP_REST_Response([
+    'success' => true,
+    'data'    => [
+      'active_leads'          => $active_leads,
+      'sla_breach_count'      => $sla_breach,
+      'sla_nao_atendido'      => $sla_nao_atendido,
+      'sla_parados'           => $sla_parados,
+      'sla_breach_pct'        => $sla_breach_pct,
+      'score_medio'           => $score_medio,
+      'followup_total'        => $followups_vencidos,
+      'followup_concluidos'   => $followups_concluidos,
+      'followup_compliance'   => $compliance_pct,
     ],
   ], 200);
 }

@@ -123,7 +123,8 @@ export function ChartFunilPorAtendente({ data }: Props) {
           <table className="w-full text-xs">
             <thead>
               <tr className="text-slate-500 uppercase tracking-wider border-b">
-                <th className="text-left pb-2 font-semibold pr-4">Atendente</th>
+                <th className="text-left pb-2 font-semibold w-6">#</th>
+                <th className="text-left pb-2 font-semibold px-3">Atendente</th>
                 <th className="text-right pb-2 font-semibold">Leads</th>
                 <th className="text-right pb-2 font-semibold">Vendas</th>
                 <th className="text-right pb-2 font-semibold">Taxa</th>
@@ -131,19 +132,51 @@ export function ChartFunilPorAtendente({ data }: Props) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map(row => (
-                <tr key={row.responsavel_id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="py-2 text-slate-700 font-medium pr-4">{row.atendente_nome}</td>
-                  <td className="py-2 text-right tabular-nums text-slate-500">{row.total_leads}</td>
-                  <td className="py-2 text-right tabular-nums text-emerald-600 font-semibold">{row.vendas_realizadas}</td>
-                  <td className="py-2 text-right tabular-nums font-bold" style={{ color: row.taxa_conversao > 0 ? '#059669' : '#94a3b8' }}>
-                    {row.taxa_conversao ?? 0}%
-                  </td>
-                  <td className="py-2 text-right tabular-nums text-slate-500">{formatHoras(row.ciclo_medio_horas)}</td>
-                </tr>
-              ))}
+              {sorted.map((row, idx) => {
+                const rank = idx + 1
+                const rankStyles = [
+                  'bg-amber-400 text-white',   // 1º - ouro
+                  'bg-slate-400 text-white',   // 2º - prata
+                  'bg-orange-400 text-white',  // 3º - bronze
+                ]
+                const rankClass = rank <= 3 ? rankStyles[rank - 1] : 'bg-slate-100 text-slate-500'
+                const avgTaxa = sorted.reduce((s, r) => s + (r.taxa_conversao ?? 0), 0) / sorted.length
+                const isAboveAvg = (row.taxa_conversao ?? 0) > avgTaxa
+
+                return (
+                  <tr
+                    key={row.responsavel_id}
+                    className={`border-b border-slate-100 transition-colors ${rank === 1 ? 'bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-slate-50'}`}
+                  >
+                    <td className="py-2">
+                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${rankClass}`}>
+                        {rank}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className={`font-medium ${rank === 1 ? 'text-amber-700' : 'text-slate-700'}`}>
+                        {row.atendente_nome}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-slate-500">{row.total_leads}</td>
+                    <td className="py-2 text-right tabular-nums text-emerald-600 font-semibold">{row.vendas_realizadas}</td>
+                    <td className="py-2 text-right tabular-nums font-bold">
+                      <span className={`inline-flex items-center gap-0.5 ${isAboveAvg ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {row.taxa_conversao ?? 0}%
+                        {isAboveAvg && <span className="text-[8px]">▲</span>}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-slate-500">{formatHoras(row.ciclo_medio_horas)}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
+          {sorted.length > 1 && (
+            <p className="mt-2 text-[10px] text-slate-400">
+              ▲ acima da média · Média da equipe: {(sorted.reduce((s, r) => s + (r.taxa_conversao ?? 0), 0) / sorted.length).toFixed(1)}%
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

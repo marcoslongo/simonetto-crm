@@ -234,7 +234,7 @@ class Stats_Handler
   /**
    * Taxa de conversão por loja
    */
-  public static function conversao_por_loja(array $loja_ids = []): array
+  public static function conversao_por_loja(array $loja_ids = [], string $from = '', string $to = ''): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
@@ -246,6 +246,8 @@ class Stats_Handler
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
       $where .= $wpdb->prepare(" AND l.loja_id IN ($placeholders)", ...$loja_ids);
     }
+    if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
+    if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
 
     $sql = "
       SELECT
@@ -284,7 +286,7 @@ class Stats_Handler
   /**
    * Funil por atendente
    */
-  public static function funil_por_atendente(array $loja_ids = []): array
+  public static function funil_por_atendente(array $loja_ids = [], string $from = '', string $to = ''): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
@@ -296,6 +298,8 @@ class Stats_Handler
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
       $where .= $wpdb->prepare(" AND l.loja_id IN ($placeholders)", ...$loja_ids);
     }
+    if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
+    if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
 
     $sql = "
       SELECT
@@ -341,17 +345,20 @@ class Stats_Handler
   /**
    * Tempo médio por etapa (usa data_atualizacao como proxy de quando o status foi alterado)
    */
-  public static function tempo_por_etapa(array $loja_ids = []): array
+  public static function tempo_por_etapa(array $loja_ids = [], string $from = '', string $to = ''): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
 
     $loja_filter = '';
+    $date_filter = '';
     if (!empty($loja_ids)) {
       $loja_ids = array_values(array_map('intval', $loja_ids));
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
       $loja_filter = $wpdb->prepare("AND loja_id IN ($placeholders)", ...$loja_ids);
     }
+    if ($from) $date_filter .= $wpdb->prepare(" AND data_criacao >= %s", $from . ' 00:00:00');
+    if ($to)   $date_filter .= $wpdb->prepare(" AND data_criacao <= %s", $to   . ' 23:59:59');
 
     // Leads ativos: tempo desde a última atualização de status (tempo na etapa atual)
     $sql_ativos = "
@@ -362,6 +369,7 @@ class Stats_Handler
       FROM {$table_leads}
       WHERE status NOT IN ('venda_realizada', 'venda_nao_realizada')
       {$loja_filter}
+      {$date_filter}
       GROUP BY status
     ";
 
@@ -374,6 +382,7 @@ class Stats_Handler
       FROM {$table_leads}
       WHERE status IN ('venda_realizada', 'venda_nao_realizada')
       {$loja_filter}
+      {$date_filter}
       GROUP BY status
     ";
 
