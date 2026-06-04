@@ -1373,7 +1373,7 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
   })
 
   const [popoverOpen, setPopoverOpen] = useState(false)
-  const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([])
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; avatar_url?: string | null }[]>([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -1526,9 +1526,9 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               <Popover open={popoverOpen} onOpenChange={handlePopoverOpen}>
                 <PopoverTrigger asChild>
                   {lead.responsavel_nome ? (
-                    <button className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
-                      <User className="h-3 w-3 shrink-0" />
-                      {lead.responsavel_nome}
+                    <button className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                      <AvatarBadge name={lead.responsavel_nome} avatarUrl={lead.responsavel_avatar_url} />
+                      <span className="max-w-24 truncate">{lead.responsavel_nome}</span>
                     </button>
                   ) : (
                     <button className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60 hover:border-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer">
@@ -1570,7 +1570,8 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
                             ? <Check className="h-3 w-3 shrink-0" />
                             : <span className="w-3 shrink-0" />
                           }
-                          {u.nome}
+                          <AvatarBadge name={u.nome} avatarUrl={u.avatar_url} />
+                          <span className="truncate">{u.nome}</span>
                         </button>
                       ))}
                     </div>
@@ -1579,9 +1580,9 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               </Popover>
             ) : (
               lead.responsavel_nome ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                  <User className="h-3 w-3 shrink-0" />
-                  {lead.responsavel_nome}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
+                  <AvatarBadge name={lead.responsavel_nome} avatarUrl={lead.responsavel_avatar_url} />
+                  <span className="max-w-24 truncate">{lead.responsavel_nome}</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60">
@@ -1771,8 +1772,8 @@ const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, i
       {/* Row 2: meta */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         {lead.responsavel_nome && (
-          <span className="flex items-center gap-1">
-            <User className="h-3 w-3" />
+          <span className="flex items-center gap-1.5">
+            <AvatarBadge name={lead.responsavel_nome} avatarUrl={lead.responsavel_avatar_url} size="md" />
             {lead.responsavel_nome}
           </span>
         )}
