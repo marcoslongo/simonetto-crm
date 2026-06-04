@@ -46,24 +46,3 @@ add_action('init', function () {
   Kanban_Column_Handler::maybe_create_table();
 }, 5);
 
-// Migração única: adiciona índice composto (loja_id, status) na tabela de leads
-add_action('init', function () {
-  $option_key = 'simonetto_leads_index_loja_status_v1';
-  if (get_option($option_key)) {
-    return;
-  }
-  global $wpdb;
-  $table = $wpdb->prefix . 'leads';
-  $wpdb->query("ALTER TABLE {$table} ADD INDEX IF NOT EXISTS idx_loja_status (loja_id, status)");
-  update_option($option_key, true);
-}, 7);
-
-// Migração única: semeia colunas fixas para todas as lojas existentes
-add_action('init', function () {
-  $option_key = 'simonetto_kanban_columns_seed_v1';
-  if (get_option($option_key)) {
-    return;
-  }
-  Kanban_Column_Handler::seed_all_existing_lojas();
-  update_option($option_key, true);
-}, 6);
