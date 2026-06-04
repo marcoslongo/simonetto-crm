@@ -9,14 +9,22 @@ import {
   Leads12MonthsSection,
   StatsSection,
   StatsByOrigemSection,
+  ComparativoSemanalSection,
+  SlaRedeSection,
 } from '@/components/dashboard/dashboard-sections'
+import { DateFilterClient } from '@/components/ui/date-filter-client'
 
 export const metadata = {
   title: 'Dashboard | Noxus',
 }
 
-export default async function AdminDashboardPage() {
+interface AdminDashboardPageProps {
+  searchParams: Promise<{ from?: string; to?: string }>
+}
+
+export default async function AdminDashboardPage({ searchParams }: AdminDashboardPageProps) {
   await requireAdmin()
+  const { from, to } = await searchParams
 
   return (
     <div className="space-y-6">
@@ -29,6 +37,8 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
+      <DateFilterClient />
+
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
       </Suspense>
@@ -37,8 +47,16 @@ export default async function AdminDashboardPage() {
         <StatsByOrigemSection />
       </Suspense>
 
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <ComparativoSemanalSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton height="h-20" />}>
+        <SlaRedeSection />
+      </Suspense>
+
       <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>
-        <Leads30DaysSection />
+        <Leads30DaysSection from={from} to={to} />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>

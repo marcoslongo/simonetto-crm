@@ -7,12 +7,13 @@ import {
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
-import { TrendingUp, Store, ChevronLeft, ChevronRight } from "lucide-react"
+import { TrendingUp, TrendingDown, Store, ChevronLeft, ChevronRight, Trophy, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { ConversaoPorLojaItem } from "@/lib/api-loja"
 import { EmptyState } from "@/components/ui/empty-state"
 
 const PAGE_SIZE = 10
+const RANKING_SIZE = 10
 
 interface Props {
   data: ConversaoPorLojaItem[]
@@ -50,8 +51,42 @@ function CustomTooltip({ active, payload }: any) {
   )
 }
 
+type RankingView = 'top' | 'bottom' | 'all'
+
+function RankingTable({ items, avg, offset = 0, type }: { items: ConversaoPorLojaItem[], avg: number, offset?: number, type: 'top' | 'bottom' }) {
+  return (
+    <div className="space-y-1">
+      {items.map((row, i) => {
+        const pos = type === 'top' ? offset + i + 1 : offset + i + 1
+        const isAbove = row.taxa_conversao >= avg
+        return (
+          <div key={row.loja_id} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+            type === 'top' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
+          }`}>
+            <span className={`text-xs font-bold w-6 text-center shrink-0 ${
+              type === 'top' ? 'text-emerald-600' : 'text-red-500'
+            }`}>
+              {pos}º
+            </span>
+            <span className="flex-1 text-sm text-slate-700 truncate">{row.loja_nome}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-slate-400 tabular-nums">{row.vendas_realizadas}/{row.total_leads}</span>
+              <span className={`text-sm font-bold tabular-nums w-14 text-right ${
+                isAbove ? 'text-emerald-600' : 'text-slate-400'
+              }`}>
+                {row.taxa_conversao}%
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function ChartConversaoPorLoja({ data }: Props) {
   const [page, setPage] = useState(0)
+  const [rankingView, setRankingView] = useState<RankingView>('all')
 
   if (!data.length) {
     return (
@@ -73,13 +108,15 @@ export function ChartConversaoPorLoja({ data }: Props) {
 
   const sorted = [...data].sort((a, b) => b.taxa_conversao - a.taxa_conversao)
   const avg = data.reduce((s, d) => s + d.taxa_conversao, 0) / data.length
+  const top10 = sorted.slice(0, RANKING_SIZE)
+  const bottom10 = [...sorted].slice(-RANKING_SIZE).reverse()
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
   const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <Card className="border-0 card-surface-elevated">
       <CardHeader>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -92,36 +129,42 @@ export function ChartConversaoPorLoja({ data }: Props) {
               </CardDescription>
             </div>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                disabled={page === 0}
-                onClick={() => setPage(p => p - 1)}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+            {([['all', 'Ranking'], ['top', 'Top 10'], ['bottom', 'Bottom 10']] as [RankingView, string][]).map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setRankingView(v)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  rankingView === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs text-slate-500 tabular-nums w-14 text-center">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                disabled={page === totalPages - 1}
-                onClick={() => setPage(p => p + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </CardHeader>
 
       <CardContent>
+        {rankingView === 'top' && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="h-4 w-4 text-emerald-600" />
+              <p className="text-sm font-semibold text-emerald-700">Melhores conversores da rede</p>
+            </div>
+            <RankingTable items={top10} avg={avg} offset={0} type="top" />
+          </div>
+        )}
+        {rankingView === 'bottom' && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <p className="text-sm font-semibold text-red-600">Precisam de atenção</p>
+            </div>
+            <RankingTable items={bottom10} avg={avg} offset={sorted.length - RANKING_SIZE} type="bottom" />
+          </div>
+        )}
+        {rankingView === 'all' && (<>
         <div style={{ height: pageData.length * 52 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -220,6 +263,7 @@ export function ChartConversaoPorLoja({ data }: Props) {
             </div>
           )}
         </div>
+        </>)}
       </CardContent>
     </Card>
   )

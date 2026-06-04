@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from "react"
-import { Table2, Calendar as CalendarIcon2, Download, Loader2, Eraser, ChevronDown, Search } from "lucide-react"
+import { Table2, Calendar as CalendarIcon2, Download, Loader2, Eraser, ChevronDown, Search, BarChart3 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { fetchAllLeadsForExport } from "@/actions/leads-actions"
+import { fetchAllLeadsForExport, fetchPerformanceFranqueadosForExport } from "@/actions/leads-actions"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,29 @@ function getPresetRange(days: number) {
   const toDate = new Date(); toDate.setHours(23, 59, 59, 999)
   const fromDate = new Date(); fromDate.setDate(fromDate.getDate() - days); fromDate.setHours(0, 0, 0, 0)
   return { fromDate, toDate }
+}
+
+function performanceToCSV(rows: any[]): string {
+  const headers = [
+    'ID', 'Franqueado',
+    'Total Leads', 'Vendas Realizadas', 'Em Negociação', 'Não Atendido',
+    'Taxa Conversão (%)',
+    'Leads Ativos', 'SLA Breach', 'SLA Breach (%)', 'Sem Contato',
+    'Follow-up Compliance (%)',
+  ]
+  const escape = (val: any) => {
+    if (val == null) return ''
+    const str = String(val).replace(/"/g, '""')
+    return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str
+  }
+  const dataRows = rows.map(r => [
+    r.loja_id, r.loja_nome,
+    r.total_leads, r.vendas_realizadas, r.em_negociacao, r.nao_atendido,
+    r.taxa_conversao,
+    r.active_leads, r.sla_breach_count, r.sla_breach_pct, r.sla_nao_atendido,
+    r.followup_compliance ?? '',
+  ].map(escape).join(','))
+  return [headers.join(','), ...dataRows].join('\n')
 }
 
 function leadsToCSV(leads: any[]): string {
@@ -155,6 +178,7 @@ export function Content({ lojas }: ContentProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus[]>([])
   const [origem, setOrigem] = useState<Origem>('')
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingPerformance, setIsExportingPerformance] = useState(false)
 
   const isCustomReady = filterMode === 'custom' && !!from && !!to
   const canExport = filterMode === 'preset' || isCustomReady
@@ -368,32 +392,70 @@ export function Content({ lojas }: ContentProps) {
         </div>
       </div>
 
-      {/* Export button */}
-      <button
-        onClick={handleExportCSV}
-        disabled={isExporting || !canExport}
-        title={!canExport ? "Selecione o período para exportar" : undefined}
-        className="w-full sm:w-auto bg-card cursor-pointer border border-border rounded-xl p-5 text-left hover:border-[#0b1437]/40 hover:shadow-md transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
-      >
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-[#0b1437]/10 flex items-center justify-center shrink-0 group-hover:bg-[#0b1437]/20 transition-colors">
-            {isExporting
-              ? <Loader2 size={20} className="text-[#0b1437] animate-spin" />
-              : <Table2 size={20} className="text-[#0b1437]" />
+      {/* Export buttons */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={handleExportCSV}
+          disabled={isExporting || !canExport}
+          title={!canExport ? "Selecione o período para exportar" : undefined}
+          className="flex-1 bg-card cursor-pointer border border-border rounded-xl p-5 text-left hover:border-[#0b1437]/40 hover:shadow-md transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-[#0b1437]/10 flex items-center justify-center shrink-0 group-hover:bg-[#0b1437]/20 transition-colors">
+              {isExporting
+                ? <Loader2 size={20} className="text-[#0b1437] animate-spin" />
+                : <Table2 size={20} className="text-[#0b1437]" />
+              }
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                {isExporting ? 'Exportando...' : 'Exportar Leads (CSV)'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{getExportDateDescription()}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{getActiveFiltersSummary()}</p>
+            </div>
+            {!isExporting && (
+              <Download size={16} className="text-muted-foreground mt-1 shrink-0 ml-auto" />
+            )}
+          </div>
+        </button>
+
+        <button
+          onClick={async () => {
+            setIsExportingPerformance(true)
+            try {
+              const rows = await fetchPerformanceFranqueadosForExport()
+              const csv = performanceToCSV(rows)
+              downloadCSV(csv, `performance-franqueados-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+            } catch {
+              alert('Erro ao exportar performance. Tente novamente.')
+            } finally {
+              setIsExportingPerformance(false)
             }
+          }}
+          disabled={isExportingPerformance}
+          className="flex-1 bg-card cursor-pointer border border-border rounded-xl p-5 text-left hover:border-emerald-500/40 hover:shadow-md transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+              {isExportingPerformance
+                ? <Loader2 size={20} className="text-emerald-700 animate-spin" />
+                : <BarChart3 size={20} className="text-emerald-700" />
+              }
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                {isExportingPerformance ? 'Exportando...' : 'Performance por Franqueado (CSV)'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Todos os franqueados</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Conversão · SLA · Leads ativos · Follow-up</p>
+            </div>
+            {!isExportingPerformance && (
+              <Download size={16} className="text-muted-foreground mt-1 shrink-0 ml-auto" />
+            )}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">
-              {isExporting ? 'Exportando...' : 'Exportar Leads (CSV)'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{getExportDateDescription()}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{getActiveFiltersSummary()}</p>
-          </div>
-          {!isExporting && (
-            <Download size={16} className="text-muted-foreground mt-1 shrink-0 ml-auto" />
-          )}
-        </div>
-      </button>
+        </button>
+      </div>
     </div>
   )
 }

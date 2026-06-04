@@ -582,10 +582,11 @@ export interface CampanhaUTMItem {
   utm_campaign: string
   total: number
   pct: number
+  score_medio?: number
 }
 
 export async function getLeadsCampanhasUTM(from?: string, to?: string, limit = 10, token?: string): Promise<CampanhaUTMItem[]> {
-  let endpoint = `leads-campanhas-utm?limit=${limit}`
+  let endpoint = `leads-campanhas-utm?limit=${limit}&include_score=1`
   if (from) endpoint += `&from=${encodeURIComponent(from)}`
   if (to)   endpoint += `&to=${encodeURIComponent(to)}`
 

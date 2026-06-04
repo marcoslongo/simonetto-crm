@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { requireAdmin } from '@/lib/auth'
 import { ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
-import { LeadsTemperatureSection, ScoreInvestSection } from '@/components/dashboard/dashboard-sections'
+import { LeadsTemperatureSection, ScoreInvestSection, ScoreCampanhasSection } from '@/components/dashboard/dashboard-sections'
 
 export const metadata = { title: 'Aquisição | Noxus' }
 
@@ -29,6 +29,10 @@ export default async function AquisicaoPage({ searchParams }: AquisicaoPageProps
 
       <Suspense key={`score-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[400px]" />}>
         <ScoreInvestSection from={from} to={to} />
+      </Suspense>
+
+      <Suspense key={`score-camp-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[300px]" />}>
+        <ScoreCampanhasSection from={from} to={to} />
       </Suspense>
     </div>
   )
