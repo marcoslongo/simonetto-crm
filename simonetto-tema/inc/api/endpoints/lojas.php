@@ -134,6 +134,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
 
+  // GET /api/v1/lojas/{id}/atendente-stats — métricas pessoais do atendente
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/atendente-stats', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_get_atendente_stats',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET/POST /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
   register_rest_route('api/v1', '/usuarios/me/whatsapp-config', [
     [
@@ -286,12 +293,14 @@ function mytheme_api_get_loja_leads($request)
   }
 
   $result = Lead_Handler::list([
-    'page' => $request->get_param('page') ?: 1,
-    'per_page' => $request->get_param('per_page') ?: 100,
-    'search' => $request->get_param('search'),
-    'from' => $request->get_param('from'),
-    'to' => $request->get_param('to'),
-    'loja_id' => $loja_id,
+    'page'           => $request->get_param('page') ?: 1,
+    'per_page'       => $request->get_param('per_page') ?: 100,
+    'search'         => $request->get_param('search'),
+    'from'           => $request->get_param('from'),
+    'to'             => $request->get_param('to'),
+    'status'         => $request->get_param('status') ?? '',
+    'responsavel_id' => intval($request->get_param('responsavel_id') ?? 0),
+    'loja_id'        => $loja_id,
   ]);
 
   return new WP_REST_Response([
@@ -722,4 +731,117 @@ function mytheme_api_save_user_whatsapp_config(WP_REST_Request $request): WP_RES
   }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração WhatsApp salva.'], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/atendente-stats?responsavel_id=
+ * Retorna métricas pessoais de um atendente em uma loja específica.
+ */
+function mytheme_api_get_atendente_stats(WP_REST_Request $request): WP_REST_Response
+{
+  global $wpdb;
+
+  $loja_id        = intval($request['id']);
+  $responsavel_id = intval($request->get_param('responsavel_id') ?? 0);
+
+  if (!$loja_id || !$responsavel_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id e responsavel_id são obrigatórios.'], 400);
+  }
+
+  $table_leads     = $wpdb->prefix . 'leads';
+  $table_followups = $wpdb->prefix . 'leads_followups';
+  $now             = current_time('mysql');
+  $today_start     = date('Y-m-d') . ' 00:00:00';
+  $today_end       = date('Y-m-d') . ' 23:59:59';
+
+  // Total atribuídos
+  $total_atribuidos = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads} WHERE loja_id = %d AND responsavel_id = %d",
+    $loja_id, $responsavel_id
+  ));
+
+  // Contagem por status
+  $status_rows = $wpdb->get_results($wpdb->prepare(
+    "SELECT status, COUNT(*) as total FROM {$table_leads}
+     WHERE loja_id = %d AND responsavel_id = %d GROUP BY status",
+    $loja_id, $responsavel_id
+  ), ARRAY_A);
+
+  $por_status = [];
+  foreach ($status_rows as $row) {
+    $por_status[$row['status']] = intval($row['total']);
+  }
+
+  $venda_realizada     = $por_status['venda_realizada']     ?? 0;
+  $venda_nao_realizada = $por_status['venda_nao_realizada'] ?? 0;
+  $ativos              = $total_atribuidos - $venda_realizada - $venda_nao_realizada;
+  $taxa_conversao      = $total_atribuidos > 0 ? round($venda_realizada / $total_atribuidos * 100, 1) : 0.0;
+
+  // Follow-ups atrasados
+  $followups_atrasados = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_followups} f
+     INNER JOIN {$table_leads} l ON l.id = f.lead_id
+     WHERE l.loja_id = %d AND l.responsavel_id = %d AND f.concluido = 0 AND f.agendado_para < %s",
+    $loja_id, $responsavel_id, $now
+  ));
+
+  // Follow-ups hoje
+  $followups_hoje = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_followups} f
+     INNER JOIN {$table_leads} l ON l.id = f.lead_id
+     WHERE l.loja_id = %d AND l.responsavel_id = %d AND f.concluido = 0
+       AND f.agendado_para BETWEEN %s AND %s",
+    $loja_id, $responsavel_id, $today_start, $today_end
+  ));
+
+  // Leads quentes sem contato há mais de 24h
+  $leads_quentes_sem_contato = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND responsavel_id = %d AND classificacao = 'quente'
+       AND status NOT IN ('venda_realizada', 'venda_nao_realizada')
+       AND data_atualizacao < DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+    $loja_id, $responsavel_id
+  ));
+
+  // SLA: nao_atendido há mais de 2h
+  $sla_nao_atendido = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND responsavel_id = %d AND status = 'nao_atendido'
+       AND data_criacao < DATE_SUB(NOW(), INTERVAL 2 HOUR)",
+    $loja_id, $responsavel_id
+  ));
+
+  // SLA: em etapas ativas sem movimentação há mais de 3 dias
+  $sla_negociacao = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND responsavel_id = %d
+       AND status NOT IN ('nao_atendido', 'venda_realizada', 'venda_nao_realizada')
+       AND data_atualizacao < DATE_SUB(NOW(), INTERVAL 3 DAY)",
+    $loja_id, $responsavel_id
+  ));
+
+  // Leads recebidos hoje
+  $leads_hoje = (int) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$table_leads}
+     WHERE loja_id = %d AND responsavel_id = %d AND data_criacao BETWEEN %s AND %s",
+    $loja_id, $responsavel_id, $today_start, $today_end
+  ));
+
+  return new WP_REST_Response([
+    'success' => true,
+    'data'    => [
+      'total_atribuidos'          => $total_atribuidos,
+      'ativos'                    => max(0, $ativos),
+      'por_status'                => $por_status,
+      'venda_realizada'           => $venda_realizada,
+      'venda_nao_realizada'       => $venda_nao_realizada,
+      'taxa_conversao'            => $taxa_conversao,
+      'followups_atrasados'       => $followups_atrasados,
+      'followups_hoje'            => $followups_hoje,
+      'leads_quentes_sem_contato' => $leads_quentes_sem_contato,
+      'sla_nao_atendido'          => $sla_nao_atendido,
+      'sla_negociacao'            => $sla_negociacao,
+      'leads_hoje'                => $leads_hoje,
+    ],
+  ], 200);
 }

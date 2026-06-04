@@ -152,12 +152,16 @@ export async function getLojaLeads(
   perPage = 100,
   from?: string,
   to?: string,
-  search?: string
+  search?: string,
+  status?: string,
+  responsavelId?: number,
 ): Promise<{ leads: Lead[]; total: number }> {
   let url = `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`
-  if (from)   url += `&from=${encodeURIComponent(from)}`
-  if (to)     url += `&to=${encodeURIComponent(to)}`
-  if (search) url += `&search=${encodeURIComponent(search)}`
+  if (from)          url += `&from=${encodeURIComponent(from)}`
+  if (to)            url += `&to=${encodeURIComponent(to)}`
+  if (search)        url += `&search=${encodeURIComponent(search)}`
+  if (status)        url += `&status=${encodeURIComponent(status)}`
+  if (responsavelId) url += `&responsavel_id=${responsavelId}`
   const response = await fetch(
     url,
     {
@@ -388,6 +392,86 @@ const DEFAULT_KANBAN_COLUMNS: KanbanColuna[] = [
   { id: 0, loja_id: 0, slug: 'venda_realizada',     label: 'Venda Realizada',    cor: 'emerald', ordem: 2, fixo: 1 },
   { id: 0, loja_id: 0, slug: 'venda_nao_realizada', label: 'Venda Não Realizada',cor: 'red',     ordem: 3, fixo: 1 },
 ]
+
+export interface AtendanteStats {
+  total_atribuidos: number
+  ativos: number
+  por_status: Record<string, number>
+  venda_realizada: number
+  venda_nao_realizada: number
+  taxa_conversao: number
+  followups_atrasados: number
+  followups_hoje: number
+  leads_quentes_sem_contato: number
+  sla_nao_atendido: number
+  sla_negociacao: number
+  leads_hoje: number
+}
+
+export async function getLojaAtendanteStats(
+  lojaId: string | number,
+  responsavelId: number,
+): Promise<AtendanteStats> {
+  const zero: AtendanteStats = {
+    total_atribuidos: 0, ativos: 0, por_status: {},
+    venda_realizada: 0, venda_nao_realizada: 0, taxa_conversao: 0,
+    followups_atrasados: 0, followups_hoje: 0,
+    leads_quentes_sem_contato: 0, sla_nao_atendido: 0, sla_negociacao: 0,
+    leads_hoje: 0,
+  }
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/lojas/${lojaId}/atendente-stats?responsavel_id=${responsavelId}`,
+      { cache: 'no-store', headers: await getAuthHeaders() }
+    )
+    if (!response.ok) return zero
+    const data = await response.json()
+    return data.data ?? zero
+  } catch {
+    return zero
+  }
+}
+
+export async function getMultiLojaAtendanteStats(
+  lojaIds: number[],
+  responsavelId: number,
+): Promise<AtendanteStats> {
+  const zero: AtendanteStats = {
+    total_atribuidos: 0, ativos: 0, por_status: {},
+    venda_realizada: 0, venda_nao_realizada: 0, taxa_conversao: 0,
+    followups_atrasados: 0, followups_hoje: 0,
+    leads_quentes_sem_contato: 0, sla_nao_atendido: 0, sla_negociacao: 0,
+    leads_hoje: 0,
+  }
+  if (!lojaIds.length) return zero
+  const results = await Promise.all(
+    lojaIds.map(id => safeCall(() => getLojaAtendanteStats(id, responsavelId), zero))
+  )
+  const merged = results.reduce((acc, s) => ({
+    total_atribuidos:          acc.total_atribuidos + s.total_atribuidos,
+    ativos:                    acc.ativos + s.ativos,
+    por_status:                mergeStatusCounts(acc.por_status, s.por_status),
+    venda_realizada:           acc.venda_realizada + s.venda_realizada,
+    venda_nao_realizada:       acc.venda_nao_realizada + s.venda_nao_realizada,
+    taxa_conversao:            0,
+    followups_atrasados:       acc.followups_atrasados + s.followups_atrasados,
+    followups_hoje:            acc.followups_hoje + s.followups_hoje,
+    leads_quentes_sem_contato: acc.leads_quentes_sem_contato + s.leads_quentes_sem_contato,
+    sla_nao_atendido:          acc.sla_nao_atendido + s.sla_nao_atendido,
+    sla_negociacao:            acc.sla_negociacao + s.sla_negociacao,
+    leads_hoje:                acc.leads_hoje + s.leads_hoje,
+  }), zero)
+  merged.taxa_conversao = merged.total_atribuidos > 0
+    ? Math.round(merged.venda_realizada / merged.total_atribuidos * 1000) / 10
+    : 0
+  return merged
+}
+
+function mergeStatusCounts(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const out = { ...a }
+  for (const [k, v] of Object.entries(b)) out[k] = (out[k] ?? 0) + v
+  return out
+}
 
 export const getKanbanColumns = cache(async (lojaId: string | number): Promise<KanbanColuna[]> => {
   try {

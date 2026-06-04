@@ -1,13 +1,24 @@
 import { Suspense } from 'react'
 import { requireAuth } from '@/lib/auth'
-import { getMultiLojaStats, getMultiLojaStatusFunil, getMultiLojaClassificacao, getMultiLojaKanbanColumns } from '@/lib/api-loja'
+import {
+  getMultiLojaStats,
+  getMultiLojaStatusFunil,
+  getMultiLojaClassificacao,
+  getMultiLojaKanbanColumns,
+  getMultiLojaAtendanteStats,
+} from '@/lib/api-loja'
 import { getLojas } from '@/lib/api'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
-import { FunilStatus } from '@/components/lojas/funil-status'
+import { AtendenteDashboard } from '@/components/dashboard/atendente-dashboard'
 import { Store } from 'lucide-react'
-import { StatsCardsSkeleton, KanbanStatsCardsSkeleton, ChartCardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import {
+  StatsCardsSkeleton,
+  KanbanStatsCardsSkeleton,
+  ChartCardSkeleton,
+} from '@/components/dashboard/dashboard-skeletons'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
   title: 'Resumo | Noxus - Lead Ops',
@@ -33,14 +44,6 @@ async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
   )
 }
 
-async function FunilStatusWrapper({ lojaIds }: { lojaIds: number[] }) {
-  const [statusFunil, colunas] = await Promise.all([
-    getMultiLojaStatusFunil(lojaIds),
-    getMultiLojaKanbanColumns(lojaIds),
-  ])
-  return <FunilStatus data={statusFunil} colunas={colunas} />
-}
-
 async function LeadsTemperatureWrapper({ lojaIds }: { lojaIds: number[] }) {
   const classificacao = await getMultiLojaClassificacao(lojaIds)
   return (
@@ -52,11 +55,46 @@ async function LeadsTemperatureWrapper({ lojaIds }: { lojaIds: number[] }) {
   )
 }
 
+async function AtendenteDashboardWrapper({
+  lojaIds,
+  userId,
+  userName,
+}: {
+  lojaIds: number[]
+  userId: number
+  userName: string
+}) {
+  const [stats, colunas] = await Promise.all([
+    getMultiLojaAtendanteStats(lojaIds, userId),
+    getMultiLojaKanbanColumns(lojaIds),
+  ])
+  return <AtendenteDashboard stats={stats} userName={userName} colunas={colunas} />
+}
+
+function AtendenteDashboardSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default async function CrmDashboardPage() {
   const user = await requireAuth()
 
   const isLoja = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []
+  const isGerente = user.is_gerente
 
   const lojasVinculadas =
     isLoja && lojaIds.length > 1
@@ -93,22 +131,33 @@ export default async function CrmDashboardPage() {
         </div>
       )}
 
+      {/* Dashboard pessoal — só para atendentes (não gerentes) */}
+      {isLoja && !isGerente && (
+        <div className="rounded-2xl border border-border/50 bg-white p-5 shadow-sm">
+          <Suspense fallback={<AtendenteDashboardSkeleton />}>
+            <AtendenteDashboardWrapper
+              lojaIds={lojaIds}
+              userId={user.id}
+              userName={user.name}
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {/* Stats gerais da loja */}
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsCardsWrapper lojaIds={lojaIds} />
       </Suspense>
 
+      {/* Status do Funil — único bloco, sem redundância */}
       <Suspense fallback={<KanbanStatsCardsSkeleton />}>
         <KanbanStatsWrapper lojaIds={lojaIds} />
       </Suspense>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <FunilStatusWrapper lojaIds={lojaIds} />
-        </Suspense>
-        <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <LeadsTemperatureWrapper lojaIds={lojaIds} />
-        </Suspense>
-      </div>
+      {/* Temperatura */}
+      <Suspense fallback={<ChartCardSkeleton height="h-56" />}>
+        <LeadsTemperatureWrapper lojaIds={lojaIds} />
+      </Suspense>
     </div>
   )
 }

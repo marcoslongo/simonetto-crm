@@ -42,14 +42,20 @@ export async function fetchLeadsByStatusPaginated(params: {
   const session = await getSession()
   const isLojista = session?.user.role === 'loja' && !!session.user.loja_ids?.length
 
-  let all
   if (isLojista) {
-    const { leads } = await getMultiLojaLeads(session!.user.loja_ids, 1000)
-    all = leads.filter(l => (l.status ?? 'nao_atendido') === params.status)
-  } else {
-    all = await getAllLeadsServer(undefined, params.from, params.to, undefined, [params.status])
+    // Filtragem server-side via endpoint dedicado por loja
+    const lojaIds = session!.user.loja_ids
+    const results = await Promise.all(
+      lojaIds.map(id => getLojaLeads(id, params.page, STATUS_PAGE_SIZE, undefined, undefined, undefined, params.status))
+    )
+    const leads = results.flatMap(r => r.leads)
+      .sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime())
+    const total = results.reduce((s, r) => s + r.total, 0)
+    const totalPages = Math.ceil(total / STATUS_PAGE_SIZE) || 1
+    return { leads, total, totalPages }
   }
 
+  const all = await getAllLeadsServer(undefined, params.from, params.to, undefined, [params.status])
   const total = all.length
   const totalPages = Math.ceil(total / STATUS_PAGE_SIZE) || 1
   const leads = all.slice((params.page - 1) * STATUS_PAGE_SIZE, params.page * STATUS_PAGE_SIZE)

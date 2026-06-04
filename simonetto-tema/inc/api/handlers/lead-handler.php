@@ -382,16 +382,17 @@ class Lead_Handler
 
     $table_name = $wpdb->prefix . 'leads';
 
-    $page     = max(1, intval($args['page'] ?? 1));
-    $per_page = intval($args['per_page'] ?? 20);
-    $offset   = ($page - 1) * $per_page;
-    $email    = $args['email'] ?? '';
-    $loja_id  = $args['loja_id'] ?? 0;
-    $search   = $args['search'] ?? '';
-    $from     = $args['from'] ?? '';
-    $to       = $args['to'] ?? '';
-    $status   = $args['status'] ?? '';
-    $origem   = $args['origem'] ?? '';
+    $page           = max(1, intval($args['page'] ?? 1));
+    $per_page       = intval($args['per_page'] ?? 20);
+    $offset         = ($page - 1) * $per_page;
+    $email          = $args['email'] ?? '';
+    $loja_id        = $args['loja_id'] ?? 0;
+    $search         = $args['search'] ?? '';
+    $from           = $args['from'] ?? '';
+    $to             = $args['to'] ?? '';
+    $status         = $args['status'] ?? '';
+    $origem         = $args['origem'] ?? '';
+    $responsavel_id = isset($args['responsavel_id']) ? intval($args['responsavel_id']) : 0;
 
     $where_clauses  = [];
     $prepare_values = [];
@@ -425,14 +426,19 @@ class Lead_Handler
       $prepare_values[] = sanitize_text_field($to) . ' 23:59:59';
     }
 
-    if ($status && in_array($status, self::STATUS_ALLOWED, true)) {
+    if ($status !== '') {
       $where_clauses[]  = "l.status = %s";
-      $prepare_values[] = $status;
+      $prepare_values[] = sanitize_text_field($status);
     }
 
     if ($origem && in_array($origem, self::ORIGEM_ALLOWED, true)) {
       $where_clauses[]  = "l.origem = %s";
       $prepare_values[] = $origem;
+    }
+
+    if ($responsavel_id > 0) {
+      $where_clauses[]  = "l.responsavel_id = %d";
+      $prepare_values[] = $responsavel_id;
     }
 
     $where_sql = !empty($where_clauses)
