@@ -15,6 +15,7 @@ require_once __DIR__ . '/utils/email.php';
 
 // Carregar handlers
 require_once __DIR__ . '/handlers/kanban-column-handler.php';
+require_once __DIR__ . '/handlers/etiqueta-handler.php';
 require_once __DIR__ . '/handlers/lead-handler.php';
 require_once __DIR__ . '/handlers/lead-arquiteto-handler.php';
 require_once __DIR__ . '/handlers/lead-tracking-handler.php';
@@ -40,6 +41,7 @@ require_once __DIR__ . '/endpoints/followups.php';
 require_once __DIR__ . '/endpoints/renders.php';
 require_once __DIR__ . '/endpoints/ai.php';
 require_once __DIR__ . '/endpoints/kanban-columns.php';
+require_once __DIR__ . '/endpoints/etiquetas.php';
 require_once __DIR__ . '/endpoints/agenda-compartilhada.php';
 require_once __DIR__ . '/endpoints/lead-arquivos.php';
 require_once __DIR__ . '/endpoints/lead-notificacoes.php';
@@ -50,6 +52,7 @@ add_action('init', function () {
   Followup_Handler::maybe_create_table();
   Render_Handler::maybe_create_table();
   Kanban_Column_Handler::maybe_create_table();
+  Etiqueta_Handler::maybe_create_tables();
   Agenda_Compartilhada_Handler::maybe_create_tables();
   Lead_Arquivos_Handler::maybe_create_table();
   Lead_Notificacoes_Handler::maybe_create_table();

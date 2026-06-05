@@ -6,6 +6,14 @@ export type UserRole = 'administrator' | 'loja';
 
 export type LeadStatus = string;
 
+export interface Etiqueta {
+  id: number;
+  loja_id: number;
+  nome: string;
+  cor: string;
+  ordem?: number;
+}
+
 export interface KanbanColuna {
   id: number
   loja_id: number
@@ -89,6 +97,7 @@ export interface Lead {
   responsavel_avatar_url?: string | null;
   proximo_followup_em?: string | null;
   proximo_followup_descricao?: string | null;
+  etiquetas?: Etiqueta[];
 }
 
 export interface LeadsResponse {

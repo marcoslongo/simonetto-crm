@@ -81,8 +81,9 @@ import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
 import { NovoLeadDialog } from './novo-lead-dialog'
 import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
-import { Lead, KanbanColuna } from '@/lib/types'
+import { Lead, KanbanColuna, Etiqueta } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
+import { EtiquetaBadge, EtiquetasPicker } from './etiquetas-picker'
 import { useIsMobile } from '@/components/ui/use-mobile'
 
 export type LeadStatus = string
@@ -1317,6 +1318,7 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
                   onLeadClick={onLeadClick}
                   onLeadUpdate={onLeadUpdate}
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
+                  isGerente={isGerente}
                 />
               ))}
 
@@ -1359,9 +1361,10 @@ interface DraggableLeadRowProps {
   onLeadClick?: (lead: Lead) => void
   onLeadUpdate: (updated: Lead) => void
   isSaving?: boolean
+  isGerente?: boolean
 }
 
-const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false }: DraggableLeadRowProps) {
+const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -1371,6 +1374,13 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
   } = useDraggable({
     id: String(lead.id),
   })
+
+  const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? [])
+
+  const handleEtiquetasUpdate = (updated: Etiqueta[]) => {
+    setEtiquetas(updated)
+    onLeadUpdate({ ...lead, etiquetas: updated })
+  }
 
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [usuarios, setUsuarios] = useState<{ id: number; nome: string; avatar_url?: string | null }[]>([])
@@ -1520,6 +1530,21 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               Ver informações completas
             </TooltipContent>
           </Tooltip>
+
+          {lead.loja_id && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1">
+              {etiquetas.map(e => (
+                <EtiquetaBadge key={e.id} etiqueta={e} size="xs" />
+              ))}
+              <EtiquetasPicker
+                leadId={lead.id}
+                lojaId={lead.loja_id}
+                etiquetas={etiquetas}
+                isGerente={isGerente}
+                onUpdate={handleEtiquetasUpdate}
+              />
+            </div>
+          )}
 
           <div className="mt-2">
             {lead.loja_id ? (

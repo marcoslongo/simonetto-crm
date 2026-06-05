@@ -32,8 +32,10 @@ import {
   X,
   XCircle,
   Sparkles,
+  Tag,
 } from "lucide-react";
-import { Lead, VendaNaoRealizada } from "@/lib/types";
+import { Lead, VendaNaoRealizada, Etiqueta } from "@/lib/types";
+import { EtiquetasPicker, EtiquetaBadge } from "@/components/leads/etiquetas-picker";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FaWhatsapp } from "react-icons/fa";
@@ -153,6 +155,8 @@ export function LeadDetailsModal({
   const [vendaNaoRealizada, setVendaNaoRealizada] = useState<VendaNaoRealizada | null>(null);
   const [loadingVnr, setLoadingVnr] = useState(false);
 
+  const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? []);
+
   useEffect(() => {
     setSelectedLojaId(lead.loja_id ?? "");
     setCurrentLojaNome(lead.loja_nome ?? "");
@@ -162,6 +166,7 @@ export function LeadDetailsModal({
     setEditingResponsavel(false);
     setUsuarios([]);
     setVendaNaoRealizada(null);
+    setEtiquetas(lead.etiquetas ?? []);
   }, [lead.id]);
 
   useEffect(() => {
@@ -740,6 +745,36 @@ export function LeadDetailsModal({
                         {currentResponsavelNome || "—"}
                       </p>
                     )}
+                  </div>
+
+                  {/* Etiquetas */}
+                  <div className="rounded-xl border border-border bg-card p-5 md:col-span-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <Tag className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex-1">
+                        Etiquetas
+                      </h3>
+                      {lead.loja_id && (
+                        <EtiquetasPicker
+                          leadId={lead.id}
+                          lojaId={lead.loja_id}
+                          etiquetas={etiquetas}
+                          isGerente={isGerente || isAdmin}
+                          onUpdate={setEtiquetas}
+                        />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 min-h-6">
+                      {etiquetas.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">Nenhuma etiqueta atribuída.</p>
+                      ) : (
+                        etiquetas.map(e => (
+                          <EtiquetaBadge key={e.id} etiqueta={e} />
+                        ))
+                      )}
+                    </div>
                   </div>
 
                   {/* Registro */}

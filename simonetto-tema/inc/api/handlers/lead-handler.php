@@ -473,8 +473,11 @@ class Lead_Handler
       ...$query_values
     ), ARRAY_A);
 
+    $lead_ids       = array_map(fn($l) => (int) $l['id'], $leads);
+    $etiquetas_map  = Etiqueta_Handler::get_etiquetas_for_leads($lead_ids);
+
     foreach ($leads as &$lead) {
-      $lead = self::_format_lead($lead);
+      $lead = self::_format_lead($lead, false, $etiquetas_map);
     }
 
     $total = $wpdb->get_var($wpdb->prepare(
@@ -774,7 +777,7 @@ class Lead_Handler
    * @param  bool  $full       Se true, inclui campos extras da loja (endereço, telefone).
    * @return array
    */
-  private static function _format_lead(array $lead, bool $full = false): array
+  private static function _format_lead(array $lead, bool $full = false, array $etiquetas_map = []): array
   {
     $lead['id']             = (string) $lead['id'];
     $lead['loja_id']        = $lead['loja_id'] ? (string) $lead['loja_id'] : null;
@@ -782,6 +785,9 @@ class Lead_Handler
     $lead['classificacao']  = $lead['classificacao']  ?? 'frio';
     $lead['score']          = isset($lead['score']) ? (int) $lead['score'] : 0;
     $lead['unread_count']   = isset($lead['unread_count']) ? (int) $lead['unread_count'] : 0;
+
+    $lid = (int) $lead['id'];
+    $lead['etiquetas'] = $etiquetas_map[$lid] ?? Etiqueta_Handler::get_lead_etiquetas($lid);
 
     $lead['responsavel_id'] = isset($lead['responsavel_id']) && $lead['responsavel_id']
       ? (int) $lead['responsavel_id']
