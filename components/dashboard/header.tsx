@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { logoutAction } from '@/app/login/actions'
 import { NotificationBell } from './notification-bell'
 import { FollowupBell } from './followup-bell'
+import { LeadAtribuicaoBell } from './lead-atribuicao-bell'
 import { useSidebar } from './sidebar-context'
 import type { User as UserType } from '@/lib/types'
 
@@ -69,6 +70,11 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
           <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10 lg:[&_button]:text-inherit lg:[&_button]:hover:bg-inherit lg:[&_button]:hover:text-inherit">
             <FollowupBell />
           </div>
+          {!isAdmin && (
+            <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10 lg:[&_button]:text-inherit lg:[&_button]:hover:bg-inherit lg:[&_button]:hover:text-inherit">
+              <LeadAtribuicaoBell />
+            </div>
+          )}
           {isAdmin && (
             <div className="[&_button]:text-white/80 [&_button]:hover:text-white [&_button]:hover:bg-white/10 lg:[&_button]:text-inherit lg:[&_button]:hover:bg-inherit lg:[&_button]:hover:text-inherit">
               <NotificationBell />

@@ -733,6 +733,21 @@ class Lead_Handler
         ['%d', '%s'],
         ['%d']
       );
+
+      // Notifica o responsável se a atribuição foi feita por outra pessoa
+      if ($resultado !== false) {
+        $quem_atribuiu    = wp_get_current_user();
+        $lead_row_full    = $wpdb->get_row($wpdb->prepare("SELECT nome FROM {$table_leads} WHERE id = %d", $id));
+        $lead_nome        = $lead_row_full ? $lead_row_full->nome : 'Lead #' . $id;
+
+        Lead_Notificacoes_Handler::criar(
+          intval($responsavel_id),
+          intval($id),
+          $lead_nome,
+          intval($quem_atribuiu->ID),
+          $quem_atribuiu->display_name
+        );
+      }
     } else {
       $resultado = $wpdb->query($wpdb->prepare(
         "UPDATE {$table_leads} SET responsavel_id = NULL, data_atualizacao = %s WHERE id = %d",
