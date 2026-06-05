@@ -39,7 +39,10 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         </p>
       </div>
 
-      <DateFilterClient />
+      {/* Suspense obrigatório: DateFilterClient usa useSearchParams() */}
+      <Suspense fallback={null}>
+        <DateFilterClient />
+      </Suspense>
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <StatsSection />
@@ -57,15 +60,15 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <SlaRedeSection />
       </Suspense>
 
-      <Suspense fallback={<StatsCardsSkeleton />}>
+      <Suspense key={`conversao-${from}-${to}`} fallback={<StatsCardsSkeleton />}>
         <ConversaoRedeSection from={from} to={to} />
       </Suspense>
 
-      <Suspense fallback={<ChartCardSkeleton height="h-64" />}>
+      <Suspense key={`topbottom-${from}-${to}`} fallback={<ChartCardSkeleton height="h-64" />}>
         <TopBottomConversoesSection from={from} to={to} />
       </Suspense>
 
-      <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>
+      <Suspense key={`30dias-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[300px]" />}>
         <Leads30DaysSection from={from} to={to} />
       </Suspense>
 

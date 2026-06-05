@@ -21,7 +21,9 @@ export default async function AquisicaoPage({ searchParams }: AquisicaoPageProps
         <p className="text-muted-foreground mt-1">Origem dos leads e investimentos</p>
       </div>
 
-      <DateFilterClient />
+      <Suspense fallback={null}>
+        <DateFilterClient />
+      </Suspense>
 
       <Suspense key={`temp-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[200px]" />}>
         <LeadsTemperatureSection from={from} to={to} />

@@ -182,7 +182,7 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
           <p className="text-muted-foreground mt-1">Análise guiada do funil de vendas da sua unidade</p>
         </div>
         <div className="shrink-0">
-          <Suspense>
+          <Suspense fallback={null}>
             <DateFilterClient />
           </Suspense>
         </div>

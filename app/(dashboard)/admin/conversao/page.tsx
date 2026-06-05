@@ -95,7 +95,9 @@ export default async function ConversaoPage({ searchParams }: ConversaoPageProps
         <p className="text-muted-foreground mt-1">Análise do funil e taxas de conversão</p>
       </div>
 
-      <DateFilterClient />
+      <Suspense fallback={null}>
+        <DateFilterClient />
+      </Suspense>
 
       <Suspense key={`alerta-${from}-${to}`} fallback={<div className="h-20 rounded-2xl bg-slate-100 animate-pulse" />}>
         <ConversaoResumoAlerta from={from} to={to} />
