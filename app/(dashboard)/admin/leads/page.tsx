@@ -7,6 +7,7 @@ import { LeadsSearch } from '@/components/leads/leads-search'
 import { DateRangeFilter } from '@/components/leads/date-range-filter'
 import { LeadsTable } from '@/components/leads/leads-table'
 import { OrigemFilter } from '@/components/leads/origem-filter'
+import { getKanbanColumns } from '@/lib/api-loja'
 import type { LeadOrigem } from '@/lib/types'
 
 export const metadata = {
@@ -43,6 +44,19 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
     getLeadsServer(page, 10, lojaId, search, from, to, origem),
     getLojasServer().catch(() => ({ lojas: [] })),
   ])
+
+  // Busca as colunas Kanban das lojas presentes nesta página para montar o mapa slug→label
+  const lojaIdsNaPagina = [...new Set(
+    leadsResponse.leads.map(l => l.loja_id).filter(Boolean).map(Number)
+  )]
+  const colunasArrays = await Promise.all(lojaIdsNaPagina.map(id => getKanbanColumns(id).catch(() => [])))
+  const statusLabels: Record<string, string> = {}
+  for (const colunas of colunasArrays) {
+    for (const col of colunas) {
+      // Não sobrescreve um label já encontrado (primeira loja ganha para slugs fixos)
+      if (!statusLabels[col.slug]) statusLabels[col.slug] = col.label
+    }
+  }
 
   const selectedLoja =
     lojaId && leadsResponse.leads.length > 0
@@ -118,6 +132,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                 showLoja
                 isAdmin
                 lojas={lojas}
+                statusLabels={statusLabels}
               />
 
               <LeadsPagination

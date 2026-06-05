@@ -48,6 +48,7 @@ interface LeadsTableProps {
   isAdmin?: boolean;
   isGerente?: boolean;
   lojas?: LojaOption[];
+  statusLabels?: Record<string, string>;
 }
 
 const interestLabels: Record<string, string> = {
@@ -113,7 +114,7 @@ const classificacaoMap: Record<string, { label: string; colorClass: string; Icon
   },
 };
 
-export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, lojas = [] }: LeadsTableProps) {
+export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, lojas = [], statusLabels = {} }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -221,20 +222,19 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, lojas 
                 <TableCell className="py-3">
                   {(() => {
                     const key = lead.status?.toLowerCase().trim() || "";
-                    const config = statusMap[key] || {
-                      label: lead.status || "-",
-                      colorClass: "bg-secondary text-secondary-foreground border-border",
-                      Icon: null,
-                    };
-                    const { Icon } = config;
+                    const fixedConfig = statusMap[key];
+                    // Prefere o label configurado no Kanban; fallback para mapa fixo; fallback para slug cru
+                    const label = statusLabels[key] || fixedConfig?.label || lead.status || "-";
+                    const colorClass = fixedConfig?.colorClass || "bg-secondary text-secondary-foreground border-border";
+                    const Icon = fixedConfig?.Icon ?? null;
 
                     return (
                       <Badge
                         variant="outline"
-                        className={`flex w-fit items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 ${config.colorClass}`}
+                        className={`flex w-fit items-center gap-1.5 text-[11px] font-medium px-2.5 py-0.5 ${colorClass}`}
                       >
                         {Icon && <Icon className="h-3.5 w-3.5" />}
-                        {config.label}
+                        {label}
                       </Badge>
                     );
                   })()}
