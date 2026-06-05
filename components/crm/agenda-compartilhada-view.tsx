@@ -8,14 +8,29 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import {
-  ChevronLeft, ChevronRight, Plus, X, Loader2, Trash2,
-  Settings, CalendarDays, Clock, Users, MapPin, Pencil, Check,
+  ChevronLeft, ChevronRight, Plus, Loader2, Trash2,
+  Settings, CalendarDays, Clock, Users, MapPin, Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { toast } from 'sonner'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +72,8 @@ const TIPOS: { value: string; label: string; cor: string }[] = [
 const TIPO_LABEL: Record<string, string> = Object.fromEntries(TIPOS.map(t => [t.value, t.label]))
 const TIPO_COR:   Record<string, string> = Object.fromEntries(TIPOS.map(t => [t.value, t.cor]))
 
+const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface AgendaCompartilhadaViewProps {
@@ -76,7 +93,6 @@ export function AgendaCompartilhadaView({
   isAdmin,
   isGerente,
   currentUserId,
-  currentUserName,
 }: AgendaCompartilhadaViewProps) {
   const primaryLojaId = lojaId ?? lojaIds[0] ?? null
 
@@ -86,30 +102,30 @@ export function AgendaCompartilhadaView({
   const [loading, setLoading] = useState(false)
 
   // Modal de evento
-  const [showModal, setShowModal] = useState(false)
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [eventoOpen, setEventoOpen]     = useState(false)
+  const [selectedDay, setSelectedDay]   = useState<Date | null>(null)
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null)
-  const [editMode, setEditMode] = useState(false)
+  const [editMode, setEditMode]         = useState(false)
+
+  // Modal de salas
+  const [salasOpen, setSalasOpen] = useState(false)
 
   // Filtro de sala
   const [filtroSala, setFiltroSala] = useState<number | null>(null)
 
-  // Modal de gerenciar salas
-  const [showSalasModal, setShowSalasModal] = useState(false)
-
-  // Form de novo evento
+  // Form de evento
   const [form, setForm] = useState({
     titulo: '',
     descricao: '',
     inicio: '',
     fim: '',
     tipo: 'evento',
-    sala_id: '' as string,
+    sala_id: '',
     cor: '#3b82f6',
   })
   const [saving, setSaving] = useState(false)
 
-  // ── Busca de dados ───────────────────────────────────────────────────────
+  // ── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchEventos = useCallback(async () => {
     if (!primaryLojaId) return
@@ -117,7 +133,7 @@ export function AgendaCompartilhadaView({
     try {
       const year  = currentDate.getFullYear()
       const month = currentDate.getMonth() + 1
-      const res = await fetch(`/api/agenda-compartilhada?loja_id=${primaryLojaId}&year=${year}&month=${month}`)
+      const res  = await fetch(`/api/agenda-compartilhada?loja_id=${primaryLojaId}&year=${year}&month=${month}`)
       const data = await res.json()
       if (data.success) setEventos(data.eventos ?? [])
     } catch { toast.error('Erro ao carregar eventos') }
@@ -127,25 +143,27 @@ export function AgendaCompartilhadaView({
   const fetchSalas = useCallback(async () => {
     if (!primaryLojaId) return
     try {
-      const res = await fetch(`/api/salas-reuniao?loja_id=${primaryLojaId}`)
+      const res  = await fetch(`/api/salas-reuniao?loja_id=${primaryLojaId}`)
       const data = await res.json()
       if (data.success) setSalas(data.salas ?? [])
     } catch {}
   }, [primaryLojaId])
 
   useEffect(() => { fetchEventos() }, [fetchEventos])
-  useEffect(() => { fetchSalas() }, [fetchSalas])
+  useEffect(() => { fetchSalas() },  [fetchSalas])
 
-  // ── Calendário: dias da grade ────────────────────────────────────────────
+  // ── Grade do calendário ──────────────────────────────────────────────────
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd   = endOfMonth(currentDate)
   const gridStart  = startOfWeek(monthStart, { weekStartsOn: 0 })
-  const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 0 })
+  const gridEnd    = endOfWeek(monthEnd,     { weekStartsOn: 0 })
 
   const days: Date[] = []
   let d = gridStart
   while (d <= gridEnd) { days.push(d); d = addDays(d, 1) }
+
+  const total = days.length
 
   const eventosVisiveis = filtroSala
     ? eventos.filter(e => e.sala_id === filtroSala)
@@ -156,30 +174,40 @@ export function AgendaCompartilhadaView({
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  const handleDayClick = (day: Date) => {
+  const openCreate = (day: Date) => {
     if (!primaryLojaId) return
     setSelectedDay(day)
     setSelectedEvento(null)
     setEditMode(false)
-    const defaultTipo = TIPOS[0]
+    const def = TIPOS[0]
     setForm({
-      titulo: '',
-      descricao: '',
+      titulo: '', descricao: '',
       inicio: format(day, 'yyyy-MM-dd') + 'T09:00',
       fim:    format(day, 'yyyy-MM-dd') + 'T10:00',
-      tipo: defaultTipo.value,
-      sala_id: '',
-      cor: defaultTipo.cor,
+      tipo: def.value, sala_id: '', cor: def.cor,
     })
-    setShowModal(true)
+    setEventoOpen(true)
   }
 
-  const handleEventoClick = (e: React.MouseEvent, evento: Evento) => {
+  const openView = (e: React.MouseEvent, evento: Evento) => {
     e.stopPropagation()
     setSelectedEvento(evento)
     setSelectedDay(null)
     setEditMode(false)
-    setShowModal(true)
+    setEventoOpen(true)
+  }
+
+  const enterEditMode = (evento: Evento) => {
+    setEditMode(true)
+    setForm({
+      titulo:    evento.titulo,
+      descricao: evento.descricao ?? '',
+      inicio:    evento.inicio.slice(0, 16).replace(' ', 'T'),
+      fim:       evento.fim ? evento.fim.slice(0, 16).replace(' ', 'T') : '',
+      tipo:      evento.tipo,
+      sala_id:   evento.sala_id ? String(evento.sala_id) : '',
+      cor:       evento.cor,
+    })
   }
 
   const handleSave = async () => {
@@ -198,17 +226,17 @@ export function AgendaCompartilhadaView({
       }
 
       if (editMode && selectedEvento) {
-        const res = await fetch(`/api/agenda-compartilhada/${selectedEvento.id}`, {
+        const res  = await fetch(`/api/agenda-compartilhada/${selectedEvento.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...body, loja_id: primaryLojaId }),
         })
         const data = await res.json()
         if (!data.success) throw new Error(data.mensagem)
-        setEventos(prev => prev.map(e => e.id === selectedEvento.id ? data.evento : e))
+        setEventos(prev => prev.map(ev => ev.id === selectedEvento.id ? data.evento : ev))
         toast.success('Evento atualizado')
       } else {
-        const res = await fetch('/api/agenda-compartilhada', {
+        const res  = await fetch('/api/agenda-compartilhada', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -218,48 +246,32 @@ export function AgendaCompartilhadaView({
         setEventos(prev => [...prev, data.evento])
         toast.success('Evento criado')
       }
-      setShowModal(false)
+      setEventoOpen(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao salvar evento')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   const handleDelete = async (evento: Evento) => {
     if (!primaryLojaId) return
     if (!confirm(`Excluir "${evento.titulo}"?`)) return
     try {
-      const res = await fetch(`/api/agenda-compartilhada/${evento.id}`, {
+      const res  = await fetch(`/api/agenda-compartilhada/${evento.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loja_id: primaryLojaId }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.mensagem)
-      setEventos(prev => prev.filter(e => e.id !== evento.id))
-      setShowModal(false)
+      setEventos(prev => prev.filter(ev => ev.id !== evento.id))
+      setEventoOpen(false)
       toast.success('Evento excluído')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao excluir evento')
     }
   }
 
-  const canEdit = (evento: Evento) =>
-    isAdmin || isGerente || evento.usuario_id === currentUserId
-
-  const enterEditMode = (evento: Evento) => {
-    setEditMode(true)
-    setForm({
-      titulo:    evento.titulo,
-      descricao: evento.descricao ?? '',
-      inicio:    evento.inicio.slice(0, 16).replace(' ', 'T'),
-      fim:       evento.fim ? evento.fim.slice(0, 16).replace(' ', 'T') : '',
-      tipo:      evento.tipo,
-      sala_id:   evento.sala_id ? String(evento.sala_id) : '',
-      cor:       evento.cor,
-    })
-  }
+  const canEdit = (ev: Evento) => isAdmin || isGerente || ev.usuario_id === currentUserId
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -272,22 +284,24 @@ export function AgendaCompartilhadaView({
     )
   }
 
+  const monthLabel = format(currentDate, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())
+
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
+
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 justify-between">
-        {/* Navegação do mês */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+          <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-base font-semibold text-[#16255c] min-w-32 text-center capitalize">
-            {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+          <span className="text-base font-semibold min-w-47.5 text-center capitalize">
+            {monthLabel}
           </span>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+          <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setCurrentDate(new Date())}>
+          <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="text-xs">
             Hoje
           </Button>
         </div>
@@ -298,7 +312,11 @@ export function AgendaCompartilhadaView({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setFiltroSala(null)}
-                className={cn('text-xs px-2.5 py-1 rounded-full border transition-colors', filtroSala === null ? 'bg-[#16255c] text-white border-[#16255c]' : 'border-border text-muted-foreground hover:border-[#16255c]/40')}
+                className={cn('text-xs px-2.5 py-1 rounded-full border transition-colors',
+                  filtroSala === null
+                    ? 'bg-[#16255c] text-white border-[#16255c]'
+                    : 'border-border text-muted-foreground hover:border-[#16255c]/40'
+                )}
               >
                 Todos
               </button>
@@ -306,7 +324,9 @@ export function AgendaCompartilhadaView({
                 <button
                   key={s.id}
                   onClick={() => setFiltroSala(filtroSala === s.id ? null : s.id)}
-                  className={cn('text-xs px-2.5 py-1 rounded-full border transition-colors', filtroSala === s.id ? 'text-white border-transparent' : 'border-border text-muted-foreground hover:border-opacity-60')}
+                  className={cn('text-xs px-2.5 py-1 rounded-full border transition-colors',
+                    filtroSala === s.id ? 'text-white border-transparent' : 'border-border text-muted-foreground'
+                  )}
                   style={filtroSala === s.id ? { backgroundColor: s.cor, borderColor: s.cor } : {}}
                 >
                   <span className="inline-block h-1.5 w-1.5 rounded-full mr-1" style={{ backgroundColor: s.cor }} />
@@ -316,286 +336,335 @@ export function AgendaCompartilhadaView({
             </div>
           )}
 
-          {/* Gerenciar salas */}
           {(isGerente || isAdmin) && (
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setShowSalasModal(true)}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setSalasOpen(true)}>
               <Settings className="h-3.5 w-3.5" />
               Salas
             </Button>
           )}
 
-          {/* Novo evento */}
-          <Button size="sm" className="gap-1.5 h-8 text-xs bg-[#16255c] hover:bg-[#16255c]/90" onClick={() => handleDayClick(new Date())}>
-            <Plus className="h-3.5 w-3.5" />
-            Novo evento
+          <Button
+            size="sm"
+            className="gap-1.5 bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
+            onClick={() => openCreate(new Date())}
+          >
+            <Plus className="h-4 w-4" />
+            Novo Compromisso
           </Button>
         </div>
       </div>
 
-      {/* Grade do calendário */}
-      <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-        {/* Cabeçalho: dias da semana */}
-        <div className="grid grid-cols-7 border-b">
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-            <div key={d} className="py-2 text-center text-xs font-semibold text-muted-foreground">
-              {d}
+      {/* ── Grade do calendário ──────────────────────────────────────────── */}
+      <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+        {/* Cabeçalho dias da semana */}
+        <div className="grid grid-cols-7 border-b bg-muted/30">
+          {WEEK_DAYS.map(day => (
+            <div key={day} className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {day}
             </div>
           ))}
         </div>
 
         {/* Dias */}
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-7">
-            {days.map((day, idx) => {
-              const inMonth   = isSameMonth(day, currentDate)
-              const today     = isToday(day)
-              const dayEvents = eventosDoDia(day)
-              const overflow  = dayEvents.length > 3
+        <div className={cn('grid grid-cols-7 relative', loading && 'opacity-50')}>
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {days.map((day, i) => {
+            const inMonth   = isSameMonth(day, currentDate)
+            const today     = isToday(day)
+            const dayEvents = eventosDoDia(day)
+            const overflow  = dayEvents.length > 3
 
-              return (
-                <div
-                  key={idx}
-                  onClick={() => handleDayClick(day)}
-                  className={cn(
-                    'min-h-[90px] lg:min-h-[110px] p-1.5 border-b border-r cursor-pointer transition-colors',
-                    !inMonth && 'bg-slate-50/60',
-                    inMonth && 'hover:bg-blue-50/40',
-                    today && 'bg-blue-50'
-                  )}
-                >
-                  <div className={cn(
-                    'text-xs font-semibold mb-1 h-5 w-5 flex items-center justify-center rounded-full',
-                    today     && 'bg-[#16255c] text-white',
-                    !today && inMonth  && 'text-slate-700',
-                    !inMonth && 'text-slate-300',
-                  )}>
-                    {format(day, 'd')}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {dayEvents.slice(0, 3).map(evento => (
-                      <button
-                        key={evento.id}
-                        onClick={e => handleEventoClick(e, evento)}
-                        className="w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate transition-opacity hover:opacity-80"
-                        style={{ backgroundColor: (evento.sala_cor ?? evento.cor) + '25', color: evento.sala_cor ?? evento.cor, borderLeft: `2px solid ${evento.sala_cor ?? evento.cor}` }}
-                      >
-                        {format(parseISO(evento.inicio), 'HH:mm')} {evento.titulo}
-                      </button>
-                    ))}
-                    {overflow && (
-                      <p className="text-[10px] text-muted-foreground pl-1">+{dayEvents.length - 3} mais</p>
-                    )}
-                  </div>
+            return (
+              <div
+                key={i}
+                onClick={() => openCreate(day)}
+                className={cn(
+                  'min-h-22.5 lg:min-h-27.5 p-1.5 transition-colors cursor-pointer',
+                  inMonth  ? 'hover:bg-muted/30' : 'bg-muted/10 hover:bg-muted/20',
+                  i % 7 !== 6 && 'border-r',
+                  i < total - 7 && 'border-b',
+                )}
+              >
+                <div className={cn(
+                  'h-5 w-5 flex items-center justify-center rounded-full text-xs font-semibold mb-1 select-none',
+                  today
+                    ? 'bg-[#16255c] text-white'
+                    : inMonth ? 'text-foreground' : 'text-muted-foreground/40',
+                )}>
+                  {format(day, 'd')}
                 </div>
-              )
-            })}
-          </div>
-        )}
+
+                <div className="space-y-0.5">
+                  {dayEvents.slice(0, 3).map(ev => (
+                    <button
+                      key={ev.id}
+                      onClick={e => openView(e, ev)}
+                      className="w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate transition-opacity hover:opacity-75 block"
+                      style={{
+                        backgroundColor: (ev.sala_cor ?? ev.cor) + '25',
+                        color: ev.sala_cor ?? ev.cor,
+                        borderLeft: `2px solid ${ev.sala_cor ?? ev.cor}`,
+                      }}
+                    >
+                      <span className="font-semibold">{format(parseISO(ev.inicio), 'HH:mm')}</span>{' '}
+                      {ev.titulo}
+                    </button>
+                  ))}
+                  {overflow && (
+                    <p className="text-[10px] text-muted-foreground px-1.5">+{dayEvents.length - 3} mais</p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Legenda de tipos */}
-      <div className="flex flex-wrap gap-3">
+      {/* ── Legenda de tipos ─────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {TIPOS.map(t => (
-          <span key={t.value} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.cor }} />
-            {t.label}
-          </span>
+          <div key={t.value} className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded" style={{ backgroundColor: t.cor + '40', border: `2px solid ${t.cor}` }} />
+            <span>{t.label}</span>
+          </div>
         ))}
       </div>
 
-      {/* ── Modal: ver / criar / editar evento ────────────────────────────── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      {/* ── Dialog: ver evento ───────────────────────────────────────────── */}
+      <Dialog
+        open={eventoOpen && !!selectedEvento && !editMode}
+        onOpenChange={open => { if (!open) setEventoOpen(false) }}
+      >
+        <DialogContent className="sm:max-w-100">
+          {selectedEvento && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: selectedEvento.sala_cor ?? selectedEvento.cor }} />
+                  <DialogTitle className="text-base">{selectedEvento.titulo}</DialogTitle>
+                </div>
+              </DialogHeader>
 
-            {/* Ver evento */}
-            {selectedEvento && !editMode && (
-              <div>
-                <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: selectedEvento.sala_cor ?? selectedEvento.cor }} />
-                    <h3 className="font-semibold text-base text-slate-800 truncate">{selectedEvento.titulo}</h3>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {canEdit(selectedEvento) && (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => enterEditMode(selectedEvento)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(selectedEvento)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
+              <div className="space-y-3 py-1">
+                <Badge variant="outline" style={{
+                  color:           TIPO_COR[selectedEvento.tipo],
+                  borderColor:     TIPO_COR[selectedEvento.tipo] + '60',
+                  backgroundColor: TIPO_COR[selectedEvento.tipo] + '10',
+                }}>
+                  {TIPO_LABEL[selectedEvento.tipo] ?? selectedEvento.tipo}
+                </Badge>
+
+                <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-foreground">
+                      {format(parseISO(selectedEvento.inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                    {selectedEvento.fim && (
+                      <p className="text-xs">até {format(parseISO(selectedEvento.fim), 'HH:mm')}</p>
                     )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowModal(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
 
-                <div className="px-5 py-4 space-y-3">
-                  <Badge variant="outline" style={{ color: TIPO_COR[selectedEvento.tipo], borderColor: TIPO_COR[selectedEvento.tipo] + '60', backgroundColor: TIPO_COR[selectedEvento.tipo] + '10' }}>
-                    {TIPO_LABEL[selectedEvento.tipo] ?? selectedEvento.tipo}
-                  </Badge>
-
-                  <div className="flex items-start gap-2 text-sm text-slate-600">
-                    <Clock className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p>{format(parseISO(selectedEvento.inicio), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
-                      {selectedEvento.fim && (
-                        <p className="text-xs text-muted-foreground">até {format(parseISO(selectedEvento.fim), "HH:mm")}</p>
-                      )}
-                    </div>
+                {selectedEvento.sala_nome && (
+                  <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span>{selectedEvento.sala_nome}</span>
                   </div>
+                )}
 
-                  {selectedEvento.sala_nome && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span>{selectedEvento.sala_nome}</span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4 shrink-0" />
+                  <span>{selectedEvento.usuario_nome}</span>
+                </div>
 
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span>{selectedEvento.usuario_nome}</span>
-                  </div>
-
-                  {selectedEvento.descricao && (
-                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap bg-slate-50 rounded-lg p-3">
+                {selectedEvento.descricao && (
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                       {selectedEvento.descricao}
                     </p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Criar / Editar evento */}
-            {(!selectedEvento || editMode) && (
-              <div>
-                <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b">
-                  <h3 className="font-semibold text-base">
-                    {editMode ? 'Editar evento' : `Novo evento${selectedDay ? ' — ' + format(selectedDay, "dd 'de' MMM", { locale: ptBR }) : ''}`}
-                  </h3>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setShowModal(false); setEditMode(false) }}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="px-5 py-4 space-y-4">
-                  {/* Título */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="titulo">Título *</Label>
-                    <Input id="titulo" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))} placeholder="Nome do evento" autoFocus />
-                  </div>
-
-                  {/* Tipo */}
-                  <div className="space-y-1.5">
-                    <Label>Tipo</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {TIPOS.map(t => (
-                        <button
-                          key={t.value}
-                          type="button"
-                          onClick={() => setForm(p => ({ ...p, tipo: t.value, cor: t.cor }))}
-                          className={cn('text-xs px-3 py-1 rounded-full border-2 transition-all font-medium', form.tipo === t.value ? 'text-white border-transparent' : 'border-border text-muted-foreground hover:border-opacity-60')}
-                          style={form.tipo === t.value ? { backgroundColor: t.cor, borderColor: t.cor } : {}}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sala */}
-                  {salas.length > 0 && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="sala">Sala de reunião</Label>
-                      <select
-                        id="sala"
-                        value={form.sala_id}
-                        onChange={e => setForm(p => ({ ...p, sala_id: e.target.value }))}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      >
-                        <option value="">Sem sala específica</option>
-                        {salas.map(s => (
-                          <option key={s.id} value={s.id}>
-                            {s.nome}{s.capacidade ? ` (${s.capacidade} pessoas)` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Início / Fim */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="inicio">Início *</Label>
-                      <Input id="inicio" type="datetime-local" value={form.inicio} onChange={e => setForm(p => ({ ...p, inicio: e.target.value }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="fim">Fim</Label>
-                      <Input id="fim" type="datetime-local" value={form.fim} onChange={e => setForm(p => ({ ...p, fim: e.target.value }))} />
-                    </div>
-                  </div>
-
-                  {/* Descrição */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="descricao">Descrição</Label>
-                    <textarea
-                      id="descricao"
-                      value={form.descricao}
-                      onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
-                      placeholder="Detalhes opcionais..."
-                      rows={3}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 px-5 pb-5">
-                  <Button variant="outline" onClick={() => { setShowModal(false); setEditMode(false) }}>Cancelar</Button>
+              {canEdit(selectedEvento) && (
+                <DialogFooter className="gap-2 sm:justify-between">
                   <Button
-                    onClick={handleSave}
-                    disabled={saving || !form.titulo.trim() || !form.inicio}
-                    className="bg-[#16255c] hover:bg-[#16255c]/90"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(selectedEvento)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
                   >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (editMode ? 'Salvar' : 'Criar evento')}
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    Excluir
                   </Button>
-                </div>
+                  <Button size="sm" variant="outline" onClick={() => enterEditMode(selectedEvento)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    Editar
+                  </Button>
+                </DialogFooter>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: criar / editar evento ───────────────────────────────── */}
+      <Dialog
+        open={eventoOpen && (!selectedEvento || editMode)}
+        onOpenChange={open => { if (!open) { setEventoOpen(false); setEditMode(false) } }}
+      >
+        <DialogContent className="sm:max-w-110">
+          <DialogHeader>
+            <DialogTitle>
+              {editMode
+                ? 'Editar evento'
+                : `Novo Compromisso${selectedDay ? ' — ' + format(selectedDay, "dd 'de' MMM", { locale: ptBR }) : ''}`
+              }
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            {/* Título */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ac-titulo">Título <span className="text-destructive">*</span></Label>
+              <Input
+                id="ac-titulo"
+                value={form.titulo}
+                onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
+                placeholder="Nome do evento"
+                autoFocus
+              />
+            </div>
+
+            {/* Tipo */}
+            <div className="space-y-1.5">
+              <Label>Tipo</Label>
+              <div className="flex flex-wrap gap-2">
+                {TIPOS.map(t => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, tipo: t.value, cor: t.cor }))}
+                    className={cn(
+                      'text-xs px-3 py-1 rounded-full border-2 transition-all font-medium',
+                      form.tipo === t.value ? 'text-white border-transparent' : 'border-border text-muted-foreground'
+                    )}
+                    style={form.tipo === t.value ? { backgroundColor: t.cor, borderColor: t.cor } : {}}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sala */}
+            {salas.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="ac-sala">Sala de reunião</Label>
+                <Select
+                  value={form.sala_id || 'none'}
+                  onValueChange={v => setForm(p => ({ ...p, sala_id: v === 'none' ? '' : v }))}
+                >
+                  <SelectTrigger id="ac-sala">
+                    <SelectValue placeholder="Sem sala específica" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem sala específica</SelectItem>
+                    {salas.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.cor }} />
+                          {s.nome}{s.capacidade ? ` (${s.capacidade} pessoas)` : ''}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* ── Modal: gerenciar salas ────────────────────────────────────────── */}
-      {showSalasModal && (
-        <SalasModal
-          lojaId={primaryLojaId}
-          salas={salas}
-          onClose={() => setShowSalasModal(false)}
-          onUpdate={setSalas}
-        />
-      )}
+            {/* Início / Fim */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ac-inicio">Início <span className="text-destructive">*</span></Label>
+                <Input
+                  id="ac-inicio"
+                  type="datetime-local"
+                  value={form.inicio}
+                  onChange={e => setForm(p => ({ ...p, inicio: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ac-fim">Fim</Label>
+                <Input
+                  id="ac-fim"
+                  type="datetime-local"
+                  value={form.fim}
+                  onChange={e => setForm(p => ({ ...p, fim: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ac-descricao">Descrição <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+              <Textarea
+                id="ac-descricao"
+                value={form.descricao}
+                onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
+                placeholder="Detalhes opcionais..."
+                rows={3}
+                className="resize-none text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEventoOpen(false); setEditMode(false) }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !form.titulo.trim() || !form.inicio}
+              className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {editMode ? 'Salvar alterações' : 'Criar evento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: gerenciar salas ──────────────────────────────────────── */}
+      <SalasDialog
+        open={salasOpen}
+        onOpenChange={setSalasOpen}
+        lojaId={primaryLojaId}
+        salas={salas}
+        onUpdate={setSalas}
+      />
     </div>
   )
 }
 
-// ── Sub-componente: gerenciar salas ────────────────────────────────────────
+// ── Diálogo de Salas ───────────────────────────────────────────────────────
 
-interface SalasModalProps {
+interface SalasDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   lojaId: number
   salas: Sala[]
-  onClose: () => void
   onUpdate: (salas: Sala[]) => void
 }
 
-function SalasModal({ lojaId, salas, onClose, onUpdate }: SalasModalProps) {
+const CORES_SALA = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#6b7280']
+
+function SalasDialog({ open, onOpenChange, lojaId, salas, onUpdate }: SalasDialogProps) {
   const [form, setForm] = useState({ nome: '', capacidade: '', descricao: '', cor: '#3b82f6' })
   const [saving, setSaving] = useState(false)
 
@@ -603,7 +672,7 @@ function SalasModal({ lojaId, salas, onClose, onUpdate }: SalasModalProps) {
     if (!form.nome.trim()) return
     setSaving(true)
     try {
-      const res = await fetch('/api/salas-reuniao', {
+      const res  = await fetch('/api/salas-reuniao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -627,7 +696,7 @@ function SalasModal({ lojaId, salas, onClose, onUpdate }: SalasModalProps) {
   const handleDelete = async (sala: Sala) => {
     if (!confirm(`Excluir a sala "${sala.nome}"?`)) return
     try {
-      const res = await fetch(`/api/salas-reuniao/${sala.id}`, {
+      const res  = await fetch(`/api/salas-reuniao/${sala.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loja_id: lojaId }),
@@ -641,35 +710,36 @@ function SalasModal({ lojaId, salas, onClose, onUpdate }: SalasModalProps) {
     }
   }
 
-  const CORES = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#6b7280']
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b">
-          <h3 className="font-semibold text-base">Salas de Reunião</h3>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-110">
+        <DialogHeader>
+          <DialogTitle>Salas de Reunião</DialogTitle>
+        </DialogHeader>
 
         {/* Salas existentes */}
-        <div className="px-5 py-4 space-y-2">
-          {salas.length === 0 && (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {salas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nenhuma sala cadastrada.</p>
-          )}
-          {salas.map(s => (
-            <div key={s.id} className="flex items-center gap-3 rounded-xl border px-3 py-2.5">
+          ) : salas.map(s => (
+            <div key={s.id} className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
               <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: s.cor }} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{s.nome}</p>
                 {(s.capacidade || s.descricao) && (
                   <p className="text-xs text-muted-foreground truncate">
-                    {s.capacidade ? `${s.capacidade} pessoas` : ''}{s.capacidade && s.descricao ? ' · ' : ''}{s.descricao ?? ''}
+                    {s.capacidade ? `${s.capacidade} pessoas` : ''}
+                    {s.capacidade && s.descricao ? ' · ' : ''}
+                    {s.descricao ?? ''}
                   </p>
                 )}
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive shrink-0" onClick={() => handleDelete(s)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                onClick={() => handleDelete(s)}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -677,37 +747,61 @@ function SalasModal({ lojaId, salas, onClose, onUpdate }: SalasModalProps) {
         </div>
 
         {/* Nova sala */}
-        <div className="px-5 pb-5 space-y-3 border-t pt-4">
+        <div className="space-y-3 border-t pt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nova sala</p>
 
-          <Input placeholder="Nome da sala *" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} />
+          <Input
+            placeholder="Nome da sala *"
+            value={form.nome}
+            onChange={e => setForm(p => ({ ...p, nome: e.target.value }))}
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <Input placeholder="Capacidade (pessoas)" type="number" min={1} value={form.capacidade} onChange={e => setForm(p => ({ ...p, capacidade: e.target.value }))} />
-            <div className="flex items-center gap-2">
-              {CORES.map(cor => (
+            <Input
+              placeholder="Capacidade (pessoas)"
+              type="number"
+              min={1}
+              value={form.capacidade}
+              onChange={e => setForm(p => ({ ...p, capacidade: e.target.value }))}
+            />
+            <div className="flex items-center gap-1.5">
+              {CORES_SALA.map(cor => (
                 <button
                   key={cor}
                   type="button"
                   onClick={() => setForm(p => ({ ...p, cor }))}
-                  className={cn('h-6 w-6 rounded-full border-2 transition-transform hover:scale-110', form.cor === cor ? 'border-slate-700 scale-110' : 'border-transparent')}
+                  className={cn(
+                    'h-6 w-6 rounded-full border-2 transition-transform hover:scale-110',
+                    form.cor === cor ? 'border-foreground scale-110' : 'border-transparent'
+                  )}
                   style={{ backgroundColor: cor }}
                 />
               ))}
             </div>
           </div>
 
-          <Input placeholder="Descrição (opcional)" value={form.descricao} onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))} />
+          <Input
+            placeholder="Descrição (opcional)"
+            value={form.descricao}
+            onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
+          />
+        </div>
 
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           <Button
             onClick={handleCreate}
             disabled={saving || !form.nome.trim()}
-            className="w-full bg-[#16255c] hover:bg-[#16255c]/90"
+            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1.5" />Criar sala</>}
+            {saving
+              ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              : <Plus className="h-4 w-4 mr-1.5" />
+            }
+            Criar sala
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
