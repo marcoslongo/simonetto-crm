@@ -75,6 +75,27 @@ add_action('rest_api_init', function () {
     'callback' => 'mytheme_api_stats_tempo_por_etapa',
     'permission_callback' => 'mytheme_api_is_authenticated',
   ));
+
+  // SLA agregado de toda a rede em uma única query (substitui N+1 requests)
+  register_rest_route('api/v1', '/stats/sla-rede', array(
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_stats_sla_rede',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ));
+
+  // Ranking de conversão: top/bottom pré-calculados com média (substitui ordenação no frontend)
+  register_rest_route('api/v1', '/stats/conversao-ranking', array(
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_stats_conversao_ranking',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ));
+
+  // Monitor de capacidade: active_leads por loja em uma única query
+  register_rest_route('api/v1', '/stats/capacidade-rede', array(
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_stats_capacidade_rede',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ));
 });
 
 function mytheme_api_stats_general($request)
@@ -192,5 +213,39 @@ function mytheme_api_stats_tempo_por_etapa($request)
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to   = sanitize_text_field($request->get_param('to')   ?? '');
   $data = Stats_Handler::tempo_por_etapa($loja_ids, $from, $to);
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/stats/sla-rede
+ * SLA agregado de toda a rede em uma única query SQL.
+ */
+function mytheme_api_stats_sla_rede(WP_REST_Request $request): WP_REST_Response
+{
+  $data = Stats_Handler::sla_rede();
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/stats/conversao-ranking
+ * Ranking de conversão pré-calculado com top/bottom e média.
+ * Parâmetros: from, to, top_n (padrão 5)
+ */
+function mytheme_api_stats_conversao_ranking(WP_REST_Request $request): WP_REST_Response
+{
+  $from  = sanitize_text_field($request->get_param('from')  ?? '');
+  $to    = sanitize_text_field($request->get_param('to')    ?? '');
+  $top_n = max(1, (int) ($request->get_param('top_n') ?? 5));
+  $data  = Stats_Handler::conversao_ranking($from, $to, $top_n);
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/stats/capacidade-rede
+ * Active leads por loja em uma única query, com média e classificação.
+ */
+function mytheme_api_stats_capacidade_rede(WP_REST_Request $request): WP_REST_Response
+{
+  $data = Stats_Handler::capacidade_rede();
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }

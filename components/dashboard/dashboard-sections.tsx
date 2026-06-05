@@ -21,7 +21,14 @@ import {
   getLeadsLast12MonthsServer,
 } from '@/lib/server-leads-service'
 import { getLojasServer } from '@/lib/server-lojas-service'
-import { getMultiLojaFunilSaude, getConversaoPorLoja, getTodasLojasSaude } from '@/lib/api-loja'
+import {
+  getMultiLojaFunilSaude,
+  getConversaoPorLoja,
+  getTodasLojasSaude,
+  getSlaRede,
+  getConversaoRanking,
+  getCapacidadeRede,
+} from '@/lib/api-loja'
 import Link from 'next/link'
 
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -95,16 +102,12 @@ export async function StatusStatsSection({ from, to }: StatusStatsSectionProps) 
 }
 
 export async function CapacidadeMonitorSection() {
-  const lojas = await getLojasServer()
-  const lojasInput = lojas.map((l: any) => ({ id: Number(l.id), nome: l.nome })).filter((l: any) => l.id)
-  const todasSaude = await getTodasLojasSaude(lojasInput)
+  const capacidade = await getCapacidadeRede()
+  if (!capacidade || !capacidade.lojas.length) return null
 
-  const comAtivos = todasSaude.filter(l => l.active_leads > 0)
-  if (!comAtivos.length) return null
-
-  const avg = comAtivos.reduce((s, l) => s + l.active_leads, 0) / comAtivos.length
-  const sorted = [...comAtivos].sort((a, b) => b.active_leads - a.active_leads).slice(0, 15)
-  const maxLeads = sorted[0]?.active_leads ?? 1
+  const { avg, lojas } = capacidade
+  const top15 = lojas.slice(0, 15)
+  const maxLeads = top15[0]?.active_leads ?? 1
 
   return (
     <div className="rounded-2xl border border-border/50 bg-linear-to-br from-slate-50 to-slate-100 shadow-md overflow-hidden">
@@ -129,30 +132,29 @@ export async function CapacidadeMonitorSection() {
         </div>
       </div>
       <div className="p-5 space-y-2">
-        {sorted.map(l => {
-          const ratio = avg > 0 ? l.active_leads / avg : 0
-          const isOverload = ratio >= 2
-          const isWarning = !isOverload && ratio >= 1.5
-          const barPct = Math.min(100, Math.round(l.active_leads / maxLeads * 100))
-          const barColor = isOverload ? 'bg-red-500' : isWarning ? 'bg-amber-400' : 'bg-blue-400'
-          const textColor = isOverload ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600'
+        {top15.map((l, i) => {
+          const isOverload = l.status === 'overload'
+          const isWarning  = l.status === 'warning'
+          const barPct     = Math.min(100, Math.round(l.active_leads / maxLeads * 100))
+          const barColor   = isOverload ? 'bg-red-500' : isWarning ? 'bg-amber-400' : 'bg-blue-400'
+          const textColor  = isOverload ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600'
           return (
             <Link key={l.loja_id} href={`/admin/lojas/${l.loja_id}`} className="flex items-center gap-3 rounded-lg hover:bg-white/60 transition-colors px-2 py-1.5 -mx-2 group">
-              <span className="text-xs text-slate-500 w-4 shrink-0 font-medium">{sorted.indexOf(l) + 1}.</span>
+              <span className="text-xs text-slate-500 w-4 shrink-0 font-medium">{i + 1}.</span>
               <span className="text-sm font-medium text-slate-700 w-36 shrink-0 truncate group-hover:text-[#16255c]">{l.loja_nome}</span>
               <div className="flex-1 h-3 bg-slate-200/60 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${barPct}%` }} />
               </div>
               <span className={`text-sm font-bold tabular-nums w-8 text-right shrink-0 ${textColor}`}>{l.active_leads}</span>
               {(isOverload || isWarning) && (
-                <span className={`text-xs font-medium shrink-0 ${textColor}`}>{ratio.toFixed(1)}×</span>
+                <span className={`text-xs font-medium shrink-0 ${textColor}`}>{l.ratio.toFixed(1)}×</span>
               )}
             </Link>
           )
         })}
-        {comAtivos.length > 15 && (
+        {lojas.length > 15 && (
           <p className="text-xs text-slate-400 text-center pt-2">
-            Exibindo 15 de {comAtivos.length} franqueados com leads ativos
+            Exibindo 15 de {lojas.length} franqueados com leads ativos
           </p>
         )}
       </div>
@@ -253,45 +255,18 @@ export async function ComparativoSemanalSection() {
 }
 
 export async function SlaRedeSection() {
-  const lojas = await getLojasServer()
-  const lojasInput = lojas.map((l: any) => ({ id: Number(l.id), nome: l.nome })).filter((l: any) => l.id)
+  const slaRede = await getSlaRede()
+  if (!slaRede || slaRede.totais.active_leads === 0) return null
 
-  const todasSaude = await getTodasLojasSaude(lojasInput)
-
-  const saude = todasSaude.reduce(
-    (acc, s) => ({
-      active_leads:        acc.active_leads        + s.active_leads,
-      sla_breach_count:    acc.sla_breach_count    + s.sla_breach_count,
-      sla_nao_atendido:    acc.sla_nao_atendido    + s.sla_nao_atendido,
-      sla_parados:         acc.sla_parados         + s.sla_parados,
-      sla_breach_pct:      0,
-      score_medio:         0,
-      followup_total:      acc.followup_total      + s.followup_total,
-      followup_concluidos: acc.followup_concluidos + s.followup_concluidos,
-      followup_compliance: null,
-    }),
-    { active_leads: 0, sla_breach_count: 0, sla_nao_atendido: 0, sla_parados: 0, sla_breach_pct: 0, score_medio: 0, followup_total: 0, followup_concluidos: 0, followup_compliance: null as null }
-  )
-  saude.sla_breach_pct = saude.active_leads > 0
-    ? Math.round(saude.sla_breach_count / saude.active_leads * 1000) / 10
-    : 0
-
-  if (saude.active_leads === 0) return null
-
-  const isCritical = saude.sla_breach_pct >= 20
-  const isWarning = !isCritical && saude.sla_breach_pct >= 10
-  const colorKey = isCritical ? 'red' : isWarning ? 'amber' : 'emerald'
+  const { totais, criticas } = slaRede
+  const colorKey = totais.nivel === 'critico' ? 'red' : totais.nivel === 'atencao' ? 'amber' : 'emerald'
   const colorMap = {
     red:     { border: 'border-red-200',     bg: 'bg-red-50',     icon: 'bg-red-100',     text: 'text-red-800',     sub: 'text-red-600',     num: 'text-red-700',     title: 'Nível Crítico' },
     amber:   { border: 'border-amber-200',   bg: 'bg-amber-50',   icon: 'bg-amber-100',   text: 'text-amber-800',   sub: 'text-amber-600',   num: 'text-amber-700',   title: 'Atenção Necessária' },
     emerald: { border: 'border-emerald-200', bg: 'bg-emerald-50', icon: 'bg-emerald-100', text: 'text-emerald-800', sub: 'text-emerald-600', num: 'text-emerald-700', title: 'Dentro do Normal' },
   }
   const c = colorMap[colorKey]
-
-  const criticas = todasSaude
-    .filter(l => l.sla_breach_count > 0)
-    .sort((a, b) => b.sla_breach_pct - a.sla_breach_pct)
-    .slice(0, 5)
+  const showCriticas = criticas.length > 0 && totais.nivel !== 'normal'
 
   return (
     <div className={`rounded-2xl border p-5 space-y-4 ${c.bg} ${c.border}`}>
@@ -303,31 +278,29 @@ export async function SlaRedeSection() {
             </svg>
           </div>
           <div>
-            <p className={`font-semibold text-sm ${c.text}`}>
-              SLA da Rede — {c.title}
-            </p>
+            <p className={`font-semibold text-sm ${c.text}`}>SLA da Rede — {c.title}</p>
             <p className={`text-xs mt-0.5 ${c.sub}`}>
-              {saude.sla_breach_count} leads em breach de SLA ({saude.sla_breach_pct}% dos ativos)
+              {totais.sla_breach_count} leads em breach de SLA ({totais.sla_breach_pct}% dos ativos)
             </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 sm:gap-6">
           <div className="text-center">
-            <p className={`text-2xl font-bold ${c.num}`}>{saude.active_leads}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{totais.active_leads}</p>
             <p className="text-xs text-slate-500 mt-0.5">Leads ativos</p>
           </div>
           <div className="text-center">
-            <p className={`text-2xl font-bold ${c.num}`}>{saude.sla_nao_atendido}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{totais.sla_nao_atendido}</p>
             <p className="text-xs text-slate-500 mt-0.5">Sem contato</p>
           </div>
           <div className="text-center">
-            <p className={`text-2xl font-bold ${c.num}`}>{saude.sla_parados}</p>
+            <p className={`text-2xl font-bold ${c.num}`}>{totais.sla_parados}</p>
             <p className="text-xs text-slate-500 mt-0.5">Parados</p>
           </div>
         </div>
       </div>
 
-      {criticas.length > 0 && (isCritical || isWarning) && (
+      {showCriticas && (
         <div className="border-t border-current/10 pt-4">
           <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${c.sub}`}>
             Lojas com maior SLA breach
@@ -419,15 +392,10 @@ interface TopBottomConversoesSectionProps {
 }
 
 export async function TopBottomConversoesSection({ from, to }: TopBottomConversoesSectionProps = {}) {
-  const conversaoPorLoja = await getConversaoPorLoja([], from, to)
+  const ranking = await getConversaoRanking(from, to, 5)
+  if (!ranking || ranking.total_lojas < 2) return null
 
-  const comDados = conversaoPorLoja.filter(l => l.total_leads >= 3)
-  if (comDados.length < 2) return null
-
-  const sorted = [...comDados].sort((a, b) => b.taxa_conversao - a.taxa_conversao)
-  const top5 = sorted.slice(0, 5)
-  const bottom5 = sorted.slice(-5).reverse()
-  const avg = comDados.reduce((s, l) => s + l.taxa_conversao, 0) / comDados.length
+  const { top, bottom, avg, total_lojas } = ranking
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -441,7 +409,7 @@ export async function TopBottomConversoesSection({ from, to }: TopBottomConverso
           <span className="ml-auto text-xs text-emerald-600">média: {avg.toFixed(1)}%</span>
         </div>
         <div className="space-y-2">
-          {top5.map((loja, i) => (
+          {top.map((loja, i) => (
             <Link key={loja.loja_id} href={`/admin/lojas/${loja.loja_id}`} className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2.5 hover:bg-white transition-colors">
               <span className="text-xs font-bold text-emerald-600 w-5">{i + 1}º</span>
               <span className="flex-1 text-sm font-medium text-slate-700 truncate">{loja.loja_nome}</span>
@@ -464,9 +432,9 @@ export async function TopBottomConversoesSection({ from, to }: TopBottomConverso
           <span className="ml-auto text-xs text-red-500">abaixo de {avg.toFixed(1)}%</span>
         </div>
         <div className="space-y-2">
-          {bottom5.map((loja, i) => (
+          {bottom.map((loja, i) => (
             <Link key={loja.loja_id} href={`/admin/lojas/${loja.loja_id}`} className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2.5 hover:bg-white transition-colors">
-              <span className="text-xs font-bold text-red-500 w-5">{sorted.length - bottom5.length + i + 1}º</span>
+              <span className="text-xs font-bold text-red-500 w-5">{total_lojas - bottom.length + i + 1}º</span>
               <span className="flex-1 text-sm font-medium text-slate-700 truncate">{loja.loja_nome}</span>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-slate-400">{loja.vendas_realizadas}/{loja.total_leads}</span>

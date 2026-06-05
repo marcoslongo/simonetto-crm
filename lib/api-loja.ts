@@ -566,3 +566,105 @@ export async function getMultiLojaKanbanColumns(lojaIds: number[]): Promise<Kanb
   if (!lojaIds.length) return DEFAULT_KANBAN_COLUNAS
   return getKanbanColumns(lojaIds[0])
 }
+
+// ── Endpoints agregados (substituem N+1 requests) ─────────────────────────────
+
+export interface SlaRedeLojaItem {
+  loja_id:          number
+  loja_nome:        string
+  active_leads:     number
+  sla_breach_count: number
+  sla_nao_atendido: number
+  sla_parados:      number
+  sla_breach_pct:   number
+}
+
+export interface SlaRedeTotais {
+  active_leads:     number
+  sla_breach_count: number
+  sla_nao_atendido: number
+  sla_parados:      number
+  sla_breach_pct:   number
+  nivel:            'critico' | 'atencao' | 'normal'
+}
+
+export interface SlaRedeData {
+  totais:   SlaRedeTotais
+  lojas:    SlaRedeLojaItem[]
+  criticas: SlaRedeLojaItem[]
+}
+
+export async function getSlaRede(): Promise<SlaRedeData | null> {
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(`${API_BASE_URL}/stats/sla-rede`, {
+      next: { revalidate: 60 },
+      headers,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.data ?? null
+  } catch { return null }
+}
+
+export interface ConversaoRankingItem {
+  loja_id:               number
+  loja_nome:             string
+  total_leads:           number
+  vendas_realizadas:     number
+  vendas_nao_realizadas: number
+  em_negociacao:         number
+  nao_atendido:          number
+  taxa_conversao:        number
+}
+
+export interface ConversaoRankingData {
+  avg:         number
+  total_lojas: number
+  ranking:     ConversaoRankingItem[]
+  top:         ConversaoRankingItem[]
+  bottom:      ConversaoRankingItem[]
+}
+
+export async function getConversaoRanking(from?: string, to?: string, topN = 5): Promise<ConversaoRankingData | null> {
+  const qs = new URLSearchParams()
+  if (from) qs.set('from', from)
+  if (to)   qs.set('to', to)
+  qs.set('top_n', String(topN))
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/stats/conversao-ranking?${qs}`,
+      { next: { revalidate: from || to ? 0 : 60 }, headers }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.data ?? null
+  } catch { return null }
+}
+
+export interface CapacidadeLojaItem {
+  loja_id:      number
+  loja_nome:    string
+  active_leads: number
+  ratio:        number
+  status:       'overload' | 'warning' | 'normal'
+}
+
+export interface CapacidadeRedeData {
+  avg:   number
+  lojas: CapacidadeLojaItem[]
+}
+
+export async function getCapacidadeRede(): Promise<CapacidadeRedeData | null> {
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(`${API_BASE_URL}/stats/capacidade-rede`, {
+      next: { revalidate: 60 },
+      headers,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.data ?? null
+  } catch { return null }
+}
