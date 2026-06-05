@@ -344,8 +344,7 @@ export function AgendaCompartilhadaView({
           )}
 
           <Button
-            size="sm"
-            className="gap-1.5 bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
+            className="gap-2 bg-[#16255c] hover:bg-[#16255c] hover:opacity-90"
             onClick={() => openCreate(new Date())}
           >
             <Plus className="h-4 w-4" />
