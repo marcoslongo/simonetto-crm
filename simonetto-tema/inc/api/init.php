@@ -24,6 +24,7 @@ require_once __DIR__ . '/handlers/mensagem-handler.php';
 require_once __DIR__ . '/handlers/nota-handler.php';
 require_once __DIR__ . '/handlers/followup-handler.php';
 require_once __DIR__ . '/handlers/render-handler.php';
+require_once __DIR__ . '/handlers/agenda-compartilhada-handler.php';
 
 // Carregar endpoints
 require_once __DIR__ . '/endpoints/leads.php';
@@ -37,6 +38,7 @@ require_once __DIR__ . '/endpoints/followups.php';
 require_once __DIR__ . '/endpoints/renders.php';
 require_once __DIR__ . '/endpoints/ai.php';
 require_once __DIR__ . '/endpoints/kanban-columns.php';
+require_once __DIR__ . '/endpoints/agenda-compartilhada.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {
@@ -44,5 +46,6 @@ add_action('init', function () {
   Followup_Handler::maybe_create_table();
   Render_Handler::maybe_create_table();
   Kanban_Column_Handler::maybe_create_table();
+  Agenda_Compartilhada_Handler::maybe_create_tables();
 }, 5);
 

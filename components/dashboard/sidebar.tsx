@@ -20,6 +20,7 @@ import {
   TrendingUp,
   MousePointerClick,
   CalendarDays,
+  CalendarRange,
   User,
   Shield,
   LogOut,
@@ -118,7 +119,8 @@ function buildNavigation(user: UserType) {
       group: 'Operações',
       items: [
         { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
-        { name: 'Agenda', href: '/crm/calendario', icon: CalendarDays },
+        { name: 'Minha Agenda', href: '/crm/calendario', icon: CalendarDays },
+        { name: 'Agenda da Loja', href: '/crm/agenda', icon: CalendarRange },
         ...(isGerente
           ? [{ name: 'Relatórios', href: '/crm/relatorios', icon: FileChartColumnIncreasing }]
           : []),
