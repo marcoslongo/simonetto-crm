@@ -144,7 +144,7 @@ function DayCell({
   return (
     <div
       className={cn(
-        "min-h-[110px] p-1.5 transition-colors cursor-pointer",
+        "min-h-22.5 lg:min-h-27.5 p-1.5 transition-colors cursor-pointer",
         isCurrentMonth ? "hover:bg-muted/30" : "bg-muted/10 hover:bg-muted/20",
         showBorderRight && "border-r",
         showBorderBottom && "border-b"
@@ -153,7 +153,7 @@ function DayCell({
     >
       <div
         className={cn(
-          "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium mb-1 select-none",
+          "h-5 w-5 flex items-center justify-center rounded-full text-xs font-semibold mb-1 select-none",
           today
             ? "bg-[#16255c] text-white"
             : isCurrentMonth
@@ -746,7 +746,7 @@ export function CalendarioView({ userId }: { userId: number }) {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-lg font-semibold min-w-[190px] text-center capitalize">
+          <span className="text-base font-semibold min-w-47.5 text-center capitalize">
             {monthLabel}
           </span>
           <Button
