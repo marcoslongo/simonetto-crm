@@ -337,8 +337,8 @@ export function AgendaCompartilhadaView({
           )}
 
           {(isGerente || isAdmin) && (
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setSalasOpen(true)}>
-              <Settings className="h-3.5 w-3.5" />
+            <Button variant="outline" className="gap-2" onClick={() => setSalasOpen(true)}>
+              <Settings className="h-4 w-4" />
               Salas
             </Button>
           )}
