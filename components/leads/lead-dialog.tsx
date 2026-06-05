@@ -49,6 +49,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 import { NotasLead } from "@/components/leads/notas-lead";
 import { FollowupLead } from "@/components/leads/followup-lead";
 import { AiLeadPanel } from "@/components/leads/ai-lead-panel";
+import { ArquivosLead } from "@/components/leads/arquivos-lead";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -435,6 +436,7 @@ export function LeadDetailsModal({
                   <TabsTrigger value="notas" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Notas</TabsTrigger>
                   <TabsTrigger value="followup" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Retornos</TabsTrigger>
                   <TabsTrigger value="historico" onClick={fetchActions} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Histórico</TabsTrigger>
+                  <TabsTrigger value="arquivos" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Arquivos</TabsTrigger>
                   <TabsTrigger value="ia" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
                     IA
@@ -902,6 +904,15 @@ export function LeadDetailsModal({
                     onFollowupChange={onFollowupUpdate}
                   />
                 </div>
+              </TabsContent>
+
+              {/* Arquivos */}
+              <TabsContent value="arquivos" className="mt-0">
+                <ArquivosLead
+                  leadId={lead.id}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                />
               </TabsContent>
 
               {/* Assistente de IA */}
