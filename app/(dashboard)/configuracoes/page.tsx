@@ -4,6 +4,7 @@ import { ConfiguracoesForm } from './configuracoes-form'
 import { AvatarForm } from './avatar-form'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
+import { WhatsAppAutoLeadConfig } from '@/components/lojas/whatsapp-auto-lead-config'
 import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
 import { getLojaIntegration } from '@/lib/api-loja'
 
@@ -122,6 +123,8 @@ export default async function ConfiguracoesPage() {
         isAdmin={false}
         siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
       />
+
+      {isLoja && <WhatsAppAutoLeadConfig />}
     </div>
   )
 }

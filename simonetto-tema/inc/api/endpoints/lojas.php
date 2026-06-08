@@ -168,6 +168,20 @@ add_action('rest_api_init', function () {
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
   ]);
+
+  // GET/POST /api/v1/usuarios/me/whatsapp-auto-lead — criar lead automaticamente para novos contatos
+  register_rest_route('api/v1', '/usuarios/me/whatsapp-auto-lead', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_user_whatsapp_auto_lead',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_user_whatsapp_auto_lead',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
 });
 
 /**
@@ -1025,4 +1039,37 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
       'followup_compliance'   => $compliance_pct,
     ],
   ], 200);
+}
+
+/**
+ * GET /api/v1/usuarios/me/whatsapp-auto-lead
+ */
+function mytheme_api_get_user_whatsapp_auto_lead(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = get_current_user_id();
+  $enabled = (bool) get_user_meta($user_id, '_whatsapp_auto_create_lead', true);
+  return new WP_REST_Response(['success' => true, 'enabled' => $enabled], 200);
+}
+
+/**
+ * POST /api/v1/usuarios/me/whatsapp-auto-lead
+ */
+function mytheme_api_save_user_whatsapp_auto_lead(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id     = get_current_user_id();
+  $body        = $request->get_json_params();
+  $enabled     = !empty($body['enabled']);
+  $was_enabled = (bool) get_user_meta($user_id, '_whatsapp_auto_create_lead', true);
+
+  update_user_meta($user_id, '_whatsapp_auto_create_lead', $enabled ? '1' : '');
+
+  // Só atualiza o timestamp de início quando a feature é ativada pela primeira vez ou reativada
+  if ($enabled && !$was_enabled) {
+    update_user_meta($user_id, '_whatsapp_auto_create_lead_since', time());
+  }
+  if (!$enabled) {
+    delete_user_meta($user_id, '_whatsapp_auto_create_lead_since');
+  }
+
+  return new WP_REST_Response(['success' => true, 'enabled' => $enabled], 200);
 }

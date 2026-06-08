@@ -488,7 +488,34 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
   if (!$lead_id) {
-    return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
+    $auto_create  = get_user_meta($usuario_id, '_whatsapp_auto_create_lead', true);
+    $active_since = (int) get_user_meta($usuario_id, '_whatsapp_auto_create_lead_since', true);
+
+    // Feature desativada
+    if (!$auto_create) {
+      return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
+    }
+
+    // Ignora mensagens anteriores à ativação da feature (conversas antigas)
+    if ($active_since && (int) $timestamp < $active_since) {
+      return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
+    }
+
+    // Segunda verificação para evitar duplicata por race condition
+    $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
+    if (!$lead_id) {
+      $nome     = !empty($push_name) ? sanitize_text_field($push_name) : 'Contato WhatsApp';
+      $new_lead = Lead_Handler::create([
+        'nome'     => $nome,
+        'telefone' => $phone,
+        'loja_id'  => $loja_id ?: null,
+        'origem'   => 'proprio',
+      ]);
+      if (is_wp_error($new_lead)) {
+        return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
+      }
+      $lead_id = $new_lead['lead_id'];
+    }
   }
 
   // Baixa e descriptografa a mídia diretamente do WhatsApp CDN
