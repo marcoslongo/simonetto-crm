@@ -351,7 +351,7 @@ export function LeadDetailsModal({
           {/* ── Header ───────────────────────────────────────────────────── */}
           <div className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-0">
             <DialogHeader className="border-b border-border pb-3 sm:pb-4">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between flex-col gap-3">
                 <div className="min-w-0 flex-1">
                   <DialogTitle className="text-lg sm:text-2xl font-semibold text-card-foreground truncate">
                     {lead.nome}

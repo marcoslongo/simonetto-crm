@@ -390,6 +390,8 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     $usuario_id = Mensagem_Handler::find_any_configured_user();
   }
 
+  error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null'));
+
   // Deriva loja_id do usuário para manter compatibilidade com wp_mensagens.loja_id
   $loja_id = null;
   if ($usuario_id) {
@@ -487,9 +489,13 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   }
 
   $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
+  error_log('[AUTO-LEAD] phone=' . $phone . ' lead_id=' . ($lead_id ?? 'null') . ' timestamp=' . $timestamp);
+
   if (!$lead_id) {
     $auto_create  = get_user_meta($usuario_id, '_whatsapp_auto_create_lead', true);
     $active_since = (int) get_user_meta($usuario_id, '_whatsapp_auto_create_lead_since', true);
+
+    error_log('[AUTO-LEAD] auto_create=' . var_export($auto_create, true) . ' active_since=' . $active_since . ' usuario_id=' . $usuario_id);
 
     // Feature desativada
     if (!$auto_create) {
@@ -497,7 +503,10 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
 
     // Ignora mensagens anteriores à ativação da feature (conversas antigas)
-    if ($active_since && (int) $timestamp < $active_since) {
+    // Só aplica o filtro se o timestamp for um valor válido (> 0)
+    $ts_int = (int) $timestamp;
+    if ($active_since && $ts_int > 0 && $ts_int < $active_since) {
+      error_log('[AUTO-LEAD] bloqueado por timestamp antigo ts=' . $ts_int . ' since=' . $active_since);
       return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
     }
 

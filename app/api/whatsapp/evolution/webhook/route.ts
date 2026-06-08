@@ -6,14 +6,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    console.log('[Evolution Webhook] evento recebido:', body?.event, '| instance:', body?.instanceId ?? body?.instanceName)
+
     const res = await fetch(`${WP_API_BASE}/mensagens/evolution-webhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
 
+    const wpText = await res.text()
+    console.log('[Evolution Webhook] WordPress respondeu:', res.status, wpText)
+
     if (!res.ok) {
-      console.error('[Evolution Webhook] WordPress retornou:', res.status)
+      console.error('[Evolution Webhook] WordPress retornou erro:', res.status)
     }
 
     // Evolution API exige resposta 200 imediata

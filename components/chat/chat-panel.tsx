@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FaWhatsapp } from "react-icons/fa";
-import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause } from "lucide-react";
+import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,9 +48,17 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null);
   const [uploadando, setUploadando] = useState(false);
   const [wpState, setWpState] = useState<string | null>(null);
+  const [gravando, setGravando] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [pendingAudio, setPendingAudio] = useState<{ blob: Blob; url: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const cancelRecordingRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/usuarios/me/whatsapp/status')
@@ -82,6 +90,92 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
 
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  const fmtTimer = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const iniciarGravacao = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mimeType =
+        ["audio/ogg;codecs=opus", "audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
+          t => MediaRecorder.isTypeSupported(t)
+        ) ?? "";
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      audioChunksRef.current = [];
+      cancelRecordingRef.current = false;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+
+        if (cancelRecordingRef.current) {
+          cancelRecordingRef.current = false;
+          audioChunksRef.current = [];
+          return;
+        }
+
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
+        const url = URL.createObjectURL(blob);
+        setPendingAudio({ blob, url });
+        audioChunksRef.current = [];
+      };
+
+      recorder.start(250);
+      mediaRecorderRef.current = recorder;
+      setGravando(true);
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1);
+      }, 1000);
+    } catch {
+      toast.error("Não foi possível acessar o microfone.");
+    }
+  };
+
+  const pararGravacao = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setGravando(false);
+    setRecordingTime(0);
+    mediaRecorderRef.current?.stop();
+  };
+
+  const cancelarGravacao = () => {
+    cancelRecordingRef.current = true;
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setGravando(false);
+    setRecordingTime(0);
+    mediaRecorderRef.current?.stop();
+  };
+
+  const cancelarAudio = () => {
+    if (pendingAudio) URL.revokeObjectURL(pendingAudio.url);
+    setPendingAudio(null);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -106,7 +200,7 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
 
   const enviarMensagem = async () => {
     const conteudo = texto.trim();
-    if ((!conteudo && !pendingFile) || enviando) return;
+    if ((!conteudo && !pendingFile && !pendingAudio) || enviando) return;
 
     setEnviando(true);
     const textoOriginal = texto;
@@ -118,11 +212,26 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
       let mimetype: string | null = null;
       let filename: string | null = null;
 
-      // Upload do arquivo se houver
-      if (pendingFile) {
+      // Upload do arquivo ou áudio gravado
+      if (pendingFile || pendingAudio) {
         setUploadando(true);
         const fd = new FormData();
-        fd.append("file", pendingFile.file);
+
+        if (pendingAudio) {
+          const ext = pendingAudio.blob.type.includes("ogg")
+            ? "ogg"
+            : pendingAudio.blob.type.includes("mp4")
+            ? "m4a"
+            : "webm";
+          const audioFile = new File(
+            [pendingAudio.blob],
+            `audio_${Date.now()}.${ext}`,
+            { type: pendingAudio.blob.type }
+          );
+          fd.append("file", audioFile);
+        } else if (pendingFile) {
+          fd.append("file", pendingFile.file);
+        }
 
         const upRes = await fetch("/api/mensagens/upload", { method: "POST", body: fd });
         const upData = await upRes.json();
@@ -138,14 +247,20 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
         mimetype  = upData.mimetype;
         filename  = upData.filename;
 
-        // Determina o tipo para a Evolution Go
-        if (mimetype?.startsWith("image/"))      mediaType = "image";
-        else if (mimetype?.startsWith("video/")) mediaType = "video";
-        else if (mimetype?.startsWith("audio/")) mediaType = "audio";
-        else                                      mediaType = "document";
+        if (pendingAudio) {
+          mediaType = "audio";
+          URL.revokeObjectURL(pendingAudio.url);
+          setPendingAudio(null);
+        } else if (pendingFile) {
+          // Determina o tipo para a Evolution Go
+          if (mimetype?.startsWith("image/"))      mediaType = "image";
+          else if (mimetype?.startsWith("video/")) mediaType = "video";
+          else if (mimetype?.startsWith("audio/")) mediaType = "audio";
+          else                                      mediaType = "document";
 
-        if (pendingFile.preview) URL.revokeObjectURL(pendingFile.preview);
-        setPendingFile(null);
+          if (pendingFile.preview) URL.revokeObjectURL(pendingFile.preview);
+          setPendingFile(null);
+        }
       }
 
       const payload: Record<string, unknown> = {
@@ -287,59 +402,123 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
         </div>
       )}
 
-      {/* Input de envio */}
-      <div className="mt-4 space-y-1.5">
-        <div className="flex gap-2 items-end">
-          {/* Input oculto de arquivo */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
-            onChange={handleFileSelect}
-          />
+      {/* Preview do áudio gravado */}
+      {pendingAudio && !gravando && (
+        <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+          <AudioPlayer src={pendingAudio.url} isEnviada={false} />
+          <button onClick={cancelarAudio} className="text-slate-400 hover:text-red-500 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-          {/* Botão de anexo */}
+      {/* Área de gravação (substitui o input enquanto grava) */}
+      {gravando ? (
+        <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
+          <span className="relative flex h-3 w-3 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+          </span>
+          <span className="text-sm font-mono text-red-600 font-semibold tabular-nums">
+            {fmtTimer(recordingTime)}
+          </span>
+          <span className="text-xs text-red-500 flex-1">Gravando áudio...</span>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={enviando}
-            title="Anexar arquivo"
+            className="h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={cancelarGravacao}
+            title="Cancelar gravação"
           >
-            <Paperclip className="h-4 w-4 text-slate-500" />
+            <X className="h-4 w-4" />
           </Button>
-
-          <Textarea
-            ref={textareaRef}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={pendingFile ? "Legenda (opcional)..." : "Digite sua mensagem..."}
-            className="resize-none min-h-[60px] max-h-[120px] text-sm"
-            rows={2}
-            disabled={enviando}
-          />
-
           <Button
-            onClick={enviarMensagem}
-            disabled={enviando || (!texto.trim() && !pendingFile)}
+            type="button"
             size="icon"
-            className="h-10 w-10 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="h-9 w-9 bg-red-500 hover:bg-red-600 text-white shrink-0"
+            onClick={pararGravacao}
+            title="Parar gravação"
           >
-            {uploadando ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            <Square className="h-3.5 w-3.5 fill-current" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground pl-1">
-          Enter para enviar · Shift+Enter para nova linha
-        </p>
-      </div>
+      ) : (
+        /* Input de envio */
+        <div className="mt-4 space-y-1.5">
+          <div className="flex gap-2 items-end">
+            {/* Input oculto de arquivo */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+              onChange={handleFileSelect}
+            />
+
+            {/* Botão de anexo */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={enviando}
+              title="Anexar arquivo"
+            >
+              <Paperclip className="h-4 w-4 text-slate-500" />
+            </Button>
+
+            <Textarea
+              ref={textareaRef}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                pendingAudio
+                  ? "Legenda (opcional)..."
+                  : pendingFile
+                  ? "Legenda (opcional)..."
+                  : "Digite sua mensagem..."
+              }
+              className="resize-none min-h-[60px] max-h-[120px] text-sm"
+              rows={2}
+              disabled={enviando}
+            />
+
+            {/* Botão enviar ou microfone */}
+            {texto.trim() || pendingFile || pendingAudio ? (
+              <Button
+                onClick={enviarMensagem}
+                disabled={enviando || (!texto.trim() && !pendingFile && !pendingAudio)}
+                size="icon"
+                className="h-10 w-10 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white"
+                title="Enviar"
+              >
+                {uploadando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={iniciarGravacao}
+                disabled={enviando}
+                size="icon"
+                className="h-10 w-10 shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white"
+                title="Gravar áudio"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground pl-1">
+            Enter para enviar · Shift+Enter para nova linha
+          </p>
+        </div>
+      )}
     </div>
   );
 }
