@@ -321,40 +321,10 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
     }
   };
 
-  if (wpState === null || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (wpState === 'not_configured') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-12 text-center gap-3">
-        <FaWhatsapp className="h-12 w-12 text-emerald-500/20" />
-        <p className="text-sm font-medium">Instância não configurada</p>
-        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-          Sua instância do WhatsApp ainda não foi atribuída. Entre em contato com o administrador.
-        </p>
-      </div>
-    );
-  }
-
-  if (wpState !== 'open') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-12 text-center gap-3">
-        <FaWhatsapp className="h-12 w-12 text-emerald-500/30" />
-        <p className="text-sm font-medium">WhatsApp não conectado</p>
-        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-          Escaneie o QR code nas configurações da conta para conectar seu WhatsApp.
-        </p>
-        <a
-          href="/configuracoes"
-          className="text-xs text-primary underline underline-offset-2 hover:opacity-80"
-        >
-          Conectar WhatsApp
-        </a>
       </div>
     );
   }
@@ -412,8 +382,32 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
         </div>
       )}
 
-      {/* Área de gravação (substitui o input enquanto grava) */}
-      {gravando ? (
+      {/* Status do WhatsApp — exibido só na área de envio quando não conectado */}
+      {wpState === null && (
+        <div className="mt-4 flex items-center justify-center py-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+        </div>
+      )}
+
+      {wpState === 'not_configured' && (
+        <div className="mt-4 p-3 rounded-xl bg-muted/40 border border-border text-center space-y-1">
+          <FaWhatsapp className="h-5 w-5 text-emerald-500/40 mx-auto" />
+          <p className="text-xs text-muted-foreground">Instância não configurada. Entre em contato com o administrador para enviar mensagens.</p>
+        </div>
+      )}
+
+      {wpState !== null && wpState !== 'open' && wpState !== 'not_configured' && (
+        <div className="mt-4 p-3 rounded-xl bg-muted/40 border border-border text-center space-y-1.5">
+          <FaWhatsapp className="h-5 w-5 text-emerald-500/40 mx-auto" />
+          <p className="text-xs text-muted-foreground">WhatsApp não conectado. Conecte para enviar mensagens.</p>
+          <a href="/configuracoes" className="text-xs text-primary underline underline-offset-2 hover:opacity-80">
+            Conectar WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* Área de gravação e input — só quando WhatsApp conectado */}
+      {wpState === 'open' && (gravando ? (
         <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
           <span className="relative flex h-3 w-3 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
@@ -518,7 +512,7 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
             Enter para enviar · Shift+Enter para nova linha
           </p>
         </div>
-      )}
+      ))}
     </div>
   );
 }
