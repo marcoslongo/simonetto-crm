@@ -218,65 +218,63 @@ export function EtiquetasPicker({ leadId, lojaId, etiquetas, isGerente, onUpdate
           </div>
         )}
 
-        {isGerente && (
-          <div className="mt-2 border-t border-border pt-2">
-            {criando ? (
-              <div className="space-y-2">
-                <Input
-                  placeholder="Nome da etiqueta"
-                  value={novoNome}
-                  onChange={e => setNovoNome(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleCriarEtiqueta()}
-                  className="h-7 text-xs"
-                  autoFocus
-                />
-                <div className="flex flex-wrap gap-1">
-                  {CORES_DISPONIVEIS.map(cor => {
-                    const c = COR_MAP[cor];
-                    return (
-                      <button
-                        key={cor}
-                        title={LABELS_COR[cor]}
-                        onClick={() => setNovaCor(cor)}
-                        className={cn(
-                          "h-5 w-5 rounded-full transition-transform hover:scale-110",
-                          c.dot,
-                          novaCor === cor && "ring-2 ring-offset-1 ring-foreground/30 scale-110"
-                        )}
-                      />
-                    );
-                  })}
-                </div>
-                <div className="flex gap-1.5">
-                  <Button
-                    size="sm"
-                    className="h-7 flex-1 text-xs"
-                    onClick={handleCriarEtiqueta}
-                    disabled={salvandoNova || !novoNome.trim()}
-                  >
-                    {salvandoNova ? <Loader2 className="h-3 w-3 animate-spin" /> : "Criar"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => { setCriando(false); setNovoNome(""); setNovaCor("gray"); }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
+        <div className="mt-2 border-t border-border pt-2">
+          {criando ? (
+            <div className="space-y-2">
+              <Input
+                placeholder="Nome da etiqueta"
+                value={novoNome}
+                onChange={e => setNovoNome(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleCriarEtiqueta()}
+                className="h-7 text-xs"
+                autoFocus
+              />
+              <div className="flex flex-wrap gap-1">
+                {CORES_DISPONIVEIS.map(cor => {
+                  const c = COR_MAP[cor];
+                  return (
+                    <button
+                      key={cor}
+                      title={LABELS_COR[cor]}
+                      onClick={() => setNovaCor(cor)}
+                      className={cn(
+                        "h-5 w-5 rounded-full transition-transform hover:scale-110",
+                        c.dot,
+                        novaCor === cor && "ring-2 ring-offset-1 ring-foreground/30 scale-110"
+                      )}
+                    />
+                  );
+                })}
               </div>
-            ) : (
-              <button
-                onClick={() => setCriando(true)}
-                className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Nova etiqueta
-              </button>
-            )}
-          </div>
-        )}
+              <div className="flex gap-1.5">
+                <Button
+                  size="sm"
+                  className="h-7 flex-1 text-xs"
+                  onClick={handleCriarEtiqueta}
+                  disabled={salvandoNova || !novoNome.trim()}
+                >
+                  {salvandoNova ? <Loader2 className="h-3 w-3 animate-spin" /> : "Criar"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => { setCriando(false); setNovoNome(""); setNovaCor("gray"); }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setCriando(true)}
+              className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Nova etiqueta
+            </button>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );

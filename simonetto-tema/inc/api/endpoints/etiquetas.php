@@ -27,7 +27,7 @@ add_action('rest_api_init', function () {
     [
       'methods'             => 'POST',
       'callback'            => 'mytheme_api_etiquetas_create',
-      'permission_callback' => 'mytheme_api_is_gerente',
+      'permission_callback' => 'mytheme_api_is_authenticated',
     ],
   ]);
 
