@@ -182,6 +182,20 @@ add_action('rest_api_init', function () {
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
   ]);
+
+  // GET/POST /api/v1/lojas/{id}/leads-config — ocultar leads não atribuídos para usuários comuns
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/leads-config', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_loja_leads_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_loja_leads_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+  ]);
 });
 
 /**
@@ -320,6 +334,19 @@ function mytheme_api_get_loja_leads($request)
     ], 404);
   }
 
+  // Se a loja tem ocultar_leads_nao_atribuidos ativo e o usuário não é gerente/admin,
+  // força o filtro de responsável para o próprio usuário.
+  $responsavel_id = intval($request->get_param('responsavel_id') ?? 0);
+  $ocultar        = (bool) get_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', true);
+
+  if ($ocultar && !current_user_can('administrator')) {
+    $current_user_id = get_current_user_id();
+    $is_gerente      = (bool) get_field('is_gerente', 'user_' . $current_user_id);
+    if (!$is_gerente) {
+      $responsavel_id = $current_user_id;
+    }
+  }
+
   $result = Lead_Handler::list([
     'page'           => $request->get_param('page') ?: 1,
     'per_page'       => $request->get_param('per_page') ?: 100,
@@ -327,7 +354,7 @@ function mytheme_api_get_loja_leads($request)
     'from'           => $request->get_param('from'),
     'to'             => $request->get_param('to'),
     'status'         => $request->get_param('status') ?? '',
-    'responsavel_id' => intval($request->get_param('responsavel_id') ?? 0),
+    'responsavel_id' => $responsavel_id,
     'loja_id'        => $loja_id,
   ]);
 
@@ -1072,4 +1099,48 @@ function mytheme_api_save_user_whatsapp_auto_lead(WP_REST_Request $request): WP_
   }
 
   return new WP_REST_Response(['success' => true, 'enabled' => $enabled], 200);
+}
+
+/**
+ * GET /api/v1/lojas/{id}/leads-config
+ */
+function mytheme_api_get_loja_leads_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = (int) $request['id'];
+
+  $loja = get_post($loja_id);
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
+  }
+
+  $ocultar = (bool) get_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', true);
+
+  return new WP_REST_Response([
+    'success'                      => true,
+    'ocultar_leads_nao_atribuidos' => $ocultar,
+  ], 200);
+}
+
+/**
+ * POST /api/v1/lojas/{id}/leads-config
+ * Body: { "ocultar_leads_nao_atribuidos": true|false }
+ */
+function mytheme_api_save_loja_leads_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = (int) $request['id'];
+
+  $loja = get_post($loja_id);
+  if (!$loja || $loja->post_type !== 'lojas') {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
+  }
+
+  $body    = $request->get_json_params();
+  $ocultar = !empty($body['ocultar_leads_nao_atribuidos']);
+
+  update_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', $ocultar ? '1' : '');
+
+  return new WP_REST_Response([
+    'success'                      => true,
+    'ocultar_leads_nao_atribuidos' => $ocultar,
+  ], 200);
 }

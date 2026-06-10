@@ -386,11 +386,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   // instanceId é UUID — confirmado pelo Evolution Go
   $instance   = $body['instanceId'] ?? ($body['instanceName'] ?? '');
   $usuario_id = $instance ? Mensagem_Handler::find_user_by_instance($instance) : null;
+  $instance_matched = (bool) $usuario_id;
   if (!$usuario_id) {
     $usuario_id = Mensagem_Handler::find_any_configured_user();
   }
 
-  error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null'));
+  if (!$usuario_id) {
+    error_log('[AUTO-LEAD] no_user event=' . $event . ' instance=' . $instance);
+    return new WP_REST_Response(['status' => 'no_user'], 200);
+  }
 
   // Deriva loja_id do usuário para manter compatibilidade com wp_mensagens.loja_id
   $loja_id = null;
@@ -403,9 +407,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
   }
 
-  if (!$usuario_id) {
-    return new WP_REST_Response(['status' => 'no_user'], 200);
-  }
+  error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' matched=' . ($instance_matched ? 'yes' : 'fallback') . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null'));
 
   // ---- Estado da conexão (event = "Connection") ----
   if ($event === 'Connection') {
@@ -485,6 +487,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   // Ignora se não tem texto nem mídia reconhecida
   if (empty($texto) && !$detected_media_type) {
+    error_log('[AUTO-LEAD] sem_conteudo phone=' . $phone . ' msg_keys=' . implode(',', array_keys($msg)));
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
@@ -521,8 +524,10 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
         'origem'   => 'proprio',
       ]);
       if (is_wp_error($new_lead)) {
+        error_log('[AUTO-LEAD] erro ao criar lead: ' . $new_lead->get_error_message() . ' | phone=' . $phone . ' loja_id=' . var_export($loja_id, true) . ' nome=' . $nome);
         return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
       }
+      error_log('[AUTO-LEAD] lead criado id=' . $new_lead['lead_id'] . ' phone=' . $phone . ' nome=' . $nome . ' loja_id=' . ($loja_id ?? 'null'));
       $lead_id = $new_lead['lead_id'];
     }
   }

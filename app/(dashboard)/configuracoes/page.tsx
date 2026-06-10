@@ -5,6 +5,7 @@ import { AvatarForm } from './avatar-form'
 import { IntegracaoLP } from '@/components/lojas/integracao-lp'
 import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 import { WhatsAppAutoLeadConfig } from '@/components/lojas/whatsapp-auto-lead-config'
+import { LeadsConfigGerente } from '@/components/lojas/leads-config-gerente'
 import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
 import { getLojaIntegration } from '@/lib/api-loja'
 
@@ -111,20 +112,26 @@ export default async function ConfiguracoesPage() {
 
       {user.role === 'administrator' && user.id === 1 && <AdminConfigTabs />}
 
-      {isLoja && integration && (
-        <IntegracaoLP
-          lojaId={String(primaryLojaId)}
-          initialData={integration}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+        {isLoja && integration && (
+          <IntegracaoLP
+            lojaId={String(primaryLojaId)}
+            initialData={integration}
+            isAdmin={false}
+          />
+        )}
+
+        <WhatsAppConfig
           isAdmin={false}
+          siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
         />
-      )}
 
-      <WhatsAppConfig
-        isAdmin={false}
-        siteUrl={process.env.NEXT_PUBLIC_SITE_URL}
-      />
+        {isLoja && <WhatsAppAutoLeadConfig />}
 
-      {isLoja && <WhatsAppAutoLeadConfig />}
+        {isLoja && user.is_gerente && (
+          <LeadsConfigGerente lojaId={String(primaryLojaId)} />
+        )}
+      </div>
     </div>
   )
 }
