@@ -1130,17 +1130,21 @@ function mytheme_api_get_loja_leads_config(WP_REST_Request $request): WP_REST_Re
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Loja não encontrada.'], 404);
   }
 
-  $ocultar = (bool) get_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', true);
+  $ocultar        = (bool) get_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', true);
+  $auto_atribuir  = get_post_meta($loja_id, '_auto_atribuir_responsavel', true);
+  // Default true: se nunca foi salvo, assume ativado
+  $auto_atribuir  = $auto_atribuir === '' ? true : (bool) $auto_atribuir;
 
   return new WP_REST_Response([
     'success'                      => true,
     'ocultar_leads_nao_atribuidos' => $ocultar,
+    'auto_atribuir_responsavel'    => $auto_atribuir,
   ], 200);
 }
 
 /**
  * POST /api/v1/lojas/{id}/leads-config
- * Body: { "ocultar_leads_nao_atribuidos": true|false }
+ * Body: { "ocultar_leads_nao_atribuidos": true|false, "auto_atribuir_responsavel": true|false }
  */
 function mytheme_api_save_loja_leads_config(WP_REST_Request $request): WP_REST_Response
 {
@@ -1156,8 +1160,17 @@ function mytheme_api_save_loja_leads_config(WP_REST_Request $request): WP_REST_R
 
   update_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', $ocultar ? '1' : '');
 
+  if (isset($body['auto_atribuir_responsavel'])) {
+    $auto_atribuir = (bool) $body['auto_atribuir_responsavel'];
+    update_post_meta($loja_id, '_auto_atribuir_responsavel', $auto_atribuir ? '1' : '0');
+  } else {
+    $auto_atribuir_meta = get_post_meta($loja_id, '_auto_atribuir_responsavel', true);
+    $auto_atribuir      = $auto_atribuir_meta === '' ? true : (bool) $auto_atribuir_meta;
+  }
+
   return new WP_REST_Response([
     'success'                      => true,
     'ocultar_leads_nao_atribuidos' => $ocultar,
+    'auto_atribuir_responsavel'    => $auto_atribuir,
   ], 200);
 }

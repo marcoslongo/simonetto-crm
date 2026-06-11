@@ -334,6 +334,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const isDraggingRef = useRef(false)
   const isFirstKanbanPollRef = useRef(true)
   const [lastUnreadAt, setLastUnreadAt] = useState<Record<string, number>>({})
+  const [autoAtribuirResponsavel, setAutoAtribuirResponsavel] = useState(true)
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
@@ -374,6 +375,19 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     fetch(`/api/kanban/columns?loja_id=${primaryLojaId}`)
       .then(r => r.json())
       .then(data => { if (data.success) setColunas(data.data) })
+      .catch(() => {})
+  }, [primaryLojaId])
+
+  // Busca configurações da loja (atribuição automática etc.)
+  useEffect(() => {
+    if (!primaryLojaId) return
+    fetch(`/api/lojas/${primaryLojaId}/leads-config`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setAutoAtribuirResponsavel(data.auto_atribuir_responsavel ?? true)
+        }
+      })
       .catch(() => {})
   }, [primaryLojaId])
 
@@ -760,7 +774,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         `Status alterado de ${statusLabels[statusAnterior]} para ${statusLabels[novoStatus]}`
       )
 
-      if (currentUser) {
+      if (currentUser && autoAtribuirResponsavel) {
         await fetch(`/api/leads/${lead.id}/responsavel`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

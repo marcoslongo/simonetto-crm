@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { EyeOff, Loader2 } from 'lucide-react'
+import { EyeOff, Loader2, UserCheck } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -12,13 +12,20 @@ interface Props {
 
 export function LeadsConfigGerente({ lojaId }: Props) {
   const [ocultar, setOcultar] = useState(false)
+  const [autoAtribuir, setAutoAtribuir] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingAuto, setSavingAuto] = useState(false)
 
   useEffect(() => {
     fetch(`/api/lojas/${lojaId}/leads-config`, { cache: 'no-store' })
       .then(r => r.json())
-      .then(d => { if (d.success) setOcultar(d.ocultar_leads_nao_atribuidos) })
+      .then(d => {
+        if (d.success) {
+          setOcultar(d.ocultar_leads_nao_atribuidos)
+          setAutoAtribuir(d.auto_atribuir_responsavel ?? true)
+        }
+      })
       .finally(() => setLoading(false))
   }, [lojaId])
 
@@ -45,6 +52,32 @@ export function LeadsConfigGerente({ lojaId }: Props) {
       toast.error('Erro ao salvar configuração.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function toggleAutoAtribuir(value: boolean) {
+    setSavingAuto(true)
+    try {
+      const res = await fetch(`/api/lojas/${lojaId}/leads-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_atribuir_responsavel: value }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAutoAtribuir(value)
+        toast.success(
+          value
+            ? 'Atribuição automática ativada ao mover leads.'
+            : 'Atribuição automática desativada.'
+        )
+      } else {
+        toast.error('Erro ao salvar configuração.')
+      }
+    } catch {
+      toast.error('Erro ao salvar configuração.')
+    } finally {
+      setSavingAuto(false)
     }
   }
 
@@ -98,6 +131,30 @@ export function LeadsConfigGerente({ lojaId }: Props) {
                 </span>
               </div>
             )}
+
+            <div className="border-t pt-4 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="auto-atribuir-toggle" className="text-sm font-medium">
+                    Atribuição automática ao mover lead
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Quando ativado, ao mover um lead no kanban ele é automaticamente
+                  atribuído ao usuário que realizou a movimentação.
+                </p>
+              </div>
+              {savingAuto ? (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
+              ) : (
+                <Switch
+                  id="auto-atribuir-toggle"
+                  checked={autoAtribuir}
+                  onCheckedChange={toggleAutoAtribuir}
+                />
+              )}
+            </div>
           </>
         )}
       </div>
