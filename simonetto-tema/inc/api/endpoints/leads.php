@@ -209,6 +209,37 @@ add_action('rest_api_init', function () {
 
 
 /**
+ * Retorna true se o usuário logado é master (administrador + is_master ACF).
+ * Não lança erro — use para verificação booleana dentro de callbacks.
+ */
+function crm_current_user_is_master(): bool
+{
+  if (!is_user_logged_in()) return false;
+  if (!current_user_can('administrator')) return false;
+  return (bool) get_field('is_master', 'user_' . get_current_user_id());
+}
+
+/**
+ * Permission callback: apenas masters (administrador + is_master = true)
+ */
+function mytheme_api_is_master()
+{
+  if (!is_user_logged_in()) {
+    return new WP_Error('unauthorized', 'Você precisa estar autenticado.', ['status' => 401]);
+  }
+
+  if (crm_current_user_is_master()) {
+    return true;
+  }
+
+  return new WP_Error(
+    'forbidden',
+    'Acesso negado. Apenas masters podem realizar esta ação.',
+    ['status' => 403]
+  );
+}
+
+/**
  * Verifica se o usuário é administrador OU gerente (is_gerente = true via ACF)
  */
 function mytheme_api_is_gerente()
@@ -299,16 +330,39 @@ function mytheme_api_create_lead($request)
  */
 function mytheme_api_list_leads($request)
 {
+  $origem_param = $request->get_param('origem');
+
+  // Administradores sem is_master não podem ver leads de origem 'proprio'
+  $is_master = crm_current_user_is_master();
+  if (!$is_master) {
+    // Se tentou filtrar por 'proprio', retorna vazio diretamente
+    if ($origem_param === 'proprio') {
+      return new WP_REST_Response([
+        'success'     => true,
+        'leads'       => [],
+        'total'       => 0,
+        'page'        => 1,
+        'per_page'    => intval($request->get_param('per_page') ?: 20),
+        'total_pages' => 0,
+      ], 200);
+    }
+    // Se não filtrou por nenhuma origem, forçamos exclusão de 'proprio'
+    if (empty($origem_param)) {
+      $origem_param = null; // mantém sem filtro de origem, mas exclui 'proprio' via flag
+    }
+  }
+
   $args = [
-    'page'     => $request->get_param('page') ?: 1,
-    'per_page' => $request->get_param('per_page') ?: 20,
-    'email'    => $request->get_param('email'),
-    'loja_id'  => $request->get_param('loja_id'),
-    'search'   => $request->get_param('search'),
-    'from'     => $request->get_param('from'),
-    'to'       => $request->get_param('to'),
-    'status'   => $request->get_param('status'),
-    'origem'   => $request->get_param('origem'),
+    'page'            => $request->get_param('page') ?: 1,
+    'per_page'        => $request->get_param('per_page') ?: 20,
+    'email'           => $request->get_param('email'),
+    'loja_id'         => $request->get_param('loja_id'),
+    'search'          => $request->get_param('search'),
+    'from'            => $request->get_param('from'),
+    'to'              => $request->get_param('to'),
+    'status'          => $request->get_param('status'),
+    'origem'          => $is_master ? $request->get_param('origem') : $origem_param,
+    'exclude_proprio' => !$is_master,
   ];
 
   $result = Lead_Handler::list($args);
@@ -328,19 +382,27 @@ function mytheme_api_list_leads($request)
  */
 function mytheme_api_get_lead($request)
 {
-  $id = intval($request->get_param('id'));
+  $id   = intval($request->get_param('id'));
   $lead = Lead_Handler::get_by_id($id);
 
   if (!$lead) {
     return new WP_REST_Response([
-      'success' => false,
+      'success'  => false,
       'mensagem' => 'Lead não encontrado.',
     ], 404);
   }
 
+  // Administradores sem is_master não podem acessar leads de origem 'proprio'
+  if (!crm_current_user_is_master() && ($lead['origem'] ?? '') === 'proprio') {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Acesso negado.',
+    ], 403);
+  }
+
   return new WP_REST_Response([
     'success' => true,
-    'lead' => $lead,
+    'lead'    => $lead,
   ], 200);
 }
 

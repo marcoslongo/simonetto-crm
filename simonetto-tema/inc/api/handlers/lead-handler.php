@@ -436,6 +436,11 @@ class Lead_Handler
       $prepare_values[] = $origem;
     }
 
+    // Exclui leads de origem 'proprio' (usado para admins sem is_master)
+    if (!empty($args['exclude_proprio'])) {
+      $where_clauses[] = "l.origem != 'proprio'";
+    }
+
     if ($responsavel_id > 0) {
       $where_clauses[]  = "l.responsavel_id = %d";
       $prepare_values[] = $responsavel_id;

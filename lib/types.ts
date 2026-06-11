@@ -34,6 +34,7 @@ export interface AuthResponse {
   acf: {
     loja_ids: number[];
     is_gerente?: boolean;
+    is_master?: boolean;
     avatar_url?: string | null;
   };
 }
@@ -47,6 +48,7 @@ export interface User {
   loja_ids: number[];
   loja_nome?: string;
   is_gerente: boolean;
+  is_master: boolean;
   avatar_url?: string | null;
 }
 

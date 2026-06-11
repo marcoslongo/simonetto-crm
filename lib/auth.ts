@@ -36,6 +36,10 @@ export async function getSession(): Promise<Session | null> {
       u.loja_ids = u.loja_id ? [u.loja_id] : []
       delete u.loja_id
     }
+    // Garante campo is_master em sessões antigas
+    if (u.is_master === undefined) {
+      u.is_master = false
+    }
 
     return session
   } catch {
@@ -104,6 +108,14 @@ export async function requireAdmin(): Promise<User> {
   return requireRole(['administrator'])
 }
 
+export async function requireMaster(): Promise<User> {
+  const user = await requireAdmin()
+  if (!isMaster(user)) {
+    redirect('/admin')
+  }
+  return user
+}
+
 export async function requireLoja(): Promise<User> {
   return requireRole(['loja', 'administrator'])
 }
@@ -119,6 +131,10 @@ export async function requireGerente(): Promise<User> {
 // =====================================
 // UTILITÁRIOS
 // =====================================
+
+export function isMaster(user: User): boolean {
+  return user.role === 'administrator' && user.is_master === true
+}
 
 export function isAdmin(user: User): boolean {
   return user.role === 'administrator'
@@ -137,6 +153,11 @@ export function canAccessLead(user: User, leadLojaId: number | null): boolean {
   if (isAdmin(user)) return true
   if (!leadLojaId) return false
   return user.loja_ids.includes(leadLojaId)
+}
+
+/** Apenas masters podem ver leads de origem 'proprio' */
+export function canAccessProprioLeads(user: User): boolean {
+  return isMaster(user)
 }
 
 export function getRedirectPath(user: User): string {
