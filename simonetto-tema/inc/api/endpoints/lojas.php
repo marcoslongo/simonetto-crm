@@ -353,14 +353,16 @@ function mytheme_api_get_loja_leads($request)
   }
 
   $result = Lead_Handler::list([
-    'page'           => $request->get_param('page') ?: 1,
-    'per_page'       => $request->get_param('per_page') ?: 100,
-    'search'         => $request->get_param('search'),
-    'from'           => $request->get_param('from'),
-    'to'             => $request->get_param('to'),
-    'status'         => $request->get_param('status') ?? '',
-    'responsavel_id' => $responsavel_id,
-    'loja_id'        => $loja_id,
+    'page'            => $request->get_param('page') ?: 1,
+    'per_page'        => $request->get_param('per_page') ?: 100,
+    'search'          => $request->get_param('search'),
+    'from'            => $request->get_param('from'),
+    'to'              => $request->get_param('to'),
+    'status'          => $request->get_param('status') ?? '',
+    'responsavel_id'  => $responsavel_id,
+    'loja_id'         => $loja_id,
+    // Administradores sem is_master não veem leads de origem 'proprio'
+    'exclude_proprio' => current_user_can('administrator') && !crm_current_user_is_master(),
   ]);
 
   return new WP_REST_Response([

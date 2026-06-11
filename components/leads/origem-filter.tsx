@@ -3,17 +3,23 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Building2, Store, LayoutList } from "lucide-react";
 
-const TABS = [
+const ALL_TABS = [
   { value: "", label: "Todos", Icon: LayoutList },
   { value: "industria", label: "Indústria", Icon: Building2 },
   { value: "proprio", label: "Próprio", Icon: Store },
 ] as const;
 
-export function OrigemFilter() {
+interface OrigemFilterProps {
+  showProprio?: boolean
+}
+
+export function OrigemFilter({ showProprio = false }: OrigemFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const current = searchParams.get("origem") ?? "";
+
+  const tabs = showProprio ? ALL_TABS : ALL_TABS.filter(t => t.value !== "proprio");
 
   const handleChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -28,7 +34,7 @@ export function OrigemFilter() {
 
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
-      {TABS.map(({ value, label, Icon }) => {
+      {tabs.map(({ value, label, Icon }) => {
         const isActive = current === value;
         return (
           <button

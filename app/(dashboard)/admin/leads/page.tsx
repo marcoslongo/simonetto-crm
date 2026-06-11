@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, isMaster } from '@/lib/auth'
 import { LeadsPagination } from '@/components/leads/leads-pagination'
 import { LojaFilter } from '@/components/lojas/loja-filter'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +27,8 @@ interface AdminLeadsPageProps {
 }
 
 export default async function AdminLeadsPage({ searchParams }: AdminLeadsPageProps) {
-  await requireAdmin()
+  const user = await requireAdmin()
+  const master = isMaster(user)
   const params = await searchParams
 
   const page = Number(params.page) || 1
@@ -36,7 +37,8 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const from = params.from || undefined
   const to = params.to || undefined
   const origemRaw = params.origem
-  const origem = origemRaw === 'industria' || origemRaw === 'proprio'
+  // Admin não-master não pode ver leads 'proprio' — ignora o filtro se vier na URL
+  const origem = (origemRaw === 'industria' || (origemRaw === 'proprio' && master))
     ? origemRaw as LeadOrigem
     : undefined
 
@@ -110,7 +112,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <OrigemFilter />
+                <OrigemFilter showProprio={master} />
                 {lojasData.lojas?.length > 0 && (
                   <LojaFilter lojas={lojasData.lojas} selectedLojaId={lojaId} />
                 )}

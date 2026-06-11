@@ -775,6 +775,11 @@ function mytheme_api_leads_por_origem(WP_REST_Request $request)
   $where_clauses = [];
   $prepare_values = [];
 
+  // Administradores sem is_master não veem leads de origem 'proprio'
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
+
   if ($from) {
     $where_clauses[] = "l.data_criacao >= %s";
     $prepare_values[] = $from . ' 00:00:00';
@@ -989,6 +994,21 @@ function mytheme_api_leads_status_total(WP_REST_Request $request)
   $loja_id = intval($request->get_param('loja_id'));
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to = sanitize_text_field($request->get_param('to') ?? '');
+  $origem_param = $request->get_param('origem');
+  if ($origem_param && !in_array($origem_param, ['industria', 'proprio'], true)) {
+    $origem_param = null;
+  }
+
+  $is_admin_non_master = current_user_can('administrator') && !crm_current_user_is_master();
+
+  // Admin não-master solicitando dados de leads próprios: retorna zeros
+  if ($is_admin_non_master && $origem_param === 'proprio') {
+    return new WP_REST_Response([
+      'success' => true,
+      'data' => ['nao_atendido' => 0, 'em_negociacao' => 0, 'venda_realizada' => 0, 'venda_nao_realizada' => 0],
+      'total_geral' => 0,
+    ], 200);
+  }
 
   $where_clauses = [];
   $prepare_values = [];
@@ -1006,6 +1026,13 @@ function mytheme_api_leads_status_total(WP_REST_Request $request)
   if ($to) {
     $where_clauses[] = "data_criacao <= %s";
     $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  if ($origem_param) {
+    $where_clauses[] = "origem = %s";
+    $prepare_values[] = $origem_param;
+  } elseif ($is_admin_non_master) {
+    $where_clauses[] = "origem != 'proprio'";
   }
 
   $where_sql = !empty($where_clauses)
@@ -1365,6 +1392,10 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   $where_clauses  = [];
   $prepare_values = [];
 
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
+
   if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
   if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
   if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
@@ -1436,6 +1467,10 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   $where_clauses  = [];
   $prepare_values = [];
 
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
+
   if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
   if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
   if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
@@ -1498,6 +1533,10 @@ function mytheme_api_leads_tracking_utm_content(WP_REST_Request $request)
   $where_clauses  = [];
   $prepare_values = [];
 
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
+
   if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
   if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
 
@@ -1555,6 +1594,10 @@ function mytheme_api_leads_tracking_medium(WP_REST_Request $request)
 
   $where_clauses  = [];
   $prepare_values = [];
+
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
 
   if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
   if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
@@ -1646,6 +1689,10 @@ function mytheme_api_leads_vnr_stats(WP_REST_Request $request)
   if ($to) {
     $where_clauses[]  = "l.data_criacao <= %s";
     $prepare_values[] = $to . ' 23:59:59';
+  }
+
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
   }
 
   $where_sql = !empty($where_clauses)

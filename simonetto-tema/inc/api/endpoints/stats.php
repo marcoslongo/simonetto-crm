@@ -100,75 +100,89 @@ add_action('rest_api_init', function () {
 
 function mytheme_api_stats_general($request)
 {
+  $is_admin_non_master = current_user_can('administrator') && !crm_current_user_is_master();
   $origem = $request->get_param('origem');
   $allowed = ['industria', 'proprio'];
   if ($origem && !in_array($origem, $allowed, true)) {
     $origem = null;
   }
+  if ($is_admin_non_master && $origem === 'proprio') {
+    return new WP_REST_Response(['success' => true, 'data' => ['total' => 0, 'today' => 0, 'ultimaCaptura' => null]], 200);
+  }
 
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::get_general($origem)
+    'data' => Stats_Handler::get_general($origem, $is_admin_non_master)
   ], 200);
 }
 
 function mytheme_api_stats_by_investment($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::by_investment()
+    'data' => Stats_Handler::by_investment($exclude_proprio)
   ], 200);
 }
 
 function mytheme_api_stats_by_interest($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::by_interest()
+    'data' => Stats_Handler::by_interest($exclude_proprio)
   ], 200);
 }
 
 function mytheme_api_stats_by_store($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::by_store()
+    'data' => Stats_Handler::by_store($exclude_proprio)
   ], 200);
 }
 
 function mytheme_api_stats_30_days($request)
 {
+  $is_admin_non_master = current_user_can('administrator') && !crm_current_user_is_master();
   $origem = $request->get_param('origem');
   $allowed = ['industria', 'proprio'];
   if ($origem && !in_array($origem, $allowed, true)) {
     $origem = null;
   }
+  if ($is_admin_non_master && $origem === 'proprio') {
+    return new WP_REST_Response(['success' => true, 'data' => []], 200);
+  }
 
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::last_30_days($origem)
+    'data' => Stats_Handler::last_30_days($origem, $is_admin_non_master)
   ], 200);
 }
 
 function mytheme_api_stats_geo($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::geo_stats()
+    'data' => Stats_Handler::geo_stats($exclude_proprio)
   ], 200);
 }
 
 function mytheme_api_stats_service($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   return new WP_REST_Response([
     'success' => true,
-    'data' => Stats_Handler::service_stats()
+    'data' => Stats_Handler::service_stats($exclude_proprio)
   ], 200);
 }
 
 function mytheme_api_stats_time_by_store($request)
 {
-  $data = Stats_Handler::avg_time_by_store();
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $data = Stats_Handler::avg_time_by_store($exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
@@ -179,6 +193,7 @@ function mytheme_api_stats_time_by_store($request)
 
 function mytheme_api_stats_conversao_por_loja($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $loja_ids = [];
   $raw = $request->get_param('loja_ids');
   if ($raw) {
@@ -186,12 +201,13 @@ function mytheme_api_stats_conversao_por_loja($request)
   }
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::conversao_por_loja($loja_ids, $from, $to);
+  $data = Stats_Handler::conversao_por_loja($loja_ids, $from, $to, $exclude_proprio);
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }
 
 function mytheme_api_stats_funil_por_atendente($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $loja_ids = [];
   $raw = $request->get_param('loja_ids');
   if ($raw) {
@@ -199,12 +215,13 @@ function mytheme_api_stats_funil_por_atendente($request)
   }
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::funil_por_atendente($loja_ids, $from, $to);
+  $data = Stats_Handler::funil_por_atendente($loja_ids, $from, $to, $exclude_proprio);
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }
 
 function mytheme_api_stats_tempo_por_etapa($request)
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $loja_ids = [];
   $raw = $request->get_param('loja_ids');
   if ($raw) {
@@ -212,7 +229,7 @@ function mytheme_api_stats_tempo_por_etapa($request)
   }
   $from = sanitize_text_field($request->get_param('from') ?? '');
   $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::tempo_por_etapa($loja_ids, $from, $to);
+  $data = Stats_Handler::tempo_por_etapa($loja_ids, $from, $to, $exclude_proprio);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }
 
@@ -222,7 +239,8 @@ function mytheme_api_stats_tempo_por_etapa($request)
  */
 function mytheme_api_stats_sla_rede(WP_REST_Request $request): WP_REST_Response
 {
-  $data = Stats_Handler::sla_rede();
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $data = Stats_Handler::sla_rede($exclude_proprio);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }
 
@@ -233,10 +251,11 @@ function mytheme_api_stats_sla_rede(WP_REST_Request $request): WP_REST_Response
  */
 function mytheme_api_stats_conversao_ranking(WP_REST_Request $request): WP_REST_Response
 {
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $from  = sanitize_text_field($request->get_param('from')  ?? '');
   $to    = sanitize_text_field($request->get_param('to')    ?? '');
   $top_n = max(1, (int) ($request->get_param('top_n') ?? 5));
-  $data  = Stats_Handler::conversao_ranking($from, $to, $top_n);
+  $data  = Stats_Handler::conversao_ranking($from, $to, $top_n, $exclude_proprio);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }
 
@@ -246,6 +265,7 @@ function mytheme_api_stats_conversao_ranking(WP_REST_Request $request): WP_REST_
  */
 function mytheme_api_stats_capacidade_rede(WP_REST_Request $request): WP_REST_Response
 {
-  $data = Stats_Handler::capacidade_rede();
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $data = Stats_Handler::capacidade_rede($exclude_proprio);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }

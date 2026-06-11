@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, isMaster } from '@/lib/auth'
 import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
@@ -25,7 +25,8 @@ interface AdminDashboardPageProps {
 }
 
 export default async function AdminDashboardPage({ searchParams }: AdminDashboardPageProps) {
-  await requireAdmin()
+  const user = await requireAdmin()
+  const master = isMaster(user)
   const { from, to } = await searchParams
 
   return (
@@ -48,9 +49,11 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <StatsSection />
       </Suspense>
 
-      <Suspense fallback={<StatsCardsSkeleton />}>
-        <StatsByOrigemSection />
-      </Suspense>
+      {master && (
+        <Suspense fallback={<StatsCardsSkeleton />}>
+          <StatsByOrigemSection />
+        </Suspense>
+      )}
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <ComparativoSemanalSection />

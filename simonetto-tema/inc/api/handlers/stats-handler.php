@@ -1,7 +1,7 @@
 <?php
 /**
  * Handler de Estatísticas - Lógica de negócio
- * 
+ *
  * @package MyTheme
  */
 
@@ -14,7 +14,7 @@ class Stats_Handler
   /**
    * Estatísticas gerais
    */
-  public static function get_general($origem = null)
+  public static function get_general($origem = null, $exclude_proprio = false)
   {
     global $wpdb;
 
@@ -23,6 +23,8 @@ class Stats_Handler
     $where = '';
     if ($origem && in_array($origem, ['industria', 'proprio'], true)) {
       $where = $wpdb->prepare(" WHERE origem = %s", $origem);
+    } elseif ($exclude_proprio) {
+      $where = " WHERE origem != 'proprio'";
     }
 
     $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}{$where}");
@@ -51,15 +53,17 @@ class Stats_Handler
   /**
    * Leads por investimento
    */
-  public static function by_investment()
+  public static function by_investment($exclude_proprio = false)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
+    $where = $exclude_proprio ? "WHERE origem != 'proprio'" : '';
 
     return $wpdb->get_results("
       SELECT expectativa_investimento, COUNT(*) as total
       FROM {$table}
+      {$where}
       GROUP BY expectativa_investimento
       ORDER BY total DESC
     ");
@@ -68,15 +72,17 @@ class Stats_Handler
   /**
    * Leads por interesse
    */
-  public static function by_interest()
+  public static function by_interest($exclude_proprio = false)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
+    $where = $exclude_proprio ? "WHERE origem != 'proprio'" : '';
 
     return $wpdb->get_results("
       SELECT interesse, COUNT(*) as total
       FROM {$table}
+      {$where}
       GROUP BY interesse
       ORDER BY total DESC
     ");
@@ -85,15 +91,17 @@ class Stats_Handler
   /**
    * Leads por loja
    */
-  public static function by_store()
+  public static function by_store($exclude_proprio = false)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
+    $where = $exclude_proprio ? "WHERE origem != 'proprio'" : '';
 
     return $wpdb->get_results("
       SELECT loja_regiao, COUNT(*) as total
       FROM {$table}
+      {$where}
       GROUP BY loja_regiao
       ORDER BY total DESC
     ");
@@ -102,7 +110,7 @@ class Stats_Handler
   /**
    * Leads últimos 30 dias
    */
-  public static function last_30_days($origem = null)
+  public static function last_30_days($origem = null, $exclude_proprio = false)
   {
     global $wpdb;
 
@@ -111,6 +119,8 @@ class Stats_Handler
     $where = "WHERE data_criacao >= CURDATE() - INTERVAL 30 DAY";
     if ($origem && in_array($origem, ['industria', 'proprio'], true)) {
       $where .= $wpdb->prepare(" AND origem = %s", $origem);
+    } elseif ($exclude_proprio) {
+      $where .= " AND origem != 'proprio'";
     }
 
     return $wpdb->get_results("
@@ -125,20 +135,21 @@ class Stats_Handler
   /**
    * Estatísticas geográficas
    */
-  public static function geo_stats()
+  public static function geo_stats($exclude_proprio = false)
   {
     global $wpdb;
 
     $table = $wpdb->prefix . 'leads';
+    $extra = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
     $results = $wpdb->get_results("
-      SELECT 
+      SELECT
         estado,
         loja_id,
         loja_regiao,
         COUNT(*) as total
       FROM {$table}
-      WHERE estado IS NOT NULL
+      WHERE estado IS NOT NULL{$extra}
       GROUP BY estado, loja_id, loja_regiao
       ORDER BY total DESC
     ");
@@ -171,12 +182,13 @@ class Stats_Handler
   /**
    * Estatísticas de atendimento
    */
-  public static function service_stats()
+  public static function service_stats($exclude_proprio = false)
   {
     global $wpdb;
 
     $table_leads = $wpdb->prefix . 'leads';
     $table_actions = $wpdb->prefix . 'leads_actions';
+    $extra = $exclude_proprio ? " AND l.origem != 'proprio'" : '';
 
     $sql = "
       SELECT
@@ -226,6 +238,8 @@ class Stats_Handler
         FROM {$table_actions}
         GROUP BY lead_id
       ) fa ON fa.lead_id = l.id
+
+      WHERE 1=1{$extra}
     ";
 
     return $wpdb->get_row($sql, ARRAY_A);
@@ -234,13 +248,16 @@ class Stats_Handler
   /**
    * Taxa de conversão por loja
    */
-  public static function conversao_por_loja(array $loja_ids = [], string $from = '', string $to = ''): array
+  public static function conversao_por_loja(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
     $table_posts = $wpdb->posts;
 
     $where = 'WHERE l.loja_id IS NOT NULL';
+    if ($exclude_proprio) {
+      $where .= " AND l.origem != 'proprio'";
+    }
     if (!empty($loja_ids)) {
       $loja_ids = array_values(array_map('intval', $loja_ids));
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
@@ -286,13 +303,16 @@ class Stats_Handler
   /**
    * Funil por atendente
    */
-  public static function funil_por_atendente(array $loja_ids = [], string $from = '', string $to = ''): array
+  public static function funil_por_atendente(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
     $table_users = $wpdb->users;
 
     $where = 'WHERE l.responsavel_id IS NOT NULL';
+    if ($exclude_proprio) {
+      $where .= " AND l.origem != 'proprio'";
+    }
     if (!empty($loja_ids)) {
       $loja_ids = array_values(array_map('intval', $loja_ids));
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
@@ -345,13 +365,14 @@ class Stats_Handler
   /**
    * Tempo médio por etapa (usa data_atualizacao como proxy de quando o status foi alterado)
    */
-  public static function tempo_por_etapa(array $loja_ids = [], string $from = '', string $to = ''): array
+  public static function tempo_por_etapa(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
 
-    $loja_filter = '';
-    $date_filter = '';
+    $loja_filter   = '';
+    $date_filter   = '';
+    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
     if (!empty($loja_ids)) {
       $loja_ids = array_values(array_map('intval', $loja_ids));
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
@@ -370,6 +391,7 @@ class Stats_Handler
       WHERE status NOT IN ('venda_realizada', 'venda_nao_realizada')
       {$loja_filter}
       {$date_filter}
+      {$proprio_filter}
       GROUP BY status
     ";
 
@@ -383,6 +405,7 @@ class Stats_Handler
       WHERE status IN ('venda_realizada', 'venda_nao_realizada')
       {$loja_filter}
       {$date_filter}
+      {$proprio_filter}
       GROUP BY status
     ";
 
@@ -443,13 +466,14 @@ class Stats_Handler
   /**
    * Tempo médio por loja
    */
-  public static function avg_time_by_store()
+  public static function avg_time_by_store($exclude_proprio = false)
   {
     global $wpdb;
 
     $table_leads = $wpdb->prefix . 'leads';
     $table_actions = $wpdb->prefix . 'leads_actions';
     $table_posts = $wpdb->posts;
+    $extra = $exclude_proprio ? " AND l.origem != 'proprio'" : '';
 
     $sql = "
       SELECT
@@ -491,7 +515,7 @@ class Stats_Handler
         GROUP BY lead_id
       ) fa ON fa.lead_id = l.id
 
-      WHERE l.loja_id IS NOT NULL
+      WHERE l.loja_id IS NOT NULL{$extra}
 
       GROUP BY l.loja_id
 
@@ -515,12 +539,12 @@ class Stats_Handler
    * SLA de toda a rede em uma única query SQL.
    * Substitui N chamadas a /lojas/{id}/saude-funil + agregação no frontend.
    */
-  public static function sla_rede(): array
+  public static function sla_rede(bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads     = $wpdb->prefix . 'leads';
-    $table_followups = $wpdb->prefix . 'leads_followups';
     $table_posts     = $wpdb->posts;
+    $extra = $exclude_proprio ? " AND l.origem != 'proprio'" : '';
 
     // Uma query com CASE WHEN para todos os contadores por loja
     $sql = "
@@ -537,6 +561,7 @@ class Stats_Handler
           AS sla_parados
       FROM {$table_leads} l
       INNER JOIN {$table_posts} p ON p.ID = l.loja_id AND p.post_type = 'lojas'
+      WHERE 1=1{$extra}
       GROUP BY l.loja_id, p.post_title
       HAVING active_leads > 0 OR sla_nao_atendido > 0 OR sla_parados > 0
       ORDER BY p.post_title ASC
@@ -602,13 +627,16 @@ class Stats_Handler
    * Ranking de conversão com top/bottom pré-calculados e média.
    * Substitui getConversaoPorLoja + ordenação/filtragem no frontend.
    */
-  public static function conversao_ranking(string $from = '', string $to = '', int $top_n = 5): array
+  public static function conversao_ranking(string $from = '', string $to = '', int $top_n = 5, bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
     $table_posts = $wpdb->posts;
 
     $where = 'WHERE l.loja_id IS NOT NULL';
+    if ($exclude_proprio) {
+      $where .= " AND l.origem != 'proprio'";
+    }
     if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
     if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
 
@@ -670,11 +698,12 @@ class Stats_Handler
    * Monitor de capacidade: active_leads por loja em uma única query.
    * Substitui N chamadas a /lojas/{id}/saude-funil usadas apenas para active_leads.
    */
-  public static function capacidade_rede(): array
+  public static function capacidade_rede(bool $exclude_proprio = false): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
     $table_posts = $wpdb->posts;
+    $extra = $exclude_proprio ? " AND l.origem != 'proprio'" : '';
 
     $sql = "
       SELECT
@@ -683,7 +712,7 @@ class Stats_Handler
         COUNT(*) AS active_leads
       FROM {$table_leads} l
       INNER JOIN {$table_posts} p ON p.ID = l.loja_id AND p.post_type = 'lojas'
-      WHERE l.status NOT IN ('venda_realizada','venda_nao_realizada')
+      WHERE l.status NOT IN ('venda_realizada','venda_nao_realizada'){$extra}
       GROUP BY l.loja_id, p.post_title
       HAVING active_leads > 0
       ORDER BY active_leads DESC
