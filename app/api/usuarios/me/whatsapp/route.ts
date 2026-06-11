@@ -47,3 +47,17 @@ export async function POST(req: Request) {
   const data = await res.json()
   return NextResponse.json(data, { status: res.status })
 }
+
+export async function DELETE() {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ success: false }, { status: 401 })
+
+  const token = await getAuthToken()
+
+  const res = await fetch(`${WP_API_BASE}/usuarios/me/whatsapp-config`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  return NextResponse.json(data, { status: res.status })
+}

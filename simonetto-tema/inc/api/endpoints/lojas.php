@@ -155,7 +155,7 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_authenticated',
   ]);
 
-  // GET/POST /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
+  // GET/POST/DELETE /api/v1/usuarios/me/whatsapp-config — configuração WhatsApp por usuário
   register_rest_route('api/v1', '/usuarios/me/whatsapp-config', [
     [
       'methods'             => 'GET',
@@ -165,6 +165,11 @@ add_action('rest_api_init', function () {
     [
       'methods'             => 'POST',
       'callback'            => 'mytheme_api_save_user_whatsapp_config',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'DELETE',
+      'callback'            => 'mytheme_api_delete_user_whatsapp_config',
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
   ]);
@@ -867,6 +872,18 @@ function mytheme_api_save_user_whatsapp_config(WP_REST_Request $request): WP_RES
   }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração WhatsApp salva.'], 200);
+}
+
+/**
+ * DELETE /api/v1/usuarios/me/whatsapp-config
+ */
+function mytheme_api_delete_user_whatsapp_config(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = get_current_user_id();
+  delete_user_meta($user_id, '_evolution_instance');
+  delete_user_meta($user_id, '_evolution_api_key');
+  delete_user_meta($user_id, '_whatsapp_connection_state');
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'WhatsApp desvinculado com sucesso.'], 200);
 }
 
 /**

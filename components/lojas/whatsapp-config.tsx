@@ -18,6 +18,7 @@ import {
   ChevronUp,
   RefreshCw,
   WifiOff,
+  Unplug,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -45,6 +46,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
   const [createFailed, setCreateFailed] = useState(false)
   const [savingGlobal, setSavingGlobal] = useState(false)
   const [loadingQr, setLoadingQr] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
   const [showWebhookInfo, setShowWebhookInfo] = useState(false)
   const [copiedWebhook, setCopiedWebhook] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -170,6 +172,28 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
     startPolling()
   }
 
+  const handleDisconnect = async () => {
+    if (!window.confirm('Tem certeza que deseja desvincular o WhatsApp? Você precisará escanear o QR Code novamente para reconectar.')) return
+    setDisconnecting(true)
+    try {
+      const res = await fetch('/api/usuarios/me/whatsapp', { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.mensagem ?? 'Erro ao desvincular WhatsApp.')
+        return
+      }
+      stopPolling()
+      setInstance(null)
+      setConnectionState('not_configured')
+      setQrCode(null)
+      toast.success('WhatsApp desvinculado com sucesso.')
+    } catch {
+      toast.error('Erro de conexão.')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
   const handleSaveGlobal = async () => {
     setSavingGlobal(true)
     try {
@@ -264,19 +288,33 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
           </div>
 
           {instance && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={isConnected ? handleReconnect : handleReconnect}
-              disabled={loadingQr || creating}
-              className="shrink-0 text-xs"
-            >
-              {loadingQr
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                : isConnected
-                  ? <><WifiOff className="h-3.5 w-3.5 mr-1.5" />Reconectar</>
-                  : <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Atualizar QR</>}
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReconnect}
+                disabled={loadingQr || creating || disconnecting}
+                className="text-xs"
+              >
+                {loadingQr
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  : isConnected
+                    ? <><WifiOff className="h-3.5 w-3.5 mr-1.5" />Reconectar</>
+                    : <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Atualizar QR</>}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={disconnecting || creating}
+                className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                {disconnecting
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  : <Unplug className="h-3.5 w-3.5 mr-1.5" />}
+                Desvincular
+              </Button>
+            </div>
           )}
         </div>
 
