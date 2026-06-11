@@ -7,7 +7,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     console.log('[Evolution Webhook] evento recebido:', body?.event, '| instance:', body?.instanceId ?? body?.instanceName)
-    console.log('[Evolution Webhook] payload completo:', JSON.stringify(body))
 
     const res = await fetch(`${WP_API_BASE}/mensagens/evolution-webhook`, {
       method: 'POST',

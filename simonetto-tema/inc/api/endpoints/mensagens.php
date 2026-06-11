@@ -500,14 +500,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     $msg_type  = $data['messageType']                 ?? '';
     $msg       = $data['message']                     ?? [];
   } else {
-    // Evolution API v1 format
+    // Evolution API v1 / Go format
     $from_me   = !empty($info['IsFromMe']);
     $chat      = $info['Chat']      ?? ($info['Sender'] ?? '');
     $wamid     = $info['ID']        ?? '';
     $push_name = $info['PushName']  ?? '';
     $timestamp = $info['Timestamp'] ?? '';
     $msg_type  = $info['Type']      ?? '';
-    $msg       = $data['Message']   ?? [];
+    // Go coloca Message dentro de data.Info; v1 Node colocava em data.Message
+    $msg       = $info['Message']   ?? ($data['Message'] ?? []);
   }
 
   if ($from_me) {
@@ -572,8 +573,8 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
 
     // Ignora mensagens anteriores à ativação da feature (conversas antigas)
-    // Só aplica o filtro se o timestamp for um valor válido (> 0)
-    $ts_int = (int) $timestamp;
+    // Suporta Unix timestamp (int) e ISO 8601 string (Evolution API Go)
+    $ts_int = is_numeric($timestamp) ? (int) $timestamp : (int) strtotime((string) $timestamp);
     if ($active_since && $ts_int > 0 && $ts_int < $active_since) {
       error_log('[AUTO-LEAD] bloqueado por timestamp antigo ts=' . $ts_int . ' since=' . $active_since);
       return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
