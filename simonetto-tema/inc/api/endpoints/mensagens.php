@@ -435,7 +435,8 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
   }
 
-  error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' matched=' . ($instance_matched ? 'yes' : 'fallback') . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null'));
+  $meta_debug = get_user_meta($usuario_id, 'loja_ids', true);
+  error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' matched=' . ($instance_matched ? 'yes' : 'fallback') . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null') . ' meta_loja_ids_raw=' . var_export($meta_debug, true));
 
   // ---- Estado da conexão (event = "Connection") ----
   if ($event === 'Connection') {
