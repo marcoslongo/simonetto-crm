@@ -203,22 +203,24 @@ export function ChartLeads30Days({
 
             <div className="flex flex-wrap items-center gap-2">
               {/* Filtro de origem */}
-              <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
-                {visibleOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleOrigemChange(opt.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                      origem === opt.value
-                        ? 'bg-[#16255c] text-white'
-                        : 'text-[#16255c]/70 hover:bg-slate-100'
-                    }`}
-                  >
-                    {opt.icon}
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              {showProprio && (
+                <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
+                  {visibleOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleOrigemChange(opt.value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                        origem === opt.value
+                          ? 'bg-[#16255c] text-white'
+                          : 'text-[#16255c]/70 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <Popover>
                 <PopoverTrigger asChild>
