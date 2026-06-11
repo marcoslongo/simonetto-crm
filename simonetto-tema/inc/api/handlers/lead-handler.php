@@ -579,6 +579,58 @@ class Lead_Handler
   }
 
   /**
+   * Atualizar dados básicos do lead (nome, telefone, email, cidade, estado, interesse, expectativa_investimento)
+   */
+  public static function update_dados($id, $params)
+  {
+    global $wpdb;
+
+    $table_leads = $wpdb->prefix . 'leads';
+
+    $lead_row = $wpdb->get_row($wpdb->prepare(
+      "SELECT id FROM {$table_leads} WHERE id = %d",
+      $id
+    ), ARRAY_A);
+
+    if (!$lead_row) {
+      return new WP_Error('not_found', 'Lead não encontrado.', ['status' => 404]);
+    }
+
+    if (empty($params['nome']) || empty($params['telefone'])) {
+      return new WP_Error('missing_fields', 'Nome e telefone são obrigatórios.', ['status' => 400]);
+    }
+
+    if (!empty($params['email']) && !is_email($params['email'])) {
+      return new WP_Error('invalid_email', 'E-mail inválido.', ['status' => 400]);
+    }
+
+    $dados = [
+      'nome'                     => sanitize_text_field($params['nome']),
+      'telefone'                 => sanitize_text_field($params['telefone']),
+      'data_atualizacao'         => current_time('mysql'),
+    ];
+
+    if (isset($params['email']))
+      $dados['email'] = sanitize_email($params['email']);
+    if (isset($params['cidade']))
+      $dados['cidade'] = sanitize_text_field($params['cidade']);
+    if (isset($params['estado']))
+      $dados['estado'] = sanitize_text_field($params['estado']);
+    if (isset($params['interesse']))
+      $dados['interesse'] = sanitize_text_field($params['interesse']);
+    if (isset($params['expectativa_investimento']))
+      $dados['expectativa_investimento'] = sanitize_text_field($params['expectativa_investimento']);
+
+    $resultado = $wpdb->update($table_leads, $dados, ['id' => $id], null, ['%d']);
+
+    if ($resultado === false) {
+      return new WP_Error('db_error', 'Erro ao atualizar lead.', ['status' => 500]);
+    }
+
+    return self::get($id);
+  }
+
+  /**
    * Atualizar loja do lead
    */
   public static function update_loja($id, $params)

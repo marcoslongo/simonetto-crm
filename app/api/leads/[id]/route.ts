@@ -48,7 +48,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    await requireGerente()
 
     const { id } = await params
 

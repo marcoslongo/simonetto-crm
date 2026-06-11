@@ -442,9 +442,34 @@ function mytheme_api_update_lead($request)
     ], 200);
   }
 
+  // Atualiza dados básicos do lead (apenas gerentes e admins)
+  if (isset($params['dados'])) {
+    if (!mytheme_api_is_gerente()) {
+      return new WP_REST_Response([
+        'success'  => false,
+        'mensagem' => 'Apenas gerentes e administradores podem editar dados do lead.',
+      ], 403);
+    }
+
+    $result = Lead_Handler::update_dados($id, $params['dados']);
+
+    if (is_wp_error($result)) {
+      return new WP_REST_Response([
+        'success'  => false,
+        'mensagem' => $result->get_error_message(),
+      ], $result->get_error_data()['status']);
+    }
+
+    return new WP_REST_Response([
+      'success'  => true,
+      'mensagem' => 'Dados do lead atualizados com sucesso.',
+      'lead'     => $result,
+    ], 200);
+  }
+
   return new WP_REST_Response([
     'success' => false,
-    'mensagem' => 'Nenhum campo válido para atualizar. Use "status", "loja_id" ou "responsavel_id".',
+    'mensagem' => 'Nenhum campo válido para atualizar. Use "status", "loja_id", "responsavel_id" ou "dados".',
   ], 400);
 }
 

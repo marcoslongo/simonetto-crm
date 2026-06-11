@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   Mail,
   Phone,
@@ -70,6 +73,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const INVESTMENT_OPTIONS = [
+  { value: "35-50k",     label: "De R$ 35.000 a R$ 50.000" },
+  { value: "50-100k",    label: "De R$ 50.000 a R$ 100.000" },
+  { value: "100-150k",   label: "De R$ 100.000 a R$ 150.000" },
+  { value: "150-200k",   label: "De R$ 150.000 a R$ 200.000" },
+  { value: "acima-250k", label: "Acima de R$ 250.000" },
+]
+
+const INTEREST_OPTIONS = [
+  { value: "cozinha",    label: "Cozinha" },
+  { value: "dormitorio", label: "Dormitório" },
+  { value: "closet",     label: "Closet" },
+  { value: "banheiro",   label: "Banheiro" },
+  { value: "escritorio", label: "Escritório" },
+  { value: "lavanderia", label: "Lavanderia" },
+  { value: "completo",   label: "Projeto completo" },
+]
+
+const ESTADOS_BR = [
+  { value: "AC", label: "Acre" },
+  { value: "AL", label: "Alagoas" },
+  { value: "AP", label: "Amapá" },
+  { value: "AM", label: "Amazonas" },
+  { value: "BA", label: "Bahia" },
+  { value: "CE", label: "Ceará" },
+  { value: "DF", label: "Distrito Federal" },
+  { value: "ES", label: "Espírito Santo" },
+  { value: "GO", label: "Goiás" },
+  { value: "MA", label: "Maranhão" },
+  { value: "MT", label: "Mato Grosso" },
+  { value: "MS", label: "Mato Grosso do Sul" },
+  { value: "MG", label: "Minas Gerais" },
+  { value: "PA", label: "Pará" },
+  { value: "PB", label: "Paraíba" },
+  { value: "PR", label: "Paraná" },
+  { value: "PE", label: "Pernambuco" },
+  { value: "PI", label: "Piauí" },
+  { value: "RJ", label: "Rio de Janeiro" },
+  { value: "RN", label: "Rio Grande do Norte" },
+  { value: "RS", label: "Rio Grande do Sul" },
+  { value: "RO", label: "Rondônia" },
+  { value: "RR", label: "Roraima" },
+  { value: "SC", label: "Santa Catarina" },
+  { value: "SP", label: "São Paulo" },
+  { value: "SE", label: "Sergipe" },
+  { value: "TO", label: "Tocantins" },
+]
 
 interface LojaOption {
   id: number;
@@ -136,6 +187,19 @@ export function LeadDetailsModal({
   const [actions, setActions] = useState<any[]>([]);
   const [loadingActions, setLoadingActions] = useState(false);
 
+  const [editingDados, setEditingDados] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nome: lead.nome,
+    telefone: lead.telefone,
+    email: lead.email ?? "",
+    cidade: lead.cidade ?? "",
+    estado: lead.estado ?? "",
+    interesses: (lead.interesse ?? "").split(",").map(s => s.trim()).filter(Boolean),
+    expectativa_investimento: lead.expectativa_investimento ?? "",
+  });
+  const [savingDados, setSavingDados] = useState(false);
+  const [localNome, setLocalNome] = useState(lead.nome);
+
   const [editingLoja, setEditingLoja] = useState(false);
   const [selectedLojaId, setSelectedLojaId] = useState<string>(lead.loja_id ?? "");
   const [currentLojaNome, setCurrentLojaNome] = useState(lead.loja_nome ?? "");
@@ -167,6 +231,17 @@ export function LeadDetailsModal({
     setUsuarios([]);
     setVendaNaoRealizada(null);
     setEtiquetas(lead.etiquetas ?? []);
+    setEditingDados(false);
+    setLocalNome(lead.nome);
+    setEditForm({
+      nome: lead.nome,
+      telefone: lead.telefone,
+      email: lead.email ?? "",
+      cidade: lead.cidade ?? "",
+      estado: lead.estado ?? "",
+      interesses: (lead.interesse ?? "").split(",").map(s => s.trim()).filter(Boolean),
+      expectativa_investimento: lead.expectativa_investimento ?? "",
+    });
   }, [lead.id]);
 
   useEffect(() => {
@@ -322,6 +397,44 @@ export function LeadDetailsModal({
     setEditingResponsavel(false);
   };
 
+  const handleSaveDados = async () => {
+    if (!editForm.nome.trim() || !editForm.telefone.trim()) {
+      toast.error("Nome e telefone são obrigatórios.");
+      return;
+    }
+    setSavingDados(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dados: {
+            nome: editForm.nome.trim(),
+            telefone: editForm.telefone.trim(),
+            email: editForm.email.trim(),
+            cidade: editForm.cidade.trim(),
+            estado: editForm.estado,
+            interesse: editForm.interesses.join(", "),
+            expectativa_investimento: editForm.expectativa_investimento,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.mensagem || "Erro ao salvar dados.");
+        return;
+      }
+      setLocalNome(editForm.nome.trim());
+      setEditingDados(false);
+      toast.success("Dados atualizados com sucesso.");
+      router.refresh();
+    } catch {
+      toast.error("Erro ao salvar dados.");
+    } finally {
+      setSavingDados(false);
+    }
+  };
+
   const fetchActions = async () => {
     try {
       setLoadingActions(true);
@@ -354,7 +467,7 @@ export function LeadDetailsModal({
               <div className="flex items-start justify-between flex-col gap-3">
                 <div className="min-w-0 flex-1">
                   <DialogTitle className="text-lg sm:text-2xl font-semibold text-card-foreground truncate">
-                    {lead.nome}
+                    {localNome}
                   </DialogTitle>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-muted-foreground">
                     {(lead.cidade || lead.estado) && (
@@ -394,7 +507,16 @@ export function LeadDetailsModal({
               </div>
 
               {(isAdmin || isGerente) && (
-                <div className="flex mt-3">
+                <div className="flex items-center gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 cursor-pointer"
+                    onClick={() => setEditingDados(true)}
+                  >
+                    <Pencil size={14} />
+                    Editar dados
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="gap-2 cursor-pointer">
@@ -1022,6 +1144,140 @@ export function LeadDetailsModal({
               </TabsContent>
             </div>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de edição de dados do lead */}
+      <Dialog open={editingDados} onOpenChange={(v) => { if (!savingDados) setEditingDados(v); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar dados do lead</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="edit-nome">Nome *</Label>
+                <Input
+                  id="edit-nome"
+                  value={editForm.nome}
+                  onChange={e => setEditForm(f => ({ ...f, nome: e.target.value }))}
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="edit-telefone">Telefone *</Label>
+                <Input
+                  id="edit-telefone"
+                  value={editForm.telefone}
+                  onChange={e => setEditForm(f => ({ ...f, telefone: e.target.value }))}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="edit-email">E-mail</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-cidade">Cidade</Label>
+                <Input
+                  id="edit-cidade"
+                  value={editForm.cidade}
+                  onChange={e => setEditForm(f => ({ ...f, cidade: e.target.value }))}
+                  placeholder="Cidade"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estado</Label>
+                <Select
+                  value={editForm.estado}
+                  onValueChange={v => setEditForm(f => ({ ...f, estado: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESTADOS_BR.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Interesse</Label>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_OPTIONS.map(({ value, label }) => {
+                  const selected = editForm.interesses.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setEditForm(f => ({
+                        ...f,
+                        interesses: selected
+                          ? f.interesses.filter(i => i !== value)
+                          : [...f.interesses, value],
+                      }))}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        selected
+                          ? "border-[#16255c] bg-[#16255c] text-white"
+                          : "border-border bg-background text-muted-foreground hover:border-[#16255c] hover:text-[#16255c]"
+                      )}
+                    >
+                      {selected && <Check className="h-3 w-3" />}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Expectativa de Investimento</Label>
+              <Select
+                value={editForm.expectativa_investimento}
+                onValueChange={v => setEditForm(f => ({ ...f, expectativa_investimento: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma faixa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVESTMENT_OPTIONS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingDados(false)}
+              disabled={savingDados}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveDados}
+              disabled={savingDados}
+              className="gap-1.5"
+            >
+              <Check className="h-3.5 w-3.5" />
+              {savingDados ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </TooltipProvider>
