@@ -508,9 +508,91 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     $msg       = $info['Message']   ?? ($data['Message'] ?? []);
   }
 
+  // Mapa de tipos de mídia (usado tanto para enviadas quanto recebidas)
+  $media_map = [
+    'pttMessage'      => 'audio',
+    'audioMessage'    => 'audio',
+    'imageMessage'    => 'image',
+    'documentMessage' => 'document',
+    'videoMessage'    => 'video',
+    'stickerMessage'  => 'sticker',
+  ];
+  $media_labels = [
+    'audio'    => '[Áudio]',
+    'image'    => '[Imagem]',
+    'document' => '[Documento]',
+    'video'    => '[Vídeo]',
+    'sticker'  => '[Figurinha]',
+  ];
+
+  // ---- Mensagem enviada pelo celular (IsFromMe = true) ----
+  // Registra no chat se o lead já existir (não cria novo lead)
   if ($from_me) {
+    // Para @lid, tenta obter o JID real do destinatário via RecipientAlt
+    $recipient_jid = $chat;
+    if (str_contains((string) $recipient_jid, '@lid')) {
+      $alt = $info['RecipientAlt'] ?? ($key_v2['participant'] ?? '');
+      if ($alt && !str_contains($alt, '@lid')) {
+        $recipient_jid = $alt;
+      }
+    }
+
+    // Ignora grupos, newsletters e @lid sem fallback
+    if (
+      empty($recipient_jid) ||
+      str_contains($recipient_jid, '@g.us') ||
+      str_contains($recipient_jid, '@newsletter') ||
+      str_contains($recipient_jid, '@lid')
+    ) {
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+
+    $sent_phone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $recipient_jid));
+    if (empty($sent_phone)) {
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+
+    $sent_lead_id = Mensagem_Handler::find_lead_by_phone($sent_phone);
+    if (!$sent_lead_id) {
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+
+    $sent_texto = $msg['conversation']
+      ?? ($msg['extendedTextMessage']['text']
+      ?? ($msg['text']
+      ?? ($msg['caption'] ?? '')));
+
+    $sent_media_type = null;
+    foreach ($media_map as $mk => $mt) {
+      if (!empty($msg[$mk])) { $sent_media_type = $mt; break; }
+    }
+
+    if (empty($sent_texto) && $sent_media_type) {
+      $sent_texto = $media_labels[$sent_media_type] ?? '[Mídia]';
+    }
+
+    if (empty($sent_texto)) {
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+
+    Mensagem_Handler::create([
+      'lead_id'  => $sent_lead_id,
+      'loja_id'  => $loja_id,
+      'conteudo' => $sent_texto,
+      'direcao'  => 'enviada',
+      'status'   => 'lida',
+      'wamid'    => $wamid,
+      'metadata' => [
+        'from'      => $push_name,
+        'timestamp' => $timestamp,
+        'type'      => $msg_type,
+      ],
+    ]);
+
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
+
+  // ---- Mensagem recebida (IsFromMe = false) ----
 
   // Ignora grupos, newsletters e JIDs @lid
   if (
@@ -529,16 +611,6 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
         ?? ($msg['extendedTextMessage']['text']
         ?? ($msg['text']
         ?? ($msg['caption'] ?? '')));
-
-  // Detecta tipo de mídia
-  $media_map = [
-    'pttMessage'      => 'audio',
-    'audioMessage'    => 'audio',
-    'imageMessage'    => 'image',
-    'documentMessage' => 'document',
-    'videoMessage'    => 'video',
-    'stickerMessage'  => 'sticker',
-  ];
   $detected_msg_key    = null;
   $detected_media_type = null;
   foreach ($media_map as $mk => $mt) {
