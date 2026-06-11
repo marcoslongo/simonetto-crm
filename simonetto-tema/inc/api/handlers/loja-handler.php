@@ -48,7 +48,7 @@ class Loja_Handler
   /**
    * Listar lojas com estatísticas
    */
-  public static function list_with_stats()
+  public static function list_with_stats(bool $exclude_proprio = false)
   {
     global $wpdb;
 
@@ -69,14 +69,15 @@ class Loja_Handler
     $loja_ids = wp_list_pluck($lojas, 'ID');
     $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
     $table_leads = $wpdb->prefix . 'leads';
+    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
     $stats_query = "
-      SELECT 
+      SELECT
         loja_id,
         COUNT(*) as total_leads,
         SUM(CASE WHEN DATE(data_criacao) = CURDATE() THEN 1 ELSE 0 END) as leads_hoje
       FROM {$table_leads}
-      WHERE loja_id IN ($placeholders)
+      WHERE loja_id IN ($placeholders){$proprio_filter}
       GROUP BY loja_id
     ";
 
@@ -203,10 +204,11 @@ class Loja_Handler
   /**
    * Estatísticas gerais da loja
    */
-  public static function get_stats($loja_id)
+  public static function get_stats($loja_id, bool $exclude_proprio = false)
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
+    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
     $stats = $wpdb->get_row($wpdb->prepare("
       SELECT
@@ -220,7 +222,7 @@ class Loja_Handler
         SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
                   AND data_criacao < DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as mes_anterior
       FROM {$table_leads}
-      WHERE loja_id = %d
+      WHERE loja_id = %d{$proprio_filter}
     ", $loja_id));
 
     return array(
@@ -237,18 +239,19 @@ class Loja_Handler
   /**
    * Leads dos últimos 30 dias (agrupados por dia)
    */
-  public static function get_leads_30_days($loja_id)
+  public static function get_leads_30_days($loja_id, bool $exclude_proprio = false)
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
+    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
     $results = $wpdb->get_results($wpdb->prepare("
-      SELECT 
+      SELECT
         DATE(data_criacao) as date,
         COUNT(*) as total
       FROM {$table_leads}
       WHERE loja_id = %d
-        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY){$proprio_filter}
       GROUP BY DATE(data_criacao)
       ORDER BY date ASC
     ", $loja_id));
@@ -278,12 +281,13 @@ class Loja_Handler
   /**
    * Métricas de atendimento da loja (taxa de contato, tempo médio de resposta)
    */
-  public static function get_service_stats($loja_id)
+  public static function get_service_stats($loja_id, bool $exclude_proprio = false)
   {
     global $wpdb;
 
     $table_leads   = $wpdb->prefix . 'leads';
     $table_actions = $wpdb->prefix . 'leads_actions';
+    $proprio_filter = $exclude_proprio ? " AND l.origem != 'proprio'" : '';
 
     $row = $wpdb->get_row($wpdb->prepare("
       SELECT
@@ -320,7 +324,7 @@ class Loja_Handler
         GROUP BY lead_id
       ) fa ON fa.lead_id = l.id
 
-      WHERE l.loja_id = %d
+      WHERE l.loja_id = %d{$proprio_filter}
     ", $loja_id), ARRAY_A);
 
     if (!$row) {
@@ -349,18 +353,19 @@ class Loja_Handler
   /**
    * Leads dos últimos 12 meses (agrupados por mês)
    */
-  public static function get_leads_12_months($loja_id)
+  public static function get_leads_12_months($loja_id, bool $exclude_proprio = false)
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
+    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
     $results = $wpdb->get_results($wpdb->prepare("
-      SELECT 
+      SELECT
         DATE_FORMAT(data_criacao, '%%Y-%%m-01') as date,
         COUNT(*) as total
       FROM {$table_leads}
       WHERE loja_id = %d
-        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH){$proprio_filter}
       GROUP BY DATE_FORMAT(data_criacao, '%%Y-%%m')
       ORDER BY date ASC
     ", $loja_id));

@@ -222,7 +222,8 @@ function mytheme_api_list_lojas($request)
  */
 function mytheme_api_list_lojas_with_stats($request)
 {
-  $lojas = Loja_Handler::list_with_stats();
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $lojas = Loja_Handler::list_with_stats($exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
@@ -268,7 +269,8 @@ function mytheme_api_get_loja_stats($request)
     ], 404);
   }
 
-  $stats = Loja_Handler::get_stats($loja_id);
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $stats = Loja_Handler::get_stats($loja_id, $exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
@@ -292,7 +294,8 @@ function mytheme_api_get_loja_leads_30_days($request)
     ], 404);
   }
 
-  $data = Loja_Handler::get_leads_30_days($loja_id);
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $data = Loja_Handler::get_leads_30_days($loja_id, $exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
@@ -316,7 +319,8 @@ function mytheme_api_get_loja_leads_12_months($request)
     ], 404);
   }
 
-  $data = Loja_Handler::get_leads_12_months($loja_id);
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $data = Loja_Handler::get_leads_12_months($loja_id, $exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
@@ -429,10 +433,12 @@ function mytheme_api_get_loja_status_funil($request)
 
   $loja_id = (int) $request['id'];
   $table   = $wpdb->prefix . 'leads';
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $proprio_filter  = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT status, COUNT(*) as total FROM {$table} WHERE loja_id = %d GROUP BY status",
+      "SELECT status, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter} GROUP BY status",
       $loja_id
     ),
     ARRAY_A
@@ -470,10 +476,12 @@ function mytheme_api_get_loja_classificacao($request)
 
   $loja_id = (int) $request['id'];
   $table   = $wpdb->prefix . 'leads';
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $proprio_filter  = $exclude_proprio ? " AND origem != 'proprio'" : '';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT classificacao, COUNT(*) as total FROM {$table} WHERE loja_id = %d GROUP BY classificacao",
+      "SELECT classificacao, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter} GROUP BY classificacao",
       $loja_id
     ),
     ARRAY_A
@@ -514,7 +522,8 @@ function mytheme_api_get_loja_service_stats($request)
     ], 404);
   }
 
-  $stats = Loja_Handler::get_service_stats($loja_id);
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $stats = Loja_Handler::get_service_stats($loja_id, $exclude_proprio);
 
   return new WP_REST_Response([
     'success' => true,
