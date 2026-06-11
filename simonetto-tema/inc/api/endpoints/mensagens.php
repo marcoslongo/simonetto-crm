@@ -383,6 +383,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   $data  = $body['data']  ?? [];
   $info  = $data['Info']  ?? [];
 
+  // Normaliza nomes de eventos: Evolution API Go/v2 usa snake-case, v1 usava PascalCase
+  $event_aliases = [
+    'connection.update' => 'Connection',
+    'messages.update'   => 'Receipt',
+    'messages.upsert'   => 'Message',
+    'send.message'      => 'Message',
+  ];
+  $event = $event_aliases[$event] ?? $event;
+
   // Tenta instanceName primeiro (é o que fica salvo no user meta); UUID como fallback
   $instance_name = $body['instanceName'] ?? '';
   $instance_uuid = $body['instanceId']   ?? '';
@@ -433,7 +442,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   // ---- Estado da conexão (event = "Connection") ----
   if ($event === 'Connection') {
-    $state = $data['state'] ?? ($body['state'] ?? '');
+    // v2/Go: data.connection (OPEN|CONNECTING|CLOSED); v1: data.state (open|close|...)
+    $raw_state = $data['connection'] ?? ($data['state'] ?? ($body['state'] ?? ''));
+    $state_map_conn = [
+      'OPEN'       => 'open',
+      'CONNECTING' => 'connecting',
+      'CLOSING'    => 'close',
+      'CLOSED'     => 'close',
+    ];
+    $state = $state_map_conn[strtoupper((string) $raw_state)] ?? strtolower((string) $raw_state);
     if ($state) {
       update_user_meta($usuario_id, '_whatsapp_connection_state', sanitize_text_field($state));
     }
@@ -442,32 +459,60 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   // ---- Recibo de leitura / entrega (event = "Receipt") ----
   if ($event === 'Receipt') {
-    $state_map = [
-      'Delivered' => 'entregue',
-      'Read'      => 'lida',
-      'Played'    => 'lida',
-    ];
-    $state = $body['state'] ?? ($data['Type'] ?? '');
-    if (isset($state_map[$state])) {
-      $ids = $data['MessageIDs'] ?? [];
-      foreach ($ids as $wamid) {
-        if ($wamid) Mensagem_Handler::update_status($wamid, $state_map[$state]);
+    // v2/Go: data é array de {key, update:{status:"READ"|"DELIVERY_ACK"|...}}
+    if (isset($data[0]['key'])) {
+      $status_map_v2 = [
+        'READ'         => 'lida',
+        'PLAYED'       => 'lida',
+        'DELIVERY_ACK' => 'entregue',
+      ];
+      foreach ($data as $upd) {
+        $wamid_r = $upd['key']['id']        ?? '';
+        $st      = $upd['update']['status'] ?? '';
+        if ($wamid_r && isset($status_map_v2[strtoupper($st)])) {
+          Mensagem_Handler::update_status($wamid_r, $status_map_v2[strtoupper($st)]);
+        }
+      }
+    } else {
+      // v1 format
+      $state_map_v1 = ['Delivered' => 'entregue', 'Read' => 'lida', 'Played' => 'lida'];
+      $state = $body['state'] ?? ($data['Type'] ?? '');
+      if (isset($state_map_v1[$state])) {
+        $ids = $data['MessageIDs'] ?? [];
+        foreach ($ids as $wamid_r) {
+          if ($wamid_r) Mensagem_Handler::update_status($wamid_r, $state_map_v1[$state]);
+        }
       }
     }
     return new WP_REST_Response(['status' => 'ok'], 200);
   }
 
-  // ---- Mensagem recebida (event = "Message" ou similar) ----
-  // Ignora mensagens enviadas por nós
-  if (!empty($info['IsFromMe'])) {
-    return new WP_REST_Response(['status' => 'ok'], 200);
+  // ---- Mensagem recebida (event = "Message") ----
+  // Suporte a Evolution API Go/v2 (data.key) e v1 (data.Info)
+  $key_v2 = $data['key'] ?? null;
+  if ($key_v2) {
+    // Evolution API Go / v2 format
+    $from_me   = (bool) ($key_v2['fromMe']            ?? false);
+    $chat      = $key_v2['remoteJid']                 ?? '';
+    $wamid     = $key_v2['id']                        ?? '';
+    $push_name = $data['pushName']                    ?? '';
+    $timestamp = $data['messageTimestamp']            ?? '';
+    $msg_type  = $data['messageType']                 ?? '';
+    $msg       = $data['message']                     ?? [];
+  } else {
+    // Evolution API v1 format
+    $from_me   = !empty($info['IsFromMe']);
+    $chat      = $info['Chat']      ?? ($info['Sender'] ?? '');
+    $wamid     = $info['ID']        ?? '';
+    $push_name = $info['PushName']  ?? '';
+    $timestamp = $info['Timestamp'] ?? '';
+    $msg_type  = $info['Type']      ?? '';
+    $msg       = $data['Message']   ?? [];
   }
 
-  $chat      = $info['Chat']      ?? ($info['Sender'] ?? '');
-  $wamid     = $info['ID']        ?? '';
-  $push_name = $info['PushName']  ?? '';
-  $timestamp = $info['Timestamp'] ?? '';
-  $msg_type  = $info['Type']      ?? '';
+  if ($from_me) {
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
 
   // Ignora grupos, newsletters e JIDs @lid
   if (
@@ -480,7 +525,6 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   }
 
   $phone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat));
-  $msg   = $data['Message'] ?? [];
 
   // Texto da mensagem (suporta texto simples e extendido; caption de imagem/doc)
   $texto = $msg['conversation']
