@@ -383,9 +383,18 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   $data  = $body['data']  ?? [];
   $info  = $data['Info']  ?? [];
 
-  // instanceId é UUID — confirmado pelo Evolution Go
-  $instance   = $body['instanceId'] ?? ($body['instanceName'] ?? '');
-  $usuario_id = $instance ? Mensagem_Handler::find_user_by_instance($instance) : null;
+  // Tenta instanceName primeiro (é o que fica salvo no user meta); UUID como fallback
+  $instance_name = $body['instanceName'] ?? '';
+  $instance_uuid = $body['instanceId']   ?? '';
+  $instance      = $instance_name ?: $instance_uuid;
+
+  $usuario_id = null;
+  if ($instance_name) {
+    $usuario_id = Mensagem_Handler::find_user_by_instance($instance_name);
+  }
+  if (!$usuario_id && $instance_uuid && $instance_uuid !== $instance_name) {
+    $usuario_id = Mensagem_Handler::find_user_by_instance($instance_uuid);
+  }
   $instance_matched = (bool) $usuario_id;
   if (!$usuario_id) {
     $usuario_id = Mensagem_Handler::find_any_configured_user();
@@ -396,14 +405,27 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['status' => 'no_user'], 200);
   }
 
-  // Deriva loja_id do usuário para manter compatibilidade com wp_mensagens.loja_id
+  // Deriva loja_id via ACF (get_field lê o campo processado; get_user_meta como fallback)
   $loja_id = null;
   if ($usuario_id) {
-    $user_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
-    if (is_array($user_loja_ids) && !empty($user_loja_ids)) {
-      $loja_id = intval($user_loja_ids[0]);
-    } elseif ($user_loja_ids) {
-      $loja_id = intval($user_loja_ids);
+    $raw_loja_ids = function_exists('get_field')
+      ? get_field('loja_ids', 'user_' . $usuario_id)
+      : null;
+
+    if (is_array($raw_loja_ids) && !empty($raw_loja_ids)) {
+      $loja_id = intval($raw_loja_ids[0]);
+    } elseif (!empty($raw_loja_ids)) {
+      $loja_id = intval($raw_loja_ids);
+    }
+
+    // Fallback: lê diretamente do wp_usermeta (cobre casos onde ACF não está ativo)
+    if (!$loja_id) {
+      $meta_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
+      if (is_array($meta_loja_ids) && !empty($meta_loja_ids)) {
+        $loja_id = intval($meta_loja_ids[0]);
+      } elseif ($meta_loja_ids) {
+        $loja_id = intval($meta_loja_ids);
+      }
     }
   }
 
