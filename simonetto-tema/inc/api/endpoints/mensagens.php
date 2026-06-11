@@ -414,26 +414,23 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['status' => 'no_user'], 200);
   }
 
-  // Deriva loja_id via ACF (get_field lê o campo processado; get_user_meta como fallback)
+  // Deriva loja_id: get_user_meta primeiro (IDs brutos, confiável), ACF como fallback
   $loja_id = null;
   if ($usuario_id) {
-    $raw_loja_ids = function_exists('get_field')
-      ? get_field('loja_ids', 'user_' . $usuario_id)
-      : null;
-
-    if (is_array($raw_loja_ids) && !empty($raw_loja_ids)) {
-      $loja_id = intval($raw_loja_ids[0]);
-    } elseif (!empty($raw_loja_ids)) {
-      $loja_id = intval($raw_loja_ids);
+    $meta_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
+    if (is_array($meta_loja_ids) && !empty($meta_loja_ids)) {
+      $first   = $meta_loja_ids[0];
+      $loja_id = is_object($first) ? intval($first->ID) : intval($first);
+    } elseif (!empty($meta_loja_ids)) {
+      $loja_id = is_object($meta_loja_ids) ? intval($meta_loja_ids->ID) : intval($meta_loja_ids);
     }
 
-    // Fallback: lê diretamente do wp_usermeta (cobre casos onde ACF não está ativo)
-    if (!$loja_id) {
-      $meta_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
-      if (is_array($meta_loja_ids) && !empty($meta_loja_ids)) {
-        $loja_id = intval($meta_loja_ids[0]);
-      } elseif ($meta_loja_ids) {
-        $loja_id = intval($meta_loja_ids);
+    // Fallback via ACF (pode retornar WP_Post objects — extrai ->ID se necessário)
+    if (!$loja_id && function_exists('get_field')) {
+      $acf_loja_ids = get_field('loja_ids', 'user_' . $usuario_id);
+      if (is_array($acf_loja_ids) && !empty($acf_loja_ids)) {
+        $first   = $acf_loja_ids[0];
+        $loja_id = is_object($first) ? intval($first->ID) : intval($first);
       }
     }
   }
