@@ -170,7 +170,7 @@ function SaudeOperacao({ saude }: { saude: SaudeFunilData }) {
           'bg-slate-50 border-slate-200',
         )}>
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Follow-up</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Retornos</p>
             {compOk   ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
              compCrit ? <TrendingDown className="h-4 w-4 text-red-500" /> :
              <AlertTriangle className="h-4 w-4 text-amber-500" />}
