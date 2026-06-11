@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, isMaster } from '@/lib/auth'
 import { getLojas } from '@/lib/api'
 import {
   getLojaStats,
@@ -73,9 +73,9 @@ async function Leads30DaysWrapper({ id }: { id: string }) {
   const data = await getLojaLeads30Days(id)
   return <ChartLeads30Days data={data} lojaIds={[id]} />
 }
-async function Leads12MonthsWrapper({ id }: { id: string }) {
+async function Leads12MonthsWrapper({ id, showProprio }: { id: string; showProprio?: boolean }) {
   const data = await getLojaLeads12Months(id)
-  return <ChartLeads12Months data={data} />
+  return <ChartLeads12Months data={data} showProprio={showProprio} />
 }
 async function IntegracaoWrapper({ id }: { id: string }) {
   const data = await getLojaIntegration(id)
@@ -103,6 +103,7 @@ async function TempoPorEtapaWrapper({ id }: { id: string }) {
 
 export default async function LojaPage({ params }: LojaPageProps) {
   const user = await requireAdmin()
+  const master = isMaster(user)
 
   const { id } = await params
 
@@ -195,7 +196,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
                 <Leads30DaysWrapper id={id} />
               </Suspense>
               <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-                <Leads12MonthsWrapper id={id} />
+                <Leads12MonthsWrapper id={id} showProprio={master} />
               </Suspense>
             </div>
           </>

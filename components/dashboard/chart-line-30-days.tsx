@@ -82,15 +82,18 @@ const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] =
 export function ChartLeads30Days({
   data: initialData,
   lojaId,
+  showProprio = true,
 }: {
   data: LeadChart[]
   lojaId?: string
+  showProprio?: boolean
 }) {
   const [data, setData] = useState(initialData)
   const [from, setFrom] = useState<Date | undefined>()
   const [to, setTo] = useState<Date | undefined>()
   const [loading, setLoading] = useState(false)
   const [isFiltered, setIsFiltered] = useState(false)
+  const visibleOptions = showProprio ? origemOptions : origemOptions.filter(o => o.value !== 'proprio')
   const [origem, setOrigem] = useState<Origem>('todos')
 
   const [openDialog, setOpenDialog] = useState(false)
@@ -201,7 +204,7 @@ export function ChartLeads30Days({
             <div className="flex flex-wrap items-center gap-2">
               {/* Filtro de origem */}
               <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
-                {origemOptions.map((opt) => (
+                {visibleOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => handleOrigemChange(opt.value)}

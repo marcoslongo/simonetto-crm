@@ -72,11 +72,11 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       </Suspense>
 
       <Suspense key={`30dias-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[300px]" />}>
-        <Leads30DaysSection from={from} to={to} />
+        <Leads30DaysSection from={from} to={to} showProprio={master} />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
-        <Leads12MonthsSection />
+        <Leads12MonthsSection showProprio={master} />
       </Suspense>
     </div>
   )

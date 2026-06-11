@@ -23,6 +23,7 @@ interface ChartLeads12MonthsProps {
     total: number
   }[]
   lojaId?: string | number
+  showProprio?: boolean
 }
 
 const chartConfig = {
@@ -40,10 +41,11 @@ const origemOptions: { value: Origem; label: string; icon: React.ReactNode }[] =
   { value: 'proprio', label: 'Lojistas', icon: <Store className="h-3.5 w-3.5" /> },
 ]
 
-export function ChartLeads12Months({ data: initialData, lojaId }: ChartLeads12MonthsProps) {
+export function ChartLeads12Months({ data: initialData, lojaId, showProprio = true }: ChartLeads12MonthsProps) {
   const [data, setData] = useState(initialData)
   const [origem, setOrigem] = useState<Origem>('todos')
   const [loading, setLoading] = useState(false)
+  const visibleOptions = showProprio ? origemOptions : origemOptions.filter(o => o.value !== 'proprio')
 
   async function handleOrigemChange(val: Origem) {
     setOrigem(val)
@@ -83,7 +85,7 @@ export function ChartLeads12Months({ data: initialData, lojaId }: ChartLeads12Mo
           <div className="flex flex-wrap items-center gap-4">
             {/* Filtro de origem */}
             <div className="flex items-center rounded-lg border border-border/60 bg-white overflow-hidden">
-              {origemOptions.map((opt) => (
+              {visibleOptions.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => handleOrigemChange(opt.value)}

@@ -202,12 +202,13 @@ export async function LeadsTemperatureSection({ from, to }: LeadsTemperatureSect
 interface Leads30DaysSectionProps {
   from?: string
   to?: string
+  showProprio?: boolean
 }
 
-export async function Leads30DaysSection({ from, to }: Leads30DaysSectionProps = {}) {
+export async function Leads30DaysSection({ from, to, showProprio = true }: Leads30DaysSectionProps = {}) {
   const leads30Days = await getLeadsLast30DaysServer(from, to)
 
-  return <ChartLeads30Days data={leads30Days} />
+  return <ChartLeads30Days data={leads30Days} showProprio={showProprio} />
 }
 
 export async function ComparativoSemanalSection() {
@@ -324,10 +325,14 @@ export async function SlaRedeSection() {
   )
 }
 
-export async function Leads12MonthsSection() {
+interface Leads12MonthsSectionProps {
+  showProprio?: boolean
+}
+
+export async function Leads12MonthsSection({ showProprio = true }: Leads12MonthsSectionProps = {}) {
   const data = await getLeadsLast12MonthsServer()
 
-  return <ChartLeads12Months data={data} />
+  return <ChartLeads12Months data={data} showProprio={showProprio} />
 }
 
 interface ConversaoRedeSectionProps {
