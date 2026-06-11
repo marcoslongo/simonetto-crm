@@ -5,6 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { FaWhatsapp } from 'react-icons/fa'
 import {
   Check,
@@ -47,6 +55,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
   const [savingGlobal, setSavingGlobal] = useState(false)
   const [loadingQr, setLoadingQr] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
   const [showWebhookInfo, setShowWebhookInfo] = useState(false)
   const [copiedWebhook, setCopiedWebhook] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -172,8 +181,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
     startPolling()
   }
 
-  const handleDisconnect = async () => {
-    if (!window.confirm('Tem certeza que deseja desvincular o WhatsApp? Você precisará escanear o QR Code novamente para reconectar.')) return
+  const confirmDisconnect = async () => {
     setDisconnecting(true)
     try {
       const res = await fetch('/api/usuarios/me/whatsapp', { method: 'DELETE' })
@@ -186,6 +194,7 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
       setInstance(null)
       setConnectionState('not_configured')
       setQrCode(null)
+      setShowDisconnectDialog(false)
       toast.success('WhatsApp desvinculado com sucesso.')
     } catch {
       toast.error('Erro de conexão.')
@@ -305,13 +314,11 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleDisconnect}
+                onClick={() => setShowDisconnectDialog(true)}
                 disabled={disconnecting || creating}
                 className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
               >
-                {disconnecting
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                  : <Unplug className="h-3.5 w-3.5 mr-1.5" />}
+                <Unplug className="h-3.5 w-3.5 mr-1.5" />
                 Desvincular
               </Button>
             </div>
@@ -474,6 +481,35 @@ export function WhatsAppConfig({ isAdmin = false, siteUrl }: WhatsAppConfigProps
         </div>
 
       </CardContent>
+
+      <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desvincular WhatsApp</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja desvincular o WhatsApp? Você precisará escanear o QR Code novamente para reconectar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDisconnectDialog(false)}
+              disabled={disconnecting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Desvinculando…</>
+                : <><Unplug className="h-4 w-4 mr-2" />Desvincular</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
