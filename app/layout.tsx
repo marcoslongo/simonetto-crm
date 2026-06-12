@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
   weight: ['400', '500', '600', '700', '800'],
 })
-
+ 
 export const metadata: Metadata = {
   title: 'Noxus - Lead Ops',
   description: 'Sistema de gestão de leads para múltiplas unidades',
