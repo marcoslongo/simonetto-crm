@@ -1,6 +1,6 @@
 'use server'
 
-import { getAllLeadsServer } from "@/lib/server-leads-service"
+import { getAllLeadsServer, getLeadsServer } from "@/lib/server-leads-service"
 import { getLojaLeads, getMultiLojaLeads, getConversaoPorLoja, getLojaFunilSaude } from "@/lib/api-loja"
 import { getSession } from "@/lib/auth"
 
@@ -83,9 +83,19 @@ export async function fetchLeadsByStatusPaginated(params: {
     return { leads, total, totalPages }
   }
 
-  const all = await getAllLeadsServer(undefined, params.from, params.to, undefined, [params.status])
-  const total = all.length
-  const totalPages = Math.ceil(total / STATUS_PAGE_SIZE) || 1
-  const leads = all.slice((params.page - 1) * STATUS_PAGE_SIZE, params.page * STATUS_PAGE_SIZE)
-  return { leads, total, totalPages }
+  const response = await getLeadsServer(
+    params.page,
+    STATUS_PAGE_SIZE,
+    undefined,
+    undefined,
+    params.from,
+    params.to,
+    undefined,
+    params.status
+  )
+  return {
+    leads: response.leads,
+    total: response.total,
+    totalPages: response.total_pages,
+  }
 }

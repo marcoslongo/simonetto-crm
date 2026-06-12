@@ -57,10 +57,11 @@ export async function getLeadsServer(
   search?: string,
   from?: string,
   to?: string,
-  origem?: 'industria' | 'proprio'
+  origem?: 'industria' | 'proprio',
+  status?: string
 ): Promise<LeadsResponse> {
   const token = await getToken()
-  return getLeads(page, perPage, lojaId, search, from, to, token, origem)
+  return getLeads(page, perPage, lojaId, search, from, to, token, origem, status)
 }
 
 export async function getAllLeadsServer(

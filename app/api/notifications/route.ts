@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { getLeads } from '@/lib/leads-service'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+const NOTIF_PER_STATUS = 60
 
 export async function GET() {
   const session = await getSession()
@@ -18,15 +19,13 @@ export async function GET() {
   try {
     const sevenDaysAgo = new Date(Date.now() - SEVEN_DAYS_MS)
 
-    // Busca um volume generoso de leads para filtrar por status e data_atualizacao
-    const response = await getLeads(1, 500, undefined, undefined, undefined, undefined, session.token)
+    const [realizadas, naoRealizadas] = await Promise.all([
+      getLeads(1, NOTIF_PER_STATUS, undefined, undefined, undefined, undefined, session.token, undefined, 'venda_realizada'),
+      getLeads(1, NOTIF_PER_STATUS, undefined, undefined, undefined, undefined, session.token, undefined, 'venda_nao_realizada'),
+    ])
 
-    const notifications = response.leads
-      .filter(
-        lead =>
-          (lead.status === 'venda_realizada' || lead.status === 'venda_nao_realizada') &&
-          new Date(lead.data_atualizacao) >= sevenDaysAgo
-      )
+    const notifications = [...realizadas.leads, ...naoRealizadas.leads]
+      .filter(lead => new Date(lead.data_atualizacao) >= sevenDaysAgo)
       .sort((a, b) => new Date(b.data_atualizacao).getTime() - new Date(a.data_atualizacao).getTime())
       .slice(0, 50)
 
