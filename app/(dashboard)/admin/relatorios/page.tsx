@@ -1,12 +1,14 @@
 import { Content } from "@/components/relatorios/content"
 import { getLojasServer } from "@/lib/server-lojas-service"
+import { requireAdmin, isMaster } from "@/lib/auth"
 
 export const metadata = {
   title: 'Relatórios | Noxus',
 }
 
 export default async function ReportsPage() {
-  const lojas = await getLojasServer()
+  const [user, lojas] = await Promise.all([requireAdmin(), getLojasServer()])
+  const master = isMaster(user)
 
   return (
     <div className="space-y-6">
@@ -17,7 +19,7 @@ export default async function ReportsPage() {
         </p>
       </div>
 
-      <Content lojas={lojas.map(l => ({ id: Number(l.id), nome: l.nome }))} />
+      <Content lojas={lojas.map(l => ({ id: Number(l.id), nome: l.nome }))} showProprio={master} />
     </div>
   )
 }

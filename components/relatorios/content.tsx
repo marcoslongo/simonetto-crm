@@ -60,13 +60,14 @@ function performanceToCSV(rows: any[]): string {
   return [headers.join(','), ...dataRows].join('\n')
 }
 
-function leadsToCSV(leads: any[]): string {
+function leadsToCSV(leads: any[], includeProprio: boolean): string {
   const headers = [
     'ID', 'Nome', 'Email', 'Telefone',
     'Cidade', 'Estado',
     'Interesse', 'Expectativa de Investimento', 'Classificação', 'Score',
     'Loja', 'Cidade da Loja', 'Estado da Loja', 'Região',
-    'Status', 'Origem',
+    'Status',
+    ...(includeProprio ? ['Origem'] : []),
     'Data de Cadastro', 'Mensagem',
   ]
 
@@ -83,7 +84,7 @@ function leadsToCSV(leads: any[]): string {
     lead.classificacao ?? '', lead.score ?? '',
     lead.loja_nome, lead.loja_cidade, lead.loja_estado, lead.loja_regiao,
     STATUS_LABELS[lead.status as LeadStatus] ?? lead.status,
-    lead.origem === 'industria' ? 'Indústria' : lead.origem === 'proprio' ? 'Próprio' : lead.origem,
+    ...(includeProprio ? [lead.origem === 'industria' ? 'Indústria' : lead.origem === 'proprio' ? 'Próprio' : lead.origem] : []),
     lead.data_criacao, lead.mensagem ?? '',
   ].map(escape).join(','))
 
@@ -102,6 +103,7 @@ type Origem = '' | 'industria' | 'proprio'
 
 interface ContentProps {
   lojas: { id: number; nome: string }[]
+  showProprio?: boolean
 }
 
 function LojaSelect({
@@ -169,7 +171,7 @@ function LojaSelect({
   )
 }
 
-export function Content({ lojas }: ContentProps) {
+export function Content({ lojas, showProprio = true }: ContentProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>('preset')
   const [activePreset, setActivePreset] = useState("ultimo-mes")
   const [from, setFrom] = useState<Date | undefined>(undefined)
@@ -221,7 +223,8 @@ export function Content({ lojas }: ContentProps) {
     const parts: string[] = []
     if (lojaId) parts.push(lojas.find(l => l.id === lojaId)?.nome ?? 'Loja selecionada')
     if (selectedStatus.length > 0) parts.push(selectedStatus.map(s => STATUS_LABELS[s]).join(', '))
-    if (origem) parts.push(origem === 'industria' ? 'Indústria' : 'Próprio')
+    if (origem === 'industria') parts.push('Indústria')
+    else if (origem === 'proprio' && showProprio) parts.push('Próprio')
     return parts.length ? parts.join(' · ') : 'Todos os registros'
   }
 
@@ -248,7 +251,7 @@ export function Content({ lojas }: ContentProps) {
         status: selectedStatus.length > 0 ? selectedStatus : undefined,
       })
 
-      const csv = leadsToCSV(leads)
+      const csv = leadsToCSV(leads, showProprio)
       const lojaNome = lojaId ? lojas.find(l => l.id === lojaId)?.nome?.toLowerCase().replace(/\s+/g, '-') : 'todas-lojas'
       downloadCSV(csv, `leads-${lojaNome}-${getPeriodLabel()}.csv`)
     } catch {
@@ -350,22 +353,24 @@ export function Content({ lojas }: ContentProps) {
             <LojaSelect lojas={lojas} value={lojaId} onChange={setLojaId} />
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origem</p>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg">
-              {([['', 'Todas'], ['industria', 'Indústria'], ['proprio', 'Próprio']] as [Origem, string][]).map(([v, label]) => (
-                <button
-                  key={v}
-                  onClick={() => setOrigem(v)}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    origem === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          {showProprio && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origem</p>
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                {([['', 'Todas'], ['industria', 'Indústria'], ['proprio', 'Próprio']] as [Origem, string][]).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setOrigem(v)}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      origem === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Status */}
