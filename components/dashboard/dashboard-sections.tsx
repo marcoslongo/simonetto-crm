@@ -19,6 +19,7 @@ import {
   getLeadsTrackingUtmContentServer,
   getLeadsTrackingMediumServer,
   getLeadsLast12MonthsServer,
+  getInfluenciadoresServer,
 } from '@/lib/server-leads-service'
 import { getLojasServer } from '@/lib/server-lojas-service'
 import {
@@ -51,6 +52,7 @@ import { ChartDeviceBreakdown } from './chart-device-breakdown'
 import { ChartHorarioLeads } from './chart-horario-leads'
 import { ChartUtmContentMedium } from './chart-utm-content-medium'
 import { ChartLeads12Months } from './chart-leads-12-months'
+import { InfluenciadoresSection } from './influenciadores-section'
 
 export async function StatsSection() {
   const [statsGeral] = await Promise.all([
@@ -830,4 +832,15 @@ export async function OrigemConversaoSection({ from, to }: OrigemConversaoSectio
       </div>
     </div>
   )
+}
+
+interface InfluenciadoresSectionProps {
+  from?: string
+  to?: string
+}
+
+export async function InfluenciadoresDashboardSection({ from, to }: InfluenciadoresSectionProps = {}) {
+  const data = await getInfluenciadoresServer(from, to)
+  return <InfluenciadoresSection data={data} />
+}
 }

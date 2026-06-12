@@ -203,6 +203,13 @@ add_action('rest_api_init', function () {
     'callback'            => 'mytheme_api_leads_tracking_medium',
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
+
+  // GET /api/v1/influenciadores — métricas agrupadas por utm_source (influencer)
+  register_rest_route('api/v1', '/influenciadores', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_influenciadores',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
 });
 
 
@@ -1629,6 +1636,104 @@ function mytheme_api_leads_tracking_medium(WP_REST_Request $request)
       'utm_medium' => $row['utm_medium'],
       'total'      => (int)   $row['total'],
       'pct'        => (float) $row['pct'],
+    ];
+  }, $rows);
+
+  return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/influenciadores
+ *
+ * Métricas de leads agrupadas por utm_source (influenciadores / canais).
+ * Retorna apenas fontes com utm_source preenchido (exclui tráfego direto).
+ *
+ * Query params opcionais: from, to (yyyy-MM-dd)
+ *
+ * Resposta:
+ * {
+ *   success: true,
+ *   data: [
+ *     {
+ *       utm_source:    "bella",
+ *       total:         120,
+ *       vendas:        18,
+ *       perdidos:      12,
+ *       em_negociacao: 30,
+ *       nao_atendido:  60,
+ *       conversao_pct: 15.0,
+ *       primeiro_lead: "2024-01-10 08:23:00",
+ *       ultimo_lead:   "2024-12-01 14:05:00"
+ *     },
+ *     ...
+ *   ]
+ * }
+ */
+function mytheme_api_influenciadores(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads    = $wpdb->prefix . 'leads';
+  $table_tracking = $wpdb->prefix . 'lead_tracking';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  $where_clauses  = [
+    "t.utm_source IS NOT NULL",
+    "t.utm_source != ''",
+  ];
+  $prepare_values = [];
+
+  if (current_user_can('administrator') && !crm_current_user_is_master()) {
+    $where_clauses[] = "l.origem != 'proprio'";
+  }
+
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
+
+  $query = "
+    SELECT
+      t.utm_source,
+      COUNT(l.id)                                                                        AS total,
+      SUM(CASE WHEN l.status = 'venda_realizada'     THEN 1 ELSE 0 END)                 AS vendas,
+      SUM(CASE WHEN l.status = 'venda_nao_realizada' THEN 1 ELSE 0 END)                 AS perdidos,
+      SUM(CASE WHEN l.status = 'em_negociacao'       THEN 1 ELSE 0 END)                 AS em_negociacao,
+      SUM(CASE WHEN l.status = 'nao_atendido'        THEN 1 ELSE 0 END)                 AS nao_atendido,
+      ROUND(
+        SUM(CASE WHEN l.status = 'venda_realizada' THEN 1 ELSE 0 END) * 100.0 / COUNT(l.id),
+        1
+      )                                                                                  AS conversao_pct,
+      MIN(l.data_criacao)                                                                AS primeiro_lead,
+      MAX(l.data_criacao)                                                                AS ultimo_lead
+    FROM {$table_leads} l
+    INNER JOIN {$table_tracking} t ON t.lead_id = l.id
+    {$where_sql}
+    GROUP BY t.utm_source
+    ORDER BY total DESC
+  ";
+
+  $rows = empty($prepare_values)
+    ? $wpdb->get_results($query, ARRAY_A)
+    : $wpdb->get_results($wpdb->prepare($query, ...$prepare_values), ARRAY_A);
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $wpdb->last_error], 500);
+  }
+
+  $data = array_map(function ($row) {
+    return [
+      'utm_source'    => $row['utm_source'],
+      'total'         => (int)   $row['total'],
+      'vendas'        => (int)   $row['vendas'],
+      'perdidos'      => (int)   $row['perdidos'],
+      'em_negociacao' => (int)   $row['em_negociacao'],
+      'nao_atendido'  => (int)   $row['nao_atendido'],
+      'conversao_pct' => (float) $row['conversao_pct'],
+      'primeiro_lead' => $row['primeiro_lead'],
+      'ultimo_lead'   => $row['ultimo_lead'],
     ];
   }, $rows);
 
