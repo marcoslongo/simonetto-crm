@@ -77,7 +77,7 @@ function crm_presence_list_online(): WP_REST_Response
       'id'          => $user->ID,
       'nome'        => $user->display_name,
       'email'       => $user->user_email,
-      'avatar'      => get_avatar_url($user->ID, ['size' => 48]),
+      'avatar'      => get_user_meta($user->ID, '_crm_avatar_url', true) ?: get_avatar_url($user->ID, ['size' => 48]),
       'role'        => $role,
       'loja_nome'   => get_field('loja_nome', 'user_' . $user->ID) ?: null,
       'last_active' => $last_active,
