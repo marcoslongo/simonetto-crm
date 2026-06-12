@@ -6,9 +6,8 @@ import Groq from 'groq-sdk'
 
 export const maxDuration = 60
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-
 export async function POST(req: Request) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false }, { status: 401 })
   if (!isAdmin(session.user)) return NextResponse.json({ success: false }, { status: 403 })

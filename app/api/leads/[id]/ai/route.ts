@@ -8,8 +8,6 @@ const WP_API = process.env.NEXT_PUBLIC_WP_URL
 
 type Ctx = { params: Promise<{ id: string }> }
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-
 const STATUS_LABELS: Record<string, string> = {
   nao_atendido: 'Não atendido',
   em_negociacao: 'Em negociação',
@@ -32,6 +30,7 @@ const INVESTMENT_LABELS: Record<string, string> = {
 }
 
 export async function POST(req: Request, { params }: Ctx) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const session = await getSession()
   if (!session) return NextResponse.json({ success: false }, { status: 401 })
 
