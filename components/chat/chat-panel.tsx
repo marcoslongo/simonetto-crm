@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { FaWhatsapp } from "react-icons/fa";
 import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
@@ -608,6 +609,7 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
   const hora = format(new Date(mensagem.criado_em), "HH:mm", { locale: ptBR });
   const mediaType = mensagem.metadata?.media_type;
   const mediaUrl  = mensagem.metadata?.media_url;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const isSticker = mediaType === "sticker";
 
@@ -636,14 +638,26 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
         )}
 
         {mediaUrl && mediaType === "image" && (
-          <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={mediaUrl}
-              alt="Imagem"
-              className="rounded-lg max-w-[220px] max-h-[220px] object-cover mb-1 cursor-pointer"
-            />
-          </a>
+          <>
+            <button type="button" onClick={() => setLightboxOpen(true)} className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl}
+                alt="Imagem"
+                className="rounded-lg max-w-55 max-h-55 object-cover mb-1 cursor-zoom-in"
+              />
+            </button>
+            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+              <DialogContent className="max-w-3xl p-2 bg-black/90 border-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mediaUrl}
+                  alt="Imagem ampliada"
+                  className="w-full h-auto max-h-[80vh] object-contain rounded"
+                />
+              </DialogContent>
+            </Dialog>
+          </>
         )}
 
         {mediaUrl && mediaType === "video" && (
