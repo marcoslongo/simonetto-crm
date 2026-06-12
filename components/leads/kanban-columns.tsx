@@ -59,6 +59,7 @@ import {
   Phone,
   MessageCircle,
   CalendarPlus,
+  SlidersHorizontal,
 } from 'lucide-react'
 import {
   Popover,
@@ -170,6 +171,50 @@ const CUSTOM_COLORS: { value: string; bg: string; label: string }[] = [
 const INITIAL_VISIBLE = 20
 const LOAD_MORE_STEP = 20
 const FETCH_PER_PAGE = 200
+
+interface KanbanFilters {
+  classificacao: string[]
+  origem: string[]
+  responsavelId: number | null
+  slaRisco: boolean
+  naoLidos: boolean
+  followupPendente: boolean
+  etiquetas: number[]
+}
+
+const EMPTY_FILTERS: KanbanFilters = {
+  classificacao: [],
+  origem: [],
+  responsavelId: null,
+  slaRisco: false,
+  naoLidos: false,
+  followupPendente: false,
+  etiquetas: [],
+}
+
+function hasActiveFilters(f: KanbanFilters) {
+  return (
+    f.classificacao.length > 0 ||
+    f.origem.length > 0 ||
+    f.responsavelId !== null ||
+    f.slaRisco ||
+    f.naoLidos ||
+    f.followupPendente ||
+    f.etiquetas.length > 0
+  )
+}
+
+function countActiveFilters(f: KanbanFilters) {
+  return (
+    (f.classificacao.length > 0 ? 1 : 0) +
+    (f.origem.length > 0 ? 1 : 0) +
+    (f.responsavelId !== null ? 1 : 0) +
+    (f.slaRisco ? 1 : 0) +
+    (f.naoLidos ? 1 : 0) +
+    (f.followupPendente ? 1 : 0) +
+    (f.etiquetas.length > 0 ? 1 : 0)
+  )
+}
 
 const colorStyles: Record<string, { icon: string; badge: string; empty: string; dropzone: string; loadMore: string }> = {
   amber: {
@@ -323,6 +368,8 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [searchResults, setSearchResults] = useState<Lead[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchTotal, setSearchTotal] = useState(0)
+  const [activeFilters, setActiveFilters] = useState<KanbanFilters>(EMPTY_FILTERS)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -709,10 +756,46 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     })
   )
 
+  const responsaveisDisponiveis = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const lead of leads) {
+      if (lead.responsavel_id && lead.responsavel_nome) {
+        map.set(lead.responsavel_id, lead.responsavel_nome)
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [leads])
+
+  const etiquetasDisponiveis = useMemo(() => {
+    const map = new Map<number, Etiqueta>()
+    for (const lead of leads) {
+      for (const et of (lead.etiquetas ?? [])) map.set(et.id, et)
+    }
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [leads])
+
+  const filteredLeads = useMemo(() => {
+    if (!hasActiveFilters(activeFilters)) return leads
+    return leads.filter(l => {
+      if (activeFilters.classificacao.length && !activeFilters.classificacao.includes(l.classificacao ?? '')) return false
+      if (activeFilters.origem.length && !activeFilters.origem.includes(l.origem)) return false
+      if (activeFilters.responsavelId !== null && l.responsavel_id !== activeFilters.responsavelId) return false
+      if (activeFilters.slaRisco && !getSLAInfo(l)) return false
+      if (activeFilters.naoLidos && !((l.unread_count ?? 0) > 0)) return false
+      if (activeFilters.followupPendente && !l.proximo_followup_em) return false
+      if (activeFilters.etiquetas.length && !l.etiquetas?.some(e => activeFilters.etiquetas.includes(e.id))) return false
+      return true
+    })
+  }, [leads, activeFilters])
+
+  const filterCount = countActiveFilters(activeFilters)
+
   const itemsByStatus = useMemo(() => {
     const map: Record<string, Lead[]> = {}
     for (const col of colunas) {
-      const colLeads = leads.filter(l => (l.status ?? 'nao_atendido') === col.slug)
+      const colLeads = filteredLeads.filter(l => (l.status ?? 'nao_atendido') === col.slug)
       map[col.slug] = colLeads.sort((a, b) => {
         const aUnread = (a.unread_count ?? 0) > 0
         const bUnread = (b.unread_count ?? 0) > 0
@@ -727,7 +810,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
       })
     }
     return map
-  }, [leads, colunas, lastUnreadAt])
+  }, [filteredLeads, colunas, lastUnreadAt])
 
   const registrarContato = async (leadId: string | number, tipoContato: string, observacao?: string) => {
     try {
@@ -854,50 +937,257 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
     ? lojas.filter(l => lojaIds.includes(l.id))
     : lojas
 
+  // ── helpers de filtro ─────────────────────────────────────────────────────
+  function toggleArray<T>(arr: T[], val: T): T[] {
+    return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]
+  }
+
+  function FilterChip({ active, onClick, icon: Icon, children }: {
+    active: boolean
+    onClick: () => void
+    icon?: React.ComponentType<{ className?: string }>
+    children: React.ReactNode
+  }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 cursor-pointer select-none',
+          active
+            ? 'bg-[#16255c] text-white border-[#16255c] shadow-sm'
+            : 'bg-background text-muted-foreground border-border hover:border-[#16255c]/50 hover:text-[#16255c] hover:bg-[#16255c]/5'
+        )}
+      >
+        {Icon && <Icon className="h-3 w-3 shrink-0" />}
+        {children}
+      </button>
+    )
+  }
+
+  function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{label}</p>
+        <div className="flex flex-wrap gap-2">{children}</div>
+      </div>
+    )
+  }
+
   // ── Shared toolbar ────────────────────────────────────────────────────────
   const toolbar = (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2 shrink-0">
-        {loadingAll ? (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-            </svg>
-            Carregando leads…
-          </span>
-        ) : (
-          <Button
-            onClick={handleRefresh}
-            size={isMobile ? 'sm' : 'default'}
-            className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span className="hidden sm:inline">Atualizar</span>
-          </Button>
-        )}
-        {lojasSeletor.length > 0 && (
-          <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
-        )}
-      </div>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 shrink-0">
+          {loadingAll ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Carregando leads…
+            </span>
+          ) : (
+            <Button
+              onClick={handleRefresh}
+              size={isMobile ? 'sm' : 'default'}
+              className="bg-[#16255c] hover:bg-[#16255c] hover:opacity-90 gap-2 cursor-pointer"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Atualizar</span>
+            </Button>
+          )}
+          {lojasSeletor.length > 0 && (
+            <NovoLeadDialog lojas={lojasSeletor} onLeadCriado={handleLeadCriado} />
+          )}
+        </div>
 
-      <div className="relative w-full sm:max-w-xs">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Buscar por nome, e-mail ou telefone…"
-          className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nome, e-mail ou telefone…"
+              className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size={isMobile ? 'sm' : 'default'}
+                className={cn(
+                  'shrink-0 gap-2 relative transition-colors duration-150',
+                  filterCount > 0 && 'border-[#16255c] text-[#16255c] bg-[#16255c]/5 hover:bg-[#16255c]/10'
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtros</span>
+                {filterCount > 0 && (
+                  <Badge className="ml-0.5 h-4 min-w-4 px-1 py-0 text-[9px] font-bold bg-[#16255c] text-white rounded-full">
+                    {filterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              className="w-80 p-0 shadow-lg rounded-xl border-border overflow-hidden"
+            >
+              {/* cabeçalho */}
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-sm font-semibold text-foreground">Filtros</p>
+                  {filterCount > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-bold">
+                      {filterCount} ativo{filterCount !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+                {filterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilters(EMPTY_FILTERS)}
+                    className="text-xs text-muted-foreground hover:text-[#16255c] transition-colors duration-150 flex items-center gap-1"
+                  >
+                    <X className="h-3 w-3" />
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                {/* Temperatura */}
+                <FilterSection label="Temperatura">
+                  <FilterChip
+                    active={activeFilters.classificacao.includes('frio')}
+                    icon={Snowflake}
+                    onClick={() => setActiveFilters(f => ({ ...f, classificacao: toggleArray(f.classificacao, 'frio') }))}
+                  >
+                    Frio
+                  </FilterChip>
+                  <FilterChip
+                    active={activeFilters.classificacao.includes('morno')}
+                    icon={Thermometer}
+                    onClick={() => setActiveFilters(f => ({ ...f, classificacao: toggleArray(f.classificacao, 'morno') }))}
+                  >
+                    Morno
+                  </FilterChip>
+                  <FilterChip
+                    active={activeFilters.classificacao.includes('quente')}
+                    icon={Flame}
+                    onClick={() => setActiveFilters(f => ({ ...f, classificacao: toggleArray(f.classificacao, 'quente') }))}
+                  >
+                    Quente
+                  </FilterChip>
+                </FilterSection>
+
+                {/* Origem */}
+                <FilterSection label="Origem">
+                  <FilterChip
+                    active={activeFilters.origem.includes('industria')}
+                    onClick={() => setActiveFilters(f => ({ ...f, origem: toggleArray(f.origem, 'industria') }))}
+                  >
+                    Indústria
+                  </FilterChip>
+                  <FilterChip
+                    active={activeFilters.origem.includes('proprio')}
+                    onClick={() => setActiveFilters(f => ({ ...f, origem: toggleArray(f.origem, 'proprio') }))}
+                  >
+                    Próprio
+                  </FilterChip>
+                </FilterSection>
+
+                {/* Indicadores */}
+                <FilterSection label="Indicadores">
+                  <FilterChip
+                    active={activeFilters.slaRisco}
+                    icon={AlertTriangle}
+                    onClick={() => setActiveFilters(f => ({ ...f, slaRisco: !f.slaRisco }))}
+                  >
+                    SLA em risco
+                  </FilterChip>
+                  <FilterChip
+                    active={activeFilters.naoLidos}
+                    icon={MessageCircle}
+                    onClick={() => setActiveFilters(f => ({ ...f, naoLidos: !f.naoLidos }))}
+                  >
+                    Não lidos
+                  </FilterChip>
+                  <FilterChip
+                    active={activeFilters.followupPendente}
+                    icon={CalendarPlus}
+                    onClick={() => setActiveFilters(f => ({ ...f, followupPendente: !f.followupPendente }))}
+                  >
+                    Retorno agendado
+                  </FilterChip>
+                </FilterSection>
+
+                {/* Responsável */}
+                {responsaveisDisponiveis.length > 0 && (
+                  <FilterSection label="Responsável">
+                    {responsaveisDisponiveis.map(r => (
+                      <FilterChip
+                        key={r.id}
+                        icon={User}
+                        active={activeFilters.responsavelId === r.id}
+                        onClick={() => setActiveFilters(f => ({ ...f, responsavelId: f.responsavelId === r.id ? null : r.id }))}
+                      >
+                        {r.nome}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+                )}
+
+                {/* Etiquetas */}
+                {etiquetasDisponiveis.length > 0 && (
+                  <FilterSection label="Etiquetas">
+                    {etiquetasDisponiveis.map(et => (
+                      <FilterChip
+                        key={et.id}
+                        active={activeFilters.etiquetas.includes(et.id)}
+                        onClick={() => setActiveFilters(f => ({ ...f, etiquetas: toggleArray(f.etiquetas, et.id) }))}
+                      >
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: et.cor }} />
+                        {et.nome}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+                )}
+              </div>
+
+              {/* rodapé com contagem */}
+              {filterCount > 0 && (
+                <div className="px-4 py-3 border-t bg-muted/20 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    <strong className="text-foreground">{filteredLeads.length}</strong> de <strong className="text-foreground">{leads.length}</strong> leads
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(false)}
+                    className="text-xs font-medium text-[#16255c] hover:opacity-80 transition-opacity"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
     </div>
   )
