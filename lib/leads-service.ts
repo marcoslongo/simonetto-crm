@@ -651,17 +651,6 @@ export interface UtmMediumItem {
   pct: number
 }
 
-export interface InfluenciadorItem {
-  utm_source: string
-  total: number
-  vendas: number
-  perdidos: number
-  em_negociacao: number
-  nao_atendido: number
-  conversao_pct: number
-  primeiro_lead: string
-  ultimo_lead: string
-}
 
 export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string, lojaId?: number): Promise<DeviceItem[]> {
   let endpoint = 'leads-tracking-device'
@@ -693,15 +682,6 @@ export async function getLeadsTrackingUtmContent(from?: string, to?: string, lim
   return json.data || []
 }
 
-export async function getInfluenciadores(from?: string, to?: string, token?: string): Promise<InfluenciadorItem[]> {
-  let endpoint = 'influenciadores'
-  const params: string[] = []
-  if (from) params.push(`from=${encodeURIComponent(from)}`)
-  if (to)   params.push(`to=${encodeURIComponent(to)}`)
-  if (params.length) endpoint += `?${params.join('&')}`
-  const json = await fetchAPI(endpoint, 'Erro ao buscar influenciadores', token)
-  return json.data || []
-}
 
 export async function getLeadsTrackingMedium(from?: string, to?: string, token?: string): Promise<UtmMediumItem[]> {
   let endpoint = 'leads-tracking-medium'

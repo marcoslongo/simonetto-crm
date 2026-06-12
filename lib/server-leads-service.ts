@@ -36,16 +36,14 @@ import {
   getLeadsTrackingUtmContent,
   getLeadsTrackingMedium,
   getLeadsLast12Months,
-  getInfluenciadores,
   type DeviceItem,
   type HorarioItem,
   type UtmContentItem,
   type UtmMediumItem,
-  type InfluenciadorItem,
 } from './leads-service'
 import type { Lead, LeadsResponse, TimeStoreResponse } from './types'
 
-export type { LojaGeo, EstadoGeoStat, OrigemItem, ScoreDistribuicaoItem, InvestimentoClassificacaoItem, CampanhaUTMItem, LandingPageItem, DeviceItem, HorarioItem, UtmContentItem, UtmMediumItem, InfluenciadorItem }
+export type { LojaGeo, EstadoGeoStat, OrigemItem, ScoreDistribuicaoItem, InvestimentoClassificacaoItem, CampanhaUTMItem, LandingPageItem, DeviceItem, HorarioItem, UtmContentItem, UtmMediumItem }
 
 async function getToken(): Promise<string | undefined> {
   const cookieStore = await cookies()
@@ -246,10 +244,6 @@ export async function getLeadsTrackingMediumServer(from?: string, to?: string) {
   return getLeadsTrackingMedium(from, to, token)
 }
 
-export async function getInfluenciadoresServer(from?: string, to?: string) {
-  const token = await getToken()
-  return getInfluenciadores(from, to, token)
-}
 
 export async function getLeadsLast12MonthsServer(origem?: 'industria' | 'proprio', lojaId?: string | number) {
   const token = await getToken()
