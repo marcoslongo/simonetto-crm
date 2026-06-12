@@ -648,7 +648,14 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
               />
             </button>
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-              <DialogContent className="max-w-[90vw] w-fit p-2 bg-black/90 border-0">
+              <DialogContent showCloseButton={false} className="max-w-[90vw] w-fit p-2 bg-black/90 border-0">
+                <button
+                  onClick={() => setLightboxOpen(false)}
+                  className="absolute -top-3 -right-3 z-50 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
