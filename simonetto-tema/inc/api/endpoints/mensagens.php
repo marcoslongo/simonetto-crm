@@ -417,7 +417,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   // Deriva loja_id: get_user_meta primeiro (IDs brutos, confiável), ACF como fallback
   $loja_id = null;
   if ($usuario_id) {
-    $meta_loja_ids = get_user_meta($usuario_id, 'loja_ids', true);
+    $meta_loja_ids = get_user_meta($usuario_id, 'loja_id', true);
     if (is_array($meta_loja_ids) && !empty($meta_loja_ids)) {
       $first   = $meta_loja_ids[0];
       $loja_id = is_object($first) ? intval($first->ID) : intval($first);
@@ -427,7 +427,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
     // Fallback via ACF (pode retornar WP_Post objects — extrai ->ID se necessário)
     if (!$loja_id && function_exists('get_field')) {
-      $acf_loja_ids = get_field('loja_ids', 'user_' . $usuario_id);
+      $acf_loja_ids = get_field('loja_id', 'user_' . $usuario_id);
       if (is_array($acf_loja_ids) && !empty($acf_loja_ids)) {
         $first   = $acf_loja_ids[0];
         $loja_id = is_object($first) ? intval($first->ID) : intval($first);
@@ -435,7 +435,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
   }
 
-  $meta_debug = get_user_meta($usuario_id, 'loja_ids', true);
+  $meta_debug = get_user_meta($usuario_id, 'loja_id', true);
   error_log('[AUTO-LEAD] event=' . $event . ' instance=' . $instance . ' matched=' . ($instance_matched ? 'yes' : 'fallback') . ' usuario_id=' . $usuario_id . ' loja_id=' . ($loja_id ?? 'null') . ' meta_loja_ids_raw=' . var_export($meta_debug, true));
 
   // ---- Estado da conexão (event = "Connection") ----

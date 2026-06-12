@@ -227,9 +227,10 @@ class Mensagem_Handler
 
     // Fallback: busca pelo último remetente já registrado na tabela de mensagens
     $lead_id = $wpdb->get_var($wpdb->prepare(
-      "SELECT lead_id FROM {$wpdb->prefix}mensagens
-       WHERE JSON_EXTRACT(metadata, '$.from') = %s
-       ORDER BY criado_em DESC LIMIT 1",
+      "SELECT m.lead_id FROM {$wpdb->prefix}mensagens m
+       INNER JOIN {$wpdb->prefix}leads l ON l.id = m.lead_id
+       WHERE JSON_EXTRACT(m.metadata, '$.from') = %s
+       ORDER BY m.criado_em DESC LIMIT 1",
       $digits
     ));
 
