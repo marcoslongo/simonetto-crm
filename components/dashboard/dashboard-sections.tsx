@@ -728,8 +728,8 @@ export async function ScoreCampanhasSection({ from, to }: ScoreCampanhasSectionP
               <span className="col-span-2">Campanha</span>
               <span className="text-right">Leads</span>
             </div>
-            {campanhas.map((row) => (
-              <div key={row.utm_campaign} className="grid grid-cols-3 gap-2 text-xs py-2 rounded-md px-1 hover:bg-white/60 transition-colors">
+            {campanhas.map((row, i) => (
+              <div key={`${row.utm_campaign}-${i}`} className="grid grid-cols-3 gap-2 text-xs py-2 rounded-md px-1 hover:bg-white/60 transition-colors">
                 <span className="col-span-2 text-slate-700 font-medium truncate" title={row.utm_campaign}>
                   {row.utm_campaign}
                 </span>
