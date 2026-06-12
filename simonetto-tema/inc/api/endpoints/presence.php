@@ -12,8 +12,8 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
-const CRM_PRESENCE_META   = '_crm_last_active';
-const CRM_ONLINE_THRESHOLD = 180; // segundos — online se ativo nos últimos 3 min
+if (!defined('CRM_PRESENCE_META'))    define('CRM_PRESENCE_META',    '_crm_last_active');
+if (!defined('CRM_ONLINE_THRESHOLD')) define('CRM_ONLINE_THRESHOLD', 180);
 
 add_action('rest_api_init', function () {
 
@@ -62,13 +62,12 @@ function crm_presence_list_online(): WP_REST_Response
   $online = [];
   foreach ($users as $user) {
     $last_active = (int) get_user_meta($user->ID, CRM_PRESENCE_META, true);
-    $is_master   = current_user_can_for_blog(get_current_blog_id(), 'administrator') // placeholder
-      ? (bool) get_field('is_master', 'user_' . $user->ID)
-      : false;
+    $is_admin    = in_array('administrator', (array) $user->roles, true);
+    $is_master   = $is_admin && (bool) get_field('is_master', 'user_' . $user->ID);
 
     // Determina role legível
     $role = 'loja';
-    if (in_array('administrator', (array) $user->roles, true)) {
+    if ($is_admin) {
       $role = $is_master ? 'master' : 'admin';
     } elseif (get_field('is_gerente', 'user_' . $user->ID)) {
       $role = 'gerente';
