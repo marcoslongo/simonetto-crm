@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { FaWhatsapp } from "react-icons/fa";
-import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square } from "lucide-react";
+import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +55,7 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -451,6 +452,16 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
               onChange={handleFileSelect}
             />
 
+            {/* Input oculto de câmera (mobile) */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileSelect}
+            />
+
             {/* Botão de anexo */}
             <Button
               type="button"
@@ -462,6 +473,19 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
               title="Anexar arquivo"
             >
               <Paperclip className="h-4 w-4 text-slate-500" />
+            </Button>
+
+            {/* Botão de câmera — apenas mobile */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0 sm:hidden"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={enviando}
+              title="Tirar foto"
+            >
+              <Camera className="h-4 w-4 text-slate-500" />
             </Button>
 
             <Textarea
