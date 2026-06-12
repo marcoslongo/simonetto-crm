@@ -45,6 +45,7 @@ require_once __DIR__ . '/endpoints/etiquetas.php';
 require_once __DIR__ . '/endpoints/agenda-compartilhada.php';
 require_once __DIR__ . '/endpoints/lead-arquivos.php';
 require_once __DIR__ . '/endpoints/lead-notificacoes.php';
+require_once __DIR__ . '/endpoints/presence.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {

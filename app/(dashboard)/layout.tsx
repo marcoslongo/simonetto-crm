@@ -8,6 +8,7 @@ import { BottomNav } from '@/components/dashboard/bottom-nav'
 import { SessionTimeout } from '@/components/providers/session-timeout'
 import { AdminAiButton } from '@/components/admin/ai-admin-button'
 import { AiGerenteButton } from '@/components/gerente/ai-gerente-button'
+import { PresenceHeartbeat } from '@/components/providers/presence-heartbeat'
 
 export default async function DashboardLayout({
   children,
@@ -29,6 +30,7 @@ export default async function DashboardLayout({
       </div>
       <BottomNav user={user} />
       <SessionTimeout />
+      <PresenceHeartbeat />
       {isAdmin(user) && <AdminAiButton />}
       {!isAdmin(user) && user.is_gerente && <AiGerenteButton lojaNome={user.loja_nome} />}
     </SidebarProvider>

@@ -15,6 +15,7 @@ import {
   TopBottomConversoesSection,
 } from '@/components/dashboard/dashboard-sections'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
+import { OnlineUsers } from '@/components/dashboard/online-users'
 
 export const metadata = {
   title: 'Dashboard | Noxus',
@@ -54,6 +55,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           <StatsByOrigemSection />
         </Suspense>
       )}
+
+      {master && <OnlineUsers />}
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <ComparativoSemanalSection />
