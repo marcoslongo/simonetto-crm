@@ -648,12 +648,12 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
               />
             </button>
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-              <DialogContent className="max-w-3xl p-2 bg-black/90 border-0">
+              <DialogContent className="max-w-[90vw] w-fit p-2 bg-black/90 border-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
                   alt="Imagem ampliada"
-                  className="w-full h-auto max-h-[80vh] object-contain rounded"
+                  className="max-w-[85vw] max-h-[85vh] w-auto h-auto object-contain rounded"
                 />
               </DialogContent>
             </Dialog>
