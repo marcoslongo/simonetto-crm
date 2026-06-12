@@ -648,7 +648,7 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
               />
             </button>
             <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-              <DialogContent showCloseButton={false} className="max-w-[90vw] max-h-[90vh] w-auto p-2 bg-black/90 border-0 overflow-hidden">
+              <DialogContent showCloseButton={false} className="w-auto max-w-[90vw] sm:max-w-[90vw] max-h-[90vh] p-2 bg-black/90 border-0 overflow-hidden">
                 <button
                   onClick={() => setLightboxOpen(false)}
                   className="absolute -top-3 -right-3 z-50 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
