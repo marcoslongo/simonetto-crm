@@ -843,4 +843,3 @@ export async function InfluenciadoresDashboardSection({ from, to }: Influenciado
   const data = await getInfluenciadoresServer(from, to)
   return <InfluenciadoresSection data={data} />
 }
-}
