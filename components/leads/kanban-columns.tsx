@@ -1541,9 +1541,22 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
     id: coluna.slug,
   })
 
-  const visibleItems = items.slice(0, visibleCount)
-  const remaining = items.length - visibleCount
-  const hasMore = remaining > 0 || (hasMoreGlobal ?? false)
+  const [colSearch, setColSearch] = useState('')
+
+  const displayedItems = colSearch.trim()
+    ? items.filter(l => {
+        const q = colSearch.toLowerCase()
+        return (
+          l.nome?.toLowerCase().includes(q) ||
+          l.email?.toLowerCase().includes(q) ||
+          l.telefone?.toLowerCase().includes(q)
+        )
+      })
+    : items
+
+  const visibleItems = displayedItems.slice(0, visibleCount)
+  const remaining = displayedItems.length - visibleCount
+  const hasMore = remaining > 0 || (!colSearch.trim() && (hasMoreGlobal ?? false))
   const Icon = getColumnIcon(coluna.slug)
 
   return (
@@ -1561,8 +1574,28 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
             <CardTitle className="text-base">{coluna.label}</CardTitle>
           </div>
           <Badge variant="secondary" className={styles.badge}>
-            {items.length}{isLoadingAll ? '+' : ''}
+            {colSearch.trim() ? `${displayedItems.length}/` : ''}{items.length}{isLoadingAll ? '+' : ''}
           </Badge>
+        </div>
+
+        {/* Busca dentro da coluna */}
+        <div className="relative mt-2">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
+          <input
+            type="text"
+            value={colSearch}
+            onChange={e => setColSearch(e.target.value)}
+            placeholder="Filtrar nesta coluna…"
+            className="w-full rounded-md border border-input bg-white/80 py-1.5 pl-8 pr-7 text-xs placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-shadow"
+          />
+          {colSearch && (
+            <button
+              onClick={() => setColSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         {isGerente && (
@@ -1606,10 +1639,10 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
 
       <CardContent className="p-0">
         <div className="divide-y min-h-25">
-          {items.length === 0 ? (
+          {displayedItems.length === 0 ? (
             <div className="flex justify-center">
               <p className={`px-6 py-8 text-center text-sm text-muted-foreground flex items-center gap-2`}>
-                {isOver ? 'Solte aqui' : 'Nenhum lead aqui'}
+                {isOver ? 'Solte aqui' : colSearch.trim() ? 'Nenhum resultado' : 'Nenhum lead aqui'}
                 <CircleCheckBig size={16} className={styles.empty} />
               </p>
             </div>
