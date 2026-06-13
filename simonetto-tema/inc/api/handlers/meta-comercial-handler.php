@@ -113,7 +113,11 @@ class Meta_Comercial_Handler
       if ($args['usuario_id'] === null) {
         $where[] = 'usuario_id IS NULL';
       } elseif ($args['usuario_id'] !== '') {
-        $where[]  = 'usuario_id = %d';
+        if (!empty($args['include_equipe'])) {
+          $where[] = '(usuario_id = %d OR usuario_id IS NULL)';
+        } else {
+          $where[] = 'usuario_id = %d';
+        }
         $values[] = intval($args['usuario_id']);
       }
     }

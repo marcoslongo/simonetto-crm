@@ -74,13 +74,14 @@ function mytheme_api_list_metas(WP_REST_Request $request): WP_REST_Response
     $args['tipo'] = sanitize_text_field($request->get_param('tipo'));
   }
 
-  // Vendedores só veem as próprias metas ou metas de equipe
+  // Vendedores veem as próprias metas e as de equipe (usuario_id IS NULL)
   $current_user = wp_get_current_user();
   $is_gerente   = mytheme_api_is_gerente();
   $is_admin     = in_array('administrator', $current_user->roles, true);
 
   if (!$is_gerente && !$is_admin && isset($args['loja_id'])) {
-    $args['usuario_id'] = $current_user->ID;
+    $args['usuario_id']    = $current_user->ID;
+    $args['include_equipe'] = true;
   }
 
   $metas = Meta_Comercial_Handler::list($args);
@@ -197,7 +198,8 @@ function mytheme_api_metas_dashboard(WP_REST_Request $request): WP_REST_Response
   // Filtro de metas ativas que cobrem o período
   $args = ['loja_id' => $loja_id, 'status' => 'ativa'];
   if (!$is_gerente && !$is_admin) {
-    $args['usuario_id'] = $current_user->ID;
+    $args['usuario_id']    = $current_user->ID;
+    $args['include_equipe'] = true;
   }
 
   $metas = Meta_Comercial_Handler::list($args);
