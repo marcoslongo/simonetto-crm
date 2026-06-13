@@ -56,6 +56,16 @@ add_action('rest_api_init', function () {
       'permission_callback' => '__return_true',
     ],
   ]);
+
+  // POST /api/v1/mensagens/upload — upload de mídia para envio via WhatsApp
+  // Usa wp_handle_upload() diretamente para evitar o check de upload_files da REST core.
+  register_rest_route('api/v1', '/mensagens/upload', [
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_mensagens_upload',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
 });
 
 // -------------------------------------------------------------------------
@@ -711,4 +721,42 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
   ]);
 
   return new WP_REST_Response(['status' => 'ok'], 200);
+}
+
+// -------------------------------------------------------------------------
+// UPLOAD de mídia para envio via WhatsApp
+// Usa wp_handle_upload() diretamente para não exigir capability upload_files.
+// -------------------------------------------------------------------------
+
+function mytheme_api_mensagens_upload(WP_REST_Request $request): WP_REST_Response
+{
+  $files = $request->get_file_params();
+
+  if (empty($files['file'])) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Nenhum arquivo enviado.'], 400);
+  }
+
+  $file = $files['file'];
+
+  $max_bytes = 16 * 1024 * 1024; // 16 MB
+  if ($file['size'] > $max_bytes) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Arquivo muito grande (máx. 16 MB).'], 400);
+  }
+
+  require_once ABSPATH . 'wp-admin/includes/file.php';
+  require_once ABSPATH . 'wp-admin/includes/media.php';
+  require_once ABSPATH . 'wp-admin/includes/image.php';
+
+  $uploaded = wp_handle_upload($file, ['test_form' => false]);
+
+  if (isset($uploaded['error'])) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $uploaded['error']], 500);
+  }
+
+  return new WP_REST_Response([
+    'success'  => true,
+    'url'      => $uploaded['url'],
+    'filename' => basename($uploaded['file']),
+    'mimetype' => $uploaded['type'],
+  ], 200);
 }

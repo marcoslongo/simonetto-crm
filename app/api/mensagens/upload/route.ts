@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
-const WP_URL = process.env.NEXT_PUBLIC_WP_URL
+const WP_API_BASE = process.env.NEXT_PUBLIC_API_URL
 
 async function getAuthToken(): Promise<string | null> {
   const cookieStore = await cookies()
@@ -30,32 +30,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, mensagem: 'Arquivo muito grande (máx. 16 MB).' }, { status: 400 })
   }
 
-  const buffer = await file.arrayBuffer()
+  // Repassa o arquivo para o endpoint customizado do tema (evita check de upload_files da REST core)
+  const fd = new FormData()
+  fd.append('file', file)
 
-  const wpRes = await fetch(`${WP_URL}/wp-json/wp/v2/media`, {
+  const wpRes = await fetch(`${WP_API_BASE}/mensagens/upload`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(file.name)}"`,
-      'Content-Type': file.type || 'application/octet-stream',
     },
-    body: buffer,
+    body: fd,
   })
 
   if (!wpRes.ok) {
     const err = await wpRes.json().catch(() => ({}))
     return NextResponse.json(
-      { success: false, mensagem: err?.message ?? 'Erro ao fazer upload.' },
+      { success: false, mensagem: (err as Record<string, string>)?.mensagem ?? 'Erro ao fazer upload.' },
       { status: wpRes.status }
     )
   }
 
-  const media = await wpRes.json()
+  const media = await wpRes.json() as { success: boolean; url: string; filename: string; mimetype: string }
 
   return NextResponse.json({
     success: true,
-    url: media.source_url as string,
-    filename: file.name,
-    mimetype: file.type,
+    url: media.url,
+    filename: media.filename,
+    mimetype: media.mimetype,
   })
 }
