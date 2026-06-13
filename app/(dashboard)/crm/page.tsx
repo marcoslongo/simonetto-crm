@@ -15,8 +15,9 @@ import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
 import { AtendenteDashboard } from '@/components/dashboard/atendente-dashboard'
 import {
   Store, AlertTriangle, ShieldCheck, Star, CheckCircle2,
-  Activity, TrendingDown,
+  Activity, TrendingDown, Medal, TrendingUp, Trophy,
 } from 'lucide-react'
+import Link from 'next/link'
 import {
   StatsCardsSkeleton,
   KanbanStatsCardsSkeleton,
@@ -69,6 +70,83 @@ async function AtendenteDashboardWrapper({
     getMultiLojaKanbanColumns(lojaIds),
   ])
   return <AtendenteDashboard stats={stats} userName={userName} colunas={colunas} />
+}
+
+async function MetasWidget({ lojaId }: { lojaId: number }) {
+  try {
+    const cookieStore = await import('next/headers').then(m => m.cookies())
+    const token = cookieStore.get('auth_token')?.value
+    if (!token) return null
+
+    const WP_BASE = process.env.NEXT_PUBLIC_WP_URL
+    const res = await fetch(`${WP_BASE}/wp-json/api/v1/metas/dashboard?loja_id=${lojaId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+    const data = await res.json()
+    if (!data.success || !data.config?.ativo) return null
+
+    const pct      = data.percentual_geral ?? 0
+    const realizado = data.total_realizado ?? 0
+    const meta      = data.total_meta ?? 0
+    const melhor    = data.ranking?.[0]
+    const color     = pct >= 100 ? 'text-emerald-600' : pct >= 80 ? 'text-blue-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
+    const bg        = pct >= 100 ? 'bg-emerald-50 border-emerald-200' : pct >= 80 ? 'bg-blue-50 border-blue-200' : pct >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+
+    return (
+      <div className="card-surface-elevated p-5 animate-section">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#16255c]/8">
+              <Medal className="h-4 w-4 text-[#16255c]" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#16255c]">Metas Comerciais</h2>
+              <p className="text-xs text-slate-500">Desempenho do período atual</p>
+            </div>
+          </div>
+          <Link href="/metas" className="text-xs text-[#16255c] font-medium hover:underline">
+            Ver detalhes →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className={`rounded-xl border p-4 ${bg}`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Atingimento</p>
+            <p className={`text-3xl font-extrabold tabular-nums ${color}`}>{pct.toFixed(1)}%</p>
+            <div className="mt-2 h-1 w-full rounded-full bg-white/60">
+              <div className={`h-1 rounded-full ${pct >= 100 ? 'bg-emerald-400' : pct >= 80 ? 'bg-blue-400' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-white p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Realizado</p>
+            <p className="text-xl font-extrabold tabular-nums text-emerald-600">
+              {realizado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1">
+              meta: {meta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+          </div>
+
+          {melhor && (
+            <div className="rounded-xl border bg-amber-50 border-amber-200 p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Melhor vendedor</p>
+                <Trophy className="h-3.5 w-3.5 text-amber-500" />
+              </div>
+              <p className="text-sm font-bold text-amber-800 truncate">{melhor.usuario_nome}</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                {melhor.valor_realizado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  } catch {
+    return null
+  }
 }
 
 async function SaudeOperacaoWrapper({ lojaIds }: { lojaIds: number[] }) {
@@ -278,6 +356,13 @@ export default async function CrmDashboardPage() {
       {isLoja && isGerente && lojaIds.length > 0 && (
         <Suspense fallback={<Skeleton className="h-44 rounded-2xl" />}>
           <SaudeOperacaoWrapper lojaIds={lojaIds} />
+        </Suspense>
+      )}
+
+      {/* Widget de Metas Comerciais — quando módulo ativo */}
+      {isLoja && lojaIds.length > 0 && (
+        <Suspense fallback={null}>
+          <MetasWidget lojaId={lojaIds[0]} />
         </Suspense>
       )}
 

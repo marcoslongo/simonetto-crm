@@ -225,6 +225,56 @@ export const VENDAS_CONFIG_PADRAO: VendasRealizadasConfig = {
   },
 }
 
+// ─── Metas Comerciais ────────────────────────────────────────────────────────
+
+export type TipoMeta = 'faturamento' | 'quantidade_vendas' | 'conversao' | 'personalizada'
+export type PeriodoMeta = 'mensal' | 'trimestral' | 'semestral' | 'anual'
+export type StatusMeta = 'ativa' | 'encerrada' | 'cancelada'
+
+export interface MetaComercial {
+  id: number
+  loja_id: number
+  usuario_id: number | null
+  usuario_nome?: string | null
+  tipo: TipoMeta
+  periodo: PeriodoMeta
+  nome: string
+  valor_meta: number
+  data_inicio: string
+  data_fim: string
+  status: StatusMeta
+  created_at: string
+  updated_at: string
+  valor_realizado?: number
+  percentual_atingido?: number
+  dias_restantes?: number
+}
+
+export interface MetasConfig {
+  ativo: boolean
+}
+
+export const METAS_CONFIG_PADRAO: MetasConfig = {
+  ativo: false,
+}
+
+export interface MetaRankingItem {
+  usuario_id: number
+  usuario_nome: string
+  valor_realizado: number
+  valor_meta: number
+  percentual_atingido: number
+}
+
+export interface MetasDashboardData {
+  config: MetasConfig
+  metas: MetaComercial[]
+  total_meta: number
+  total_realizado: number
+  percentual_geral: number
+  ranking: MetaRankingItem[]
+}
+
 export interface StoreTimeRanking {
   loja_id: string;
   loja_nome: string;

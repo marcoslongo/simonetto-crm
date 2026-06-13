@@ -202,6 +202,20 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET/POST /api/v1/lojas/{id}/metas-config — configuração do módulo de metas comerciais
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/metas-config', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_loja_metas_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_loja_metas_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+  ]);
+
   // GET/POST /api/v1/lojas/{id}/vendas-config — configuração do módulo de vendas realizadas
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/vendas-config', [
     [
@@ -1283,4 +1297,38 @@ function mytheme_api_save_loja_vendas_config(WP_REST_Request $request): WP_REST_
     'success' => true,
     'config'  => $sanitized,
   ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/{id}/metas-config
+ */
+function mytheme_api_get_loja_metas_config(WP_REST_Request $request): WP_REST_Response
+{
+  $url_params = $request->get_url_params();
+  $loja_id    = intval($url_params['id']);
+
+  $raw    = get_post_meta($loja_id, '_metas_comerciais_config', true);
+  $config = $raw ? (array) json_decode($raw, true) : [];
+
+  $default = ['ativo' => false];
+  $config  = array_merge($default, $config);
+
+  return new WP_REST_Response(['success' => true, 'config' => $config], 200);
+}
+
+/**
+ * POST /api/v1/lojas/{id}/metas-config
+ */
+function mytheme_api_save_loja_metas_config(WP_REST_Request $request): WP_REST_Response
+{
+  $url_params = $request->get_url_params();
+  $loja_id    = intval($url_params['id']);
+  $params     = $request->get_json_params();
+
+  $config    = $params['config'] ?? $params;
+  $sanitized = ['ativo' => !empty($config['ativo'])];
+
+  update_post_meta($loja_id, '_metas_comerciais_config', wp_json_encode($sanitized));
+
+  return new WP_REST_Response(['success' => true, 'config' => $sanitized], 200);
 }

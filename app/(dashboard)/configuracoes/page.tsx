@@ -7,6 +7,7 @@ import { WhatsAppConfig } from '@/components/lojas/whatsapp-config'
 import { WhatsAppAutoLeadConfig } from '@/components/lojas/whatsapp-auto-lead-config'
 import { LeadsConfigGerente } from '@/components/lojas/leads-config-gerente'
 import { VendasRealizadasConfigComp } from '@/components/lojas/vendas-realizadas-config'
+import { MetasConfigComp } from '@/components/lojas/metas-config'
 import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
 import { getLojaIntegration } from '@/lib/api-loja'
 
@@ -135,6 +136,10 @@ export default async function ConfiguracoesPage() {
 
         {isLoja && user.is_gerente && (
           <VendasRealizadasConfigComp lojaId={String(primaryLojaId)} />
+        )}
+
+        {isLoja && user.is_gerente && (
+          <MetasConfigComp lojaId={String(primaryLojaId)} />
         )}
       </div>
     </div>
