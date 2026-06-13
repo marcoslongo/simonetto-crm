@@ -243,23 +243,23 @@ export function IntegracaoLP({ lojaId, initialData, isAdmin = false }: Integraca
 
             {/* Snippet JS */}
             <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setSnippetOpen(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setSnippetOpen(v => !v)}
+                  className="flex-1 flex items-center gap-2 text-left"
+                >
                   <Code2 className="h-4 w-4 text-[#16255c]" />
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Snippet JS para embed
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
+                </button>
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={(e) => { e.stopPropagation(); copy(data.snippet!, 'snippet') }}
+                    onClick={() => copy(data.snippet!, 'snippet')}
                   >
                     {copiedSnippet ? (
                       <Check className="h-3.5 w-3.5 text-emerald-600" />
@@ -267,12 +267,18 @@ export function IntegracaoLP({ lojaId, initialData, isAdmin = false }: Integraca
                       <Copy className="h-3.5 w-3.5 text-slate-500" />
                     )}
                   </Button>
-                  {snippetOpen
-                    ? <ChevronUp className="h-4 w-4 text-slate-400" />
-                    : <ChevronDown className="h-4 w-4 text-slate-400" />
-                  }
+                  <button
+                    type="button"
+                    onClick={() => setSnippetOpen(v => !v)}
+                    className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {snippetOpen
+                      ? <ChevronUp className="h-4 w-4" />
+                      : <ChevronDown className="h-4 w-4" />
+                    }
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {snippetOpen && (
                 <div className="border-t">
