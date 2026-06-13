@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Target, Plus, Pencil, Trash2, Trophy, TrendingUp, Users,
-  Calendar, Loader2, AlertTriangle, CheckCircle2, BarChart3,
-  ChevronDown,
+  Calendar, AlertTriangle, CheckCircle2, BarChart3,
+  ChevronDown, Loader2, // Loader2 kept for saving state in form
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -24,6 +25,76 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { MetaComercial, TipoMeta, PeriodoMeta, MetasDashboardData } from '@/lib/types'
+
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+function MetasSummarySkeleton() {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-xl border bg-white shadow-sm p-4 space-y-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-8 w-28" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MetasGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+        <Skeleton className="h-4 w-28" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border bg-white shadow-sm p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full shrink-0" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-16" />
+        <div className="rounded-xl border bg-white shadow-sm p-5 space-y-4">
+          <Skeleton className="h-4 w-40" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-6 w-6 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -480,7 +551,9 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
       </div>
 
       {/* Summary cards */}
-      {dashboard && (
+      {loading ? (
+        <MetasSummarySkeleton />
+      ) : dashboard && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="rounded-xl border bg-white shadow-sm p-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Meta total</p>
@@ -526,7 +599,7 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
         {/* Visão Geral */}
         <TabsContent value="visao-geral" className="mt-4">
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <MetasGridSkeleton />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
@@ -562,7 +635,7 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
         {/* Minhas metas (vendedor) */}
         <TabsContent value="minhas-metas" className="mt-4">
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <MetasGridSkeleton />
           ) : minhasMetas.length === 0 ? (
             <div className="rounded-xl border bg-white p-10 text-center">
               <Target className="h-10 w-10 mx-auto text-slate-300 mb-3" />
@@ -580,7 +653,7 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
         {/* Gerenciar (gerente) */}
         <TabsContent value="gerenciar" className="mt-4">
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <MetasGridSkeleton />
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
