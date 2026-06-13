@@ -48,9 +48,10 @@ import type { User as UserType } from '@/lib/types'
 
 interface DashboardSidebarProps {
   user: UserType
+  metasAtivo?: boolean
 }
 
-function buildNavigation(user: UserType) {
+function buildNavigation(user: UserType, metasAtivo: boolean) {
   const isAdmin = user.role === 'administrator'
   const isGerente = isAdmin || user.is_gerente === true
 
@@ -120,7 +121,7 @@ function buildNavigation(user: UserType) {
       group: 'Operações',
       items: [
         { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
-        { name: 'Metas Comerciais', href: '/metas', icon: Medal },
+        ...(metasAtivo ? [{ name: 'Metas Comerciais', href: '/metas', icon: Medal }] : []),
         { name: 'Minha Agenda', href: '/crm/calendario', icon: CalendarDays },
         { name: 'Agenda da Loja', href: '/crm/agenda', icon: CalendarRange },
         ...(isGerente
@@ -137,13 +138,13 @@ function buildNavigation(user: UserType) {
   ]
 }
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, metasAtivo = false }: DashboardSidebarProps) {
   const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar()
   const pathname = usePathname()
 
   const isAdmin = user.role === 'administrator'
   const rootHref = isAdmin ? '/admin' : '/crm'
-  const navigation = buildNavigation(user)
+  const navigation = buildNavigation(user, metasAtivo)
 
   const isActive = (href: string) =>
     pathname === href || (href !== rootHref && pathname.startsWith(href))

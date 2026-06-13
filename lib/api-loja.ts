@@ -147,6 +147,20 @@ export async function getLojaIntegration(lojaId: string | number): Promise<LojaI
   }
 }
 
+export async function getLojaMetasConfig(lojaId: string | number): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/metas-config`, {
+      cache: 'no-store',
+      headers: await getAuthHeaders(),
+    })
+    if (!response.ok) return false
+    const data = await response.json()
+    return data.config?.ativo === true
+  } catch {
+    return false
+  }
+}
+
 export async function getLojaLeads(
   lojaId: string | number,
   page = 1,
