@@ -112,6 +112,13 @@ class Lead_Venda_Realizada_Handler
     return $result !== false && !$wpdb->last_error;
   }
 
+  public static function delete_by_lead(int $lead_id): bool
+  {
+    global $wpdb;
+    $result = $wpdb->delete(self::table(), ['lead_id' => $lead_id], ['%d']);
+    return $result !== false;
+  }
+
   private static function cast_row(array $row): array
   {
     $row['id']            = (int) $row['id'];

@@ -118,6 +118,11 @@ add_action('rest_api_init', function () {
       'callback'            => 'mytheme_api_save_venda_realizada',
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
+    [
+      'methods'             => 'DELETE',
+      'callback'            => 'mytheme_api_delete_venda_realizada',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
   ]);
 
   // GET /api/v1/leads-por-estado — stats geográficas com filtro opcional por estado
@@ -2069,5 +2074,28 @@ function mytheme_api_save_venda_realizada(WP_REST_Request $request): WP_REST_Res
     'success'  => true,
     'mensagem' => 'Dados da venda salvos com sucesso.',
     'data'     => $saved,
+  ], 200);
+}
+
+/**
+ * DELETE /api/v1/leads/{id}/venda-realizada
+ */
+function mytheme_api_delete_venda_realizada(WP_REST_Request $request): WP_REST_Response
+{
+  $url_params = $request->get_url_params();
+  $lead_id    = intval($url_params['id']);
+
+  $ok = Lead_Venda_Realizada_Handler::delete_by_lead($lead_id);
+
+  if (!$ok) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Erro ao excluir registro de venda.',
+    ], 500);
+  }
+
+  return new WP_REST_Response([
+    'success'  => true,
+    'mensagem' => 'Registro de venda excluído com sucesso.',
   ], 200);
 }

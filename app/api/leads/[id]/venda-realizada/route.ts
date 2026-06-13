@@ -51,6 +51,29 @@ export async function POST(
   return NextResponse.json(data, { status: res.status })
 }
 
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ success: false, mensagem: 'Não autenticado.' }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const res = await fetch(`${WP_API_BASE}/wp-json/api/v1/leads/${id}/venda-realizada`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${session.token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  const data = await res.json()
+  return NextResponse.json(data, { status: res.status })
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

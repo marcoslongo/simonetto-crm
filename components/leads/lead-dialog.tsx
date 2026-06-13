@@ -236,6 +236,7 @@ export function LeadDetailsModal({
   const [loadingVr, setLoadingVr] = useState(false);
   const [editingVenda, setEditingVenda] = useState(false);
   const [vendaForm, setVendaForm] = useState<Partial<VendaRealizada>>({});
+  const [deletingVenda, setDeletingVenda] = useState(false);
   const [savingVenda, setSavingVenda] = useState(false);
 
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? []);
@@ -468,6 +469,25 @@ export function LeadDetailsModal({
       toast.error("Erro ao salvar dados.");
     } finally {
       setSavingDados(false);
+    }
+  };
+
+  const handleDeleteVenda = async () => {
+    setDeletingVenda(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/venda-realizada`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Erro ao excluir registro de venda.");
+        return;
+      }
+      setVendaRealizada(null);
+      setVendaForm({});
+      setEditingVenda(false);
+      toast.success("Registro de venda excluído.");
+    } catch {
+      toast.error("Erro ao excluir registro de venda.");
+    } finally {
+      setDeletingVenda(false);
     }
   };
 
@@ -1189,13 +1209,38 @@ export function LeadDetailsModal({
                         </h3>
                       </div>
                       {!editingVenda && (
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setVendaForm(vendaRealizada ?? {});
-                          setEditingVenda(true);
-                        }}>
-                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                          Editar
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setVendaForm(vendaRealizada ?? {});
+                            setEditingVenda(true);
+                          }}>
+                            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                            Editar
+                          </Button>
+                          {vendaRealizada && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={deletingVenda}>
+                                  {deletingVenda ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir registro de venda?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Os dados da venda serão removidos permanentemente. O lead continuará na coluna "Venda Realizada".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteVenda} className="bg-destructive hover:bg-destructive/90">
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       )}
                     </div>
 
