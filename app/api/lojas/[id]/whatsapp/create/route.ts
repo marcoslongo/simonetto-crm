@@ -19,6 +19,8 @@ async function getEvolutionSettings(token: string | null) {
   return res.json()
 }
 
+const SUBSCRIBE_EVENTS = ['MESSAGE', 'SEND_MESSAGE', 'CONNECTION', 'QRCODE']
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,24 +44,9 @@ export async function POST(
 
   const instanceName = `loja-${id}`
   const evolutionUrl = settings.evolution_api_url.replace(/\/$/, '')
-  const webhookUrl = SITE_URL
-    ? `${SITE_URL}/api/whatsapp/evolution/webhook`
-    : null
-
-  const createBody: Record<string, unknown> = {
-    name: instanceName,
-    token: crypto.randomUUID(),
-    qrcode: true,
-    integration: 'WHATSAPP-BAILEYS',
-  }
-  if (webhookUrl) {
-    createBody.webhook = {
-      url: webhookUrl,
-      byEvents: true,
-      base64: false,
-      events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE'],
-    }
-  }
+  const webhookUrl = SITE_URL ? `${SITE_URL}/api/whatsapp/evolution/webhook` : null
+  const instanceToken = crypto.randomUUID()
+  const instanceUUID = crypto.randomUUID()
 
   const createRes = await fetch(`${evolutionUrl}/instance/create`, {
     method: 'POST',
@@ -67,7 +54,7 @@ export async function POST(
       'Content-Type': 'application/json',
       apikey: settings.evolution_api_key,
     },
-    body: JSON.stringify(createBody),
+    body: JSON.stringify({ name: instanceName, instanceId: instanceUUID, token: instanceToken }),
   })
 
   const createData = await createRes.json()
@@ -83,8 +70,20 @@ export async function POST(
     return NextResponse.json({ success: false, mensagem }, { status: 400 })
   }
 
-  const instanceApiKey: string | null =
-    createData?.hash?.apikey ?? createData?.apikey ?? null
+  const createdToken: string = (createData?.data?.token as string) ?? instanceToken
+
+  // Conecta e configura webhook + eventos corretos
+  const connectBody: Record<string, unknown> = {
+    immediate: false,
+    subscribe: SUBSCRIBE_EVENTS,
+  }
+  if (webhookUrl) connectBody.webhookUrl = webhookUrl
+
+  await fetch(`${evolutionUrl}/instance/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: createdToken },
+    body: JSON.stringify(connectBody),
+  }).catch(() => {})
 
   // Persist instance name and API key in WordPress
   await fetch(`${WP_API_BASE}/lojas/${id}/whatsapp-config`, {
@@ -93,7 +92,7 @@ export async function POST(
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ instance: instanceName, api_key: instanceApiKey }),
+    body: JSON.stringify({ instance: instanceName, api_key: createdToken }),
   })
 
   return NextResponse.json({
