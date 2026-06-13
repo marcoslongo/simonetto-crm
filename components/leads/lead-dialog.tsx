@@ -43,6 +43,11 @@ import {
   Link2,
   Save,
   Loader2,
+  Info,
+  StickyNote,
+  CalendarClock,
+  History,
+  Paperclip,
 } from "lucide-react";
 import { Lead, VendaNaoRealizada, VendaRealizada, FormaPagamento, Etiqueta } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
@@ -469,11 +474,12 @@ export function LeadDetailsModal({
   const handleSaveVenda = async () => {
     setSavingVenda(true);
     try {
-      const method = vendaRealizada?.id ? "PATCH" : "POST";
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _id, lead_id: _lid, created_at: _ca, updated_at: _ua, atendente_id: _ai, atendente_nome: _an, ...payload } = vendaForm as VendaRealizada;
       const res = await fetch(`/api/leads/${lead.id}/venda-realizada`, {
-        method,
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(vendaForm),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         toast.error("Erro ao salvar dados da venda.");
@@ -610,15 +616,36 @@ export function LeadDetailsModal({
             <div className="shrink-0 border-b border-border">
               <div className="overflow-x-auto no-scrollbar px-4 sm:px-6">
                 <TabsList className="w-max min-w-full justify-start rounded-none bg-transparent p-0 h-auto gap-0">
-                  <TabsTrigger value="detalhes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Detalhes</TabsTrigger>
+                  <TabsTrigger value="detalhes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <Info className="h-3.5 w-3.5" />
+                    Detalhes
+                  </TabsTrigger>
                   {lead.mensagem && (
-                    <TabsTrigger value="mensagem" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Mensagem</TabsTrigger>
+                    <TabsTrigger value="mensagem" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Mensagem
+                    </TabsTrigger>
                   )}
-                  <TabsTrigger value="atendimento" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Atendimento</TabsTrigger>
-                  <TabsTrigger value="notas" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Notas</TabsTrigger>
-                  <TabsTrigger value="followup" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Retornos</TabsTrigger>
-                  <TabsTrigger value="historico" onClick={fetchActions} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Histórico</TabsTrigger>
-                  <TabsTrigger value="arquivos" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm">Arquivos</TabsTrigger>
+                  <TabsTrigger value="atendimento" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <FaWhatsapp className="h-3.5 w-3.5" />
+                    Atendimento
+                  </TabsTrigger>
+                  <TabsTrigger value="notas" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <StickyNote className="h-3.5 w-3.5" />
+                    Notas
+                  </TabsTrigger>
+                  <TabsTrigger value="followup" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Retornos
+                  </TabsTrigger>
+                  <TabsTrigger value="historico" onClick={fetchActions} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <History className="h-3.5 w-3.5" />
+                    Histórico
+                  </TabsTrigger>
+                  <TabsTrigger value="arquivos" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Arquivos
+                  </TabsTrigger>
                   <TabsTrigger value="ia" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
                     IA
@@ -1204,14 +1231,14 @@ export function LeadDetailsModal({
                         <div className="space-y-1.5">
                           <Label className="text-xs">Forma de pagamento</Label>
                           <Select
-                            value={vendaForm.forma_pagamento ?? ""}
-                            onValueChange={v => setVendaForm(f => ({ ...f, forma_pagamento: v as FormaPagamento || null }))}
+                            value={vendaForm.forma_pagamento ?? "_none"}
+                            onValueChange={v => setVendaForm(f => ({ ...f, forma_pagamento: v === "_none" ? null : v as FormaPagamento }))}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">— Nenhuma —</SelectItem>
+                              <SelectItem value="_none">— Nenhuma —</SelectItem>
                               <SelectItem value="dinheiro">Dinheiro</SelectItem>
                               <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
                               <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>

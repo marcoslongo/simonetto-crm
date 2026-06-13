@@ -99,9 +99,9 @@ add_action('rest_api_init', function () {
     ),
   ));
 
-  // GET  /api/v1/leads/{id}/venda-realizada — buscar dados da venda
-  // POST /api/v1/leads/{id}/venda-realizada — salvar/atualizar dados da venda
-  // PATCH /api/v1/leads/{id}/venda-realizada — atualizar dados parcialmente
+  // GET   /api/v1/leads/{id}/venda-realizada — buscar dados da venda
+  // POST  /api/v1/leads/{id}/venda-realizada — salvar/atualizar dados da venda (upsert)
+  // PATCH /api/v1/leads/{id}/venda-realizada — alias para POST
   register_rest_route('api/v1', '/leads/(?P<id>\d+)/venda-realizada', [
     [
       'methods'             => 'GET',
@@ -109,7 +109,12 @@ add_action('rest_api_init', function () {
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
     [
-      'methods'             => 'POST,PATCH',
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_venda_realizada',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'PATCH',
       'callback'            => 'mytheme_api_save_venda_realizada',
       'permission_callback' => 'mytheme_api_is_authenticated',
     ],
@@ -1999,8 +2004,9 @@ function mytheme_api_save_venda_nao_realizada(WP_REST_Request $request)
  */
 function mytheme_api_get_venda_realizada(WP_REST_Request $request): WP_REST_Response
 {
-  $lead_id = intval($request->get_param('id'));
-  $data    = Lead_Venda_Realizada_Handler::get_by_lead($lead_id);
+  $url_params = $request->get_url_params();
+  $lead_id    = intval($url_params['id']);
+  $data       = Lead_Venda_Realizada_Handler::get_by_lead($lead_id);
 
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }
@@ -2027,8 +2033,9 @@ function mytheme_api_save_venda_realizada(WP_REST_Request $request): WP_REST_Res
 {
   global $wpdb;
 
-  $lead_id = intval($request->get_param('id'));
-  $params  = $request->get_json_params();
+  $url_params = $request->get_url_params();
+  $lead_id    = intval($url_params['id']);
+  $params     = $request->get_json_params();
 
   if ($params === null) {
     return new WP_REST_Response([
