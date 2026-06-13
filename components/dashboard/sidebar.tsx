@@ -121,8 +121,7 @@ function buildNavigation(user: UserType, metasAtivo: boolean) {
       group: 'Operações',
       items: [
         { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
-        // Gerentes: visível só quando módulo ativo. Vendedores: sempre visível (só leitura)
-        ...(isGerente ? (metasAtivo ? [{ name: 'Metas Comerciais', href: '/metas', icon: Medal }] : []) : [{ name: 'Metas Comerciais', href: '/metas', icon: Medal }]),
+        ...(metasAtivo ? [{ name: 'Metas Comerciais', href: '/metas', icon: Medal }] : []),
         { name: 'Minha Agenda', href: '/crm/calendario', icon: CalendarDays },
         { name: 'Agenda da Loja', href: '/crm/agenda', icon: CalendarRange },
         ...(isGerente
