@@ -213,7 +213,25 @@ function mytheme_api_create_mensagem(WP_REST_Request $request): WP_REST_Response
       $phone_clean = '55' . $phone_clean;
     }
 
-    if ($media_url) {
+    if ($media_url && $media_type === 'sticker') {
+      // Enviar figurinha via Evolution Go
+      $evo_response = wp_remote_post(
+        trailingslashit($evo_url) . 'send/sticker',
+        [
+          'timeout'   => 30,
+          'sslverify' => false,
+          'headers'   => [
+            'apikey'       => $evo_key,
+            'Content-Type' => 'application/json',
+          ],
+          'body' => wp_json_encode([
+            'instanceId' => $evo_instance,
+            'number'     => $phone_clean,
+            'url'        => $media_url,
+          ]),
+        ]
+      );
+    } elseif ($media_url) {
       // Enviar mídia via Evolution Go
       $evo_payload = [
         'instanceId' => $evo_instance,
