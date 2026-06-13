@@ -171,6 +171,60 @@ export interface VendaNaoRealizada {
   updated_at: string;
 }
 
+export type FormaPagamento =
+  | 'dinheiro'
+  | 'cartao_credito'
+  | 'cartao_debito'
+  | 'pix'
+  | 'boleto'
+  | 'financiamento'
+  | 'cheque'
+  | 'outro'
+
+export interface VendaRealizada {
+  id?: number
+  lead_id: string
+  valor?: number | null
+  data_venda?: string | null
+  forma_pagamento?: FormaPagamento | null
+  numero_pedido?: string | null
+  numero_nf?: string | null
+  serie_nf?: string | null
+  chave_acesso_nf?: string | null
+  link_nf?: string | null
+  observacoes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface VendasRealizadasCampos {
+  valor: boolean
+  data_venda: boolean
+  forma_pagamento: boolean
+  numero_pedido: boolean
+  nota_fiscal: boolean
+  observacoes: boolean
+}
+
+export interface VendasRealizadasConfig {
+  ativo: boolean
+  preenchimento_obrigatorio: boolean
+  campos: VendasRealizadasCampos
+}
+
+export const VENDAS_CONFIG_PADRAO: VendasRealizadasConfig = {
+  ativo: false,
+  preenchimento_obrigatorio: false,
+  campos: {
+    valor: true,
+    data_venda: true,
+    forma_pagamento: true,
+    numero_pedido: false,
+    nota_fiscal: false,
+    observacoes: true,
+  },
+}
+
 export interface StoreTimeRanking {
   loja_id: string;
   loja_nome: string;

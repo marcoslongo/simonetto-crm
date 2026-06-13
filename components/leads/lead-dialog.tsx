@@ -36,8 +36,16 @@ import {
   XCircle,
   Sparkles,
   Tag,
+  ShoppingBag,
+  FileText,
+  CreditCard,
+  Hash,
+  Link2,
+  Save,
+  Loader2,
 } from "lucide-react";
-import { Lead, VendaNaoRealizada, Etiqueta } from "@/lib/types";
+import { Lead, VendaNaoRealizada, VendaRealizada, FormaPagamento, Etiqueta } from "@/lib/types";
+import { Textarea } from "@/components/ui/textarea";
 import { EtiquetasPicker, EtiquetaBadge } from "@/components/leads/etiquetas-picker";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -219,6 +227,12 @@ export function LeadDetailsModal({
   const [vendaNaoRealizada, setVendaNaoRealizada] = useState<VendaNaoRealizada | null>(null);
   const [loadingVnr, setLoadingVnr] = useState(false);
 
+  const [vendaRealizada, setVendaRealizada] = useState<VendaRealizada | null>(null);
+  const [loadingVr, setLoadingVr] = useState(false);
+  const [editingVenda, setEditingVenda] = useState(false);
+  const [vendaForm, setVendaForm] = useState<Partial<VendaRealizada>>({});
+  const [savingVenda, setSavingVenda] = useState(false);
+
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? []);
 
   useEffect(() => {
@@ -230,6 +244,9 @@ export function LeadDetailsModal({
     setEditingResponsavel(false);
     setUsuarios([]);
     setVendaNaoRealizada(null);
+    setVendaRealizada(null);
+    setEditingVenda(false);
+    setVendaForm({});
     setEtiquetas(lead.etiquetas ?? []);
     setEditingDados(false);
     setLocalNome(lead.nome);
@@ -252,6 +269,20 @@ export function LeadDetailsModal({
       .then(d => setVendaNaoRealizada(d.data ?? null))
       .catch(() => {})
       .finally(() => setLoadingVnr(false));
+  }, [lead.id, lead.status, open]);
+
+  useEffect(() => {
+    if (lead.status !== "venda_realizada" || !open) return;
+    setLoadingVr(true);
+    fetch(`/api/leads/${lead.id}/venda-realizada`)
+      .then(r => r.json())
+      .then(d => {
+        const data = d.data ?? null;
+        setVendaRealizada(data);
+        if (data) setVendaForm(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingVr(false));
   }, [lead.id, lead.status, open]);
 
   const formatDate = (date: string) =>
@@ -435,6 +466,30 @@ export function LeadDetailsModal({
     }
   };
 
+  const handleSaveVenda = async () => {
+    setSavingVenda(true);
+    try {
+      const method = vendaRealizada?.id ? "PATCH" : "POST";
+      const res = await fetch(`/api/leads/${lead.id}/venda-realizada`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vendaForm),
+      });
+      if (!res.ok) {
+        toast.error("Erro ao salvar dados da venda.");
+        return;
+      }
+      const data = await res.json();
+      setVendaRealizada(data.data ?? vendaForm as VendaRealizada);
+      setEditingVenda(false);
+      toast.success("Dados da venda salvos com sucesso.");
+    } catch {
+      toast.error("Erro ao salvar dados da venda.");
+    } finally {
+      setSavingVenda(false);
+    }
+  };
+
   const fetchActions = async () => {
     try {
       setLoadingActions(true);
@@ -568,6 +623,12 @@ export function LeadDetailsModal({
                     <Sparkles className="h-3.5 w-3.5" />
                     IA
                   </TabsTrigger>
+                  {lead.status === "venda_realizada" && (
+                    <TabsTrigger value="venda" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 py-2.5 text-sm gap-1.5 data-[state=active]:text-emerald-700">
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      Venda
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
             </div>
@@ -1086,6 +1147,232 @@ export function LeadDetailsModal({
                   <AiLeadPanel lead={lead} />
                 </div>
               </TabsContent>
+
+              {/* Venda Realizada */}
+              {lead.status === "venda_realizada" && (
+                <TabsContent value="venda" className="mt-0">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                          <ShoppingBag className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                          Dados da Venda
+                        </h3>
+                      </div>
+                      {!editingVenda && (
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setVendaForm(vendaRealizada ?? {});
+                          setEditingVenda(true);
+                        }}>
+                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+
+                    {loadingVr ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                      </div>
+                    ) : editingVenda ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="vd-valor" className="text-xs">Valor da venda (R$)</Label>
+                            <Input
+                              id="vd-valor"
+                              placeholder="0,00"
+                              value={vendaForm.valor != null ? String(vendaForm.valor) : ""}
+                              onChange={e => setVendaForm(f => ({ ...f, valor: e.target.value ? Number(e.target.value) : null }))}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="vd-data" className="text-xs">Data da venda</Label>
+                            <Input
+                              id="vd-data"
+                              type="date"
+                              value={vendaForm.data_venda ?? ""}
+                              onChange={e => setVendaForm(f => ({ ...f, data_venda: e.target.value || null }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Forma de pagamento</Label>
+                          <Select
+                            value={vendaForm.forma_pagamento ?? ""}
+                            onValueChange={v => setVendaForm(f => ({ ...f, forma_pagamento: v as FormaPagamento || null }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">— Nenhuma —</SelectItem>
+                              <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                              <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                              <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                              <SelectItem value="pix">Pix</SelectItem>
+                              <SelectItem value="boleto">Boleto Bancário</SelectItem>
+                              <SelectItem value="financiamento">Financiamento</SelectItem>
+                              <SelectItem value="cheque">Cheque</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="vd-pedido" className="text-xs">Número do pedido</Label>
+                          <Input
+                            id="vd-pedido"
+                            placeholder="Ex.: 001234"
+                            value={vendaForm.numero_pedido ?? ""}
+                            onChange={e => setVendaForm(f => ({ ...f, numero_pedido: e.target.value || null }))}
+                          />
+                        </div>
+                        <div className="rounded-lg border border-border p-4 space-y-3 bg-white">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nota Fiscal</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="vd-nf-num" className="text-xs">Número NF</Label>
+                              <Input id="vd-nf-num" placeholder="000000" value={vendaForm.numero_nf ?? ""} onChange={e => setVendaForm(f => ({ ...f, numero_nf: e.target.value || null }))} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="vd-nf-serie" className="text-xs">Série</Label>
+                              <Input id="vd-nf-serie" placeholder="001" value={vendaForm.serie_nf ?? ""} onChange={e => setVendaForm(f => ({ ...f, serie_nf: e.target.value || null }))} />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="vd-nf-chave" className="text-xs">Chave de acesso</Label>
+                            <Input id="vd-nf-chave" placeholder="44 dígitos" maxLength={44} value={vendaForm.chave_acesso_nf ?? ""} onChange={e => setVendaForm(f => ({ ...f, chave_acesso_nf: e.target.value || null }))} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="vd-nf-link" className="text-xs">Link / arquivo NF</Label>
+                            <Input id="vd-nf-link" placeholder="https://..." value={vendaForm.link_nf ?? ""} onChange={e => setVendaForm(f => ({ ...f, link_nf: e.target.value || null }))} />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="vd-obs" className="text-xs">Observações</Label>
+                          <Textarea
+                            id="vd-obs"
+                            placeholder="Informações adicionais..."
+                            value={vendaForm.observacoes ?? ""}
+                            onChange={e => setVendaForm(f => ({ ...f, observacoes: e.target.value || null }))}
+                            rows={3}
+                            className="resize-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3 pt-1">
+                          <Button onClick={handleSaveVenda} disabled={savingVenda} className="bg-emerald-600 hover:bg-emerald-700">
+                            {savingVenda ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                            Salvar dados
+                          </Button>
+                          <Button variant="ghost" onClick={() => setEditingVenda(false)} disabled={savingVenda}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : !vendaRealizada || (!vendaRealizada.valor && !vendaRealizada.data_venda && !vendaRealizada.forma_pagamento && !vendaRealizada.numero_pedido && !vendaRealizada.numero_nf && !vendaRealizada.observacoes) ? (
+                      <div className="py-6 text-center">
+                        <ShoppingBag className="h-10 w-10 mx-auto text-emerald-200 mb-3" />
+                        <p className="text-sm text-muted-foreground">Nenhuma informação de venda registrada.</p>
+                        <Button size="sm" variant="outline" className="mt-4" onClick={() => { setVendaForm({}); setEditingVenda(true); }}>
+                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                          Registrar agora
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {vendaRealizada.valor != null && (
+                          <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-white px-4 py-3">
+                            <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Valor da venda</p>
+                              <p className="text-sm font-semibold text-emerald-700">
+                                {vendaRealizada.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          {vendaRealizada.data_venda && (
+                            <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
+                              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Data da venda</p>
+                                <p className="text-sm font-medium">
+                                  {new Date(vendaRealizada.data_venda + "T00:00:00").toLocaleDateString("pt-BR")}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {vendaRealizada.forma_pagamento && (
+                            <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
+                              <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Forma de pagamento</p>
+                                <p className="text-sm font-medium capitalize">
+                                  {({
+                                    dinheiro: "Dinheiro", cartao_credito: "Cartão de Crédito",
+                                    cartao_debito: "Cartão de Débito", pix: "Pix",
+                                    boleto: "Boleto", financiamento: "Financiamento",
+                                    cheque: "Cheque", outro: "Outro",
+                                  } as Record<string, string>)[vendaRealizada.forma_pagamento] ?? vendaRealizada.forma_pagamento}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {vendaRealizada.numero_pedido && (
+                          <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
+                            <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Número do pedido</p>
+                              <p className="text-sm font-medium">{vendaRealizada.numero_pedido}</p>
+                            </div>
+                          </div>
+                        )}
+                        {(vendaRealizada.numero_nf || vendaRealizada.serie_nf || vendaRealizada.chave_acesso_nf || vendaRealizada.link_nf) && (
+                          <div className="rounded-lg border bg-white px-4 py-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nota Fiscal</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              {vendaRealizada.numero_nf && <div><span className="text-xs text-muted-foreground">Número: </span>{vendaRealizada.numero_nf}</div>}
+                              {vendaRealizada.serie_nf && <div><span className="text-xs text-muted-foreground">Série: </span>{vendaRealizada.serie_nf}</div>}
+                            </div>
+                            {vendaRealizada.chave_acesso_nf && (
+                              <div className="text-xs break-all text-muted-foreground">
+                                <span className="font-medium">Chave: </span>{vendaRealizada.chave_acesso_nf}
+                              </div>
+                            )}
+                            {vendaRealizada.link_nf && (
+                              <a href={vendaRealizada.link_nf} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                <Link2 className="h-3 w-3" />
+                                Abrir nota fiscal
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {vendaRealizada.observacoes && (
+                          <div className="rounded-lg border bg-white px-4 py-3">
+                            <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{vendaRealizada.observacoes}</p>
+                          </div>
+                        )}
+                        {vendaRealizada.updated_at && (
+                          <p className="text-[11px] text-muted-foreground text-right">
+                            Atualizado em {new Date(vendaRealizada.updated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
 
               {/* Histórico */}
               <TabsContent value="historico" className="mt-0">

@@ -60,6 +60,7 @@ import {
   MessageCircle,
   CalendarPlus,
   SlidersHorizontal,
+  DollarSign,
 } from 'lucide-react'
 import {
   Popover,
@@ -82,7 +83,8 @@ import { cn } from '@/lib/utils'
 import { LeadDetailsModal } from './lead-dialog'
 import { NovoLeadDialog } from './novo-lead-dialog'
 import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
-import { Lead, KanbanColuna, Etiqueta } from '@/lib/types'
+import { VendaRealizadaDialog } from './venda-realizada-dialog'
+import { Lead, KanbanColuna, Etiqueta, VendasRealizadasConfig, VendaRealizada, VENDAS_CONFIG_PADRAO } from '@/lib/types'
 import { OrigemBadge } from './origem-badge'
 import { EtiquetaBadge, EtiquetasPicker } from './etiquetas-picker'
 import { useIsMobile } from '@/components/ui/use-mobile'
@@ -382,6 +384,9 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const isFirstKanbanPollRef = useRef(true)
   const [lastUnreadAt, setLastUnreadAt] = useState<Record<string, number>>({})
   const [autoAtribuirResponsavel, setAutoAtribuirResponsavel] = useState(true)
+  const [vendasConfig, setVendasConfig] = useState<VendasRealizadasConfig>(VENDAS_CONFIG_PADRAO)
+  const [pendingVendaRealizada, setPendingVendaRealizada] = useState<Lead | null>(null)
+  const [vendasCache, setVendasCache] = useState<Record<string, VendaRealizada>>({})
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen
@@ -433,6 +438,23 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
       .then(data => {
         if (data.success) {
           setAutoAtribuirResponsavel(data.auto_atribuir_responsavel ?? true)
+        }
+      })
+      .catch(() => {})
+  }, [primaryLojaId])
+
+  // Busca configurações de vendas realizadas
+  useEffect(() => {
+    if (!primaryLojaId) return
+    fetch(`/api/lojas/${primaryLojaId}/vendas-config`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.config) {
+          setVendasConfig({
+            ...VENDAS_CONFIG_PADRAO,
+            ...data.config,
+            campos: { ...VENDAS_CONFIG_PADRAO.campos, ...(data.config.campos ?? {}) },
+          })
         }
       })
       .catch(() => {})
@@ -907,6 +929,8 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
 
     if (novoStatus === 'venda_nao_realizada') {
       setPendingQuiz(lead)
+    } else if (novoStatus === 'venda_realizada' && vendasConfig.ativo) {
+      setPendingVendaRealizada(lead)
     } else {
       moverLead(lead, novoStatus)
     }
@@ -1277,6 +1301,24 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         />
       )}
 
+      {pendingVendaRealizada && (
+        <VendaRealizadaDialog
+          open={!!pendingVendaRealizada}
+          leadId={String(pendingVendaRealizada.id)}
+          leadNome={pendingVendaRealizada.nome}
+          config={vendasConfig}
+          onClose={() => setPendingVendaRealizada(null)}
+          onSaved={(venda) => {
+            const leadId = String(pendingVendaRealizada.id)
+            if (venda.valor || venda.data_venda || venda.forma_pagamento || venda.numero_pedido || venda.numero_nf || venda.observacoes) {
+              setVendasCache(prev => ({ ...prev, [leadId]: venda }))
+            }
+            moverLead(pendingVendaRealizada, 'venda_realizada')
+            setPendingVendaRealizada(null)
+          }}
+        />
+      )}
+
       <Dialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -1481,6 +1523,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                     onMoveColuna={moveColuna}
                     isFirst={colunas.indexOf(coluna) === 0}
                     isLast={colunas.indexOf(coluna) === colunas.length - 1}
+                    vendasCache={coluna.slug === 'venda_realizada' ? vendasCache : undefined}
                   />
                 </div>
               ))}
@@ -1534,9 +1577,10 @@ interface KanbanColumnProps {
   onMoveColuna?: (coluna: KanbanColuna, direction: 'left' | 'right') => void
   isFirst?: boolean
   isLast?: boolean
+  vendasCache?: Record<string, VendaRealizada>
 }
 
-const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast }: KanbanColumnProps) {
+const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast, vendasCache }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.slug,
   })
@@ -1656,6 +1700,7 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
                   onLeadUpdate={onLeadUpdate}
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
                   isGerente={isGerente}
+                  vendaRealizada={vendasCache?.[String(lead.id)]}
                 />
               ))}
 
@@ -1699,9 +1744,10 @@ interface DraggableLeadRowProps {
   onLeadUpdate: (updated: Lead) => void
   isSaving?: boolean
   isGerente?: boolean
+  vendaRealizada?: VendaRealizada
 }
 
-const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente }: DraggableLeadRowProps) {
+const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente, vendaRealizada }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -1867,6 +1913,30 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               Ver informações completas
             </TooltipContent>
           </Tooltip>
+
+          {vendaRealizada && (vendaRealizada.valor || vendaRealizada.data_venda || vendaRealizada.forma_pagamento) && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {vendaRealizada.valor != null && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  <DollarSign className="h-2.5 w-2.5" />
+                  {vendaRealizada.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+              )}
+              {vendaRealizada.data_venda && (
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600 border border-emerald-200">
+                  {new Date(vendaRealizada.data_venda + 'T00:00:00').toLocaleDateString('pt-BR')}
+                </span>
+              )}
+              {vendaRealizada.forma_pagamento && (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                  {({
+                    dinheiro: 'Dinheiro', cartao_credito: 'Crédito', cartao_debito: 'Débito',
+                    pix: 'Pix', boleto: 'Boleto', financiamento: 'Financ.', cheque: 'Cheque', outro: 'Outro',
+                  } as Record<string, string>)[vendaRealizada.forma_pagamento] ?? vendaRealizada.forma_pagamento}
+                </span>
+              )}
+            </div>
+          )}
 
           {lead.loja_id && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
