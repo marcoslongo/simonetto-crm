@@ -173,7 +173,7 @@ function periodoParaDatas(periodo: PeriodoMeta): { data_inicio: string; data_fim
   return { data_inicio: `${ano}-01-01`, data_fim: `${ano}-12-31` }
 }
 
-interface Usuario { id: number; name: string }
+interface Usuario { id: number; nome: string }
 
 interface MetaFormDialogProps {
   open: boolean
@@ -314,7 +314,7 @@ function MetaFormDialog({ open, lojaId, meta, usuarios, onClose, onSaved }: Meta
                   <span className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Toda a equipe</span>
                 </SelectItem>
                 {usuarios.map(u => (
-                  <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                  <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
