@@ -635,6 +635,18 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   $phone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat));
 
+  // Tipos de mensagem de sistema — ignorar silenciosamente sem criar lead
+  $system_msg_types = [
+    'senderKeyDistributionMessage',
+    'protocolMessage',
+    'receiptMessage',
+    'callLogMessage',
+    'callInviteMessage',
+  ];
+  if (in_array($msg_type, $system_msg_types, true)) {
+    return new WP_REST_Response(['status' => 'ok'], 200);
+  }
+
   // Texto da mensagem (suporta texto simples e extendido; caption de imagem/doc)
   $texto = $msg['conversation']
         ?? ($msg['extendedTextMessage']['text']
@@ -650,10 +662,40 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
   }
 
-  // Ignora se não tem texto nem mídia reconhecida
-  if (empty($texto) && !$detected_media_type) {
-    error_log('[AUTO-LEAD] sem_conteudo phone=' . $phone . ' msg_keys=' . implode(',', array_keys($msg)));
-    return new WP_REST_Response(['status' => 'ok'], 200);
+  // Detecta se o texto EM SI é a mensagem de falha de descriptografia do WA
+  $conteudo_ilegivel = false;
+  if (!empty($texto) && !$detected_media_type) {
+    $texto_lower = mb_strtolower((string) $texto, 'UTF-8');
+    $encryption_patterns = [
+      'falha ao descriptografar',
+      'mensagem não pode ser lida',
+      'não pôde ser lida',
+      'visualize-a no app',
+      'message failed to decrypt',
+      'waiting for this message',
+    ];
+    foreach ($encryption_patterns as $pat) {
+      if (str_contains($texto_lower, $pat)) {
+        $conteudo_ilegivel = true;
+        break;
+      }
+    }
+  }
+
+  // Mensagem sem nenhum conteúdo identificável (criptografada, formato desconhecido, etc.)
+  if (!$conteudo_ilegivel && empty($texto) && !$detected_media_type) {
+    if (empty($phone)) {
+      // Sem identificador mínimo de contato — descarta
+      error_log('[AUTO-LEAD] sem_conteudo sem_phone msg_type=' . $msg_type . ' msg_keys=' . implode(',', array_keys($msg)));
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+    // Tem telefone mas sem conteúdo — trata como criptografada e prossegue
+    $conteudo_ilegivel = true;
+  }
+
+  if ($conteudo_ilegivel) {
+    $texto = '[Mensagem recebida — conteúdo não pôde ser descriptografado]';
+    error_log('[WEBHOOK] mensagem_ilegivel phone=' . $phone . ' msg_type=' . $msg_type . ' wamid=' . $wamid . ' msg_keys=' . implode(',', array_keys($msg)));
   }
 
   $lead_id = Mensagem_Handler::find_lead_by_phone($phone);
@@ -720,6 +762,19 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     }
   }
 
+  $meta_mensagem = [
+    'from'         => $phone,
+    'timestamp'    => $timestamp,
+    'contact_name' => $push_name,
+    'type'         => $msg_type,
+    'media_type'   => $detected_media_type,
+    'media_url'    => $media_url,
+    'mimetype'     => $media_mime,
+  ];
+  if ($conteudo_ilegivel) {
+    $meta_mensagem['aviso'] = 'Mensagem recebida, porém não foi possível descriptografar seu conteúdo.';
+  }
+
   Mensagem_Handler::create([
     'lead_id'  => $lead_id,
     'loja_id'  => $loja_id,
@@ -727,15 +782,7 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
     'direcao'  => 'recebida',
     'status'   => 'recebida',
     'wamid'    => $wamid,
-    'metadata' => [
-      'from'         => $phone,
-      'timestamp'    => $timestamp,
-      'contact_name' => $push_name,
-      'type'         => $msg_type,
-      'media_type'   => $detected_media_type,
-      'media_url'    => $media_url,
-      'mimetype'     => $media_mime,
-    ],
+    'metadata' => $meta_mensagem,
   ]);
 
   return new WP_REST_Response(['status' => 'ok'], 200);

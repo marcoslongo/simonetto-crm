@@ -6,7 +6,7 @@ import data from "@emoji-mart/data";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FaWhatsapp } from "react-icons/fa";
-import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square, Camera, Smile, Sticker } from "lucide-react";
+import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square, Camera, Smile, Sticker, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,7 @@ interface MensagemMetadata {
   media_type?: MediaType;
   media_url?: string;
   mimetype?: string;
+  aviso?: string;
 }
 
 interface Mensagem {
@@ -751,9 +752,32 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
   const hora = format(new Date(mensagem.criado_em), "HH:mm", { locale: ptBR });
   const mediaType = mensagem.metadata?.media_type;
   const mediaUrl  = mensagem.metadata?.media_url;
+  const aviso     = mensagem.metadata?.aviso;
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const isSticker = mediaType === "sticker";
+  const isSticker  = mediaType === "sticker";
+  const ilegivel   = !!aviso;
+
+  // Mensagem ilegível/criptografada — render especial
+  if (ilegivel) {
+    return (
+      <div className={`flex my-0.5 ${isEnviada ? "justify-end" : "justify-start"}`}>
+        <div className="max-w-[78%] px-3 py-2 rounded-[10px] rounded-tl-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.08)] bg-[#fff8e1] dark:bg-[#2a2518] border border-[#f0d060]/40 dark:border-[#a08020]/30">
+          <div className="flex items-center gap-1.5 mb-1">
+            <LockKeyhole className="h-3 w-3 text-[#b8860b] dark:text-[#d4a017] shrink-0" />
+            <span className="text-[11px] font-semibold text-[#b8860b] dark:text-[#d4a017]">Mensagem criptografada</span>
+          </div>
+          <p className="text-[13px] text-[#7a6000] dark:text-[#c8a030] italic leading-snug">
+            {aviso}
+          </p>
+          <div className="flex items-center gap-1 mt-1 text-[11px] text-[#b8860b]/60 dark:text-[#d4a017]/50 justify-end">
+            <span>{hora}</span>
+            {isEnviada && <StatusIcon status={mensagem.status} />}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex my-0.5 ${isEnviada ? "justify-end" : "justify-start"}`}>
