@@ -216,6 +216,20 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET/POST /api/v1/lojas/{id}/pos-venda-config — configuração do módulo de pós-venda
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/pos-venda-config', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_loja_pos_venda_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_save_loja_pos_venda_config',
+      'permission_callback' => 'mytheme_api_is_gerente',
+    ],
+  ]);
+
   // GET/POST /api/v1/lojas/{id}/vendas-config — configuração do módulo de vendas realizadas
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/vendas-config', [
     [
@@ -1330,5 +1344,30 @@ function mytheme_api_save_loja_metas_config(WP_REST_Request $request): WP_REST_R
 
   update_post_meta($loja_id, '_metas_comerciais_config', wp_json_encode($sanitized));
 
+  return new WP_REST_Response(['success' => true, 'config' => $sanitized], 200);
+}
+
+/**
+ * GET /api/v1/lojas/{id}/pos-venda-config
+ */
+function mytheme_api_get_loja_pos_venda_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = intval($request->get_url_params()['id']);
+  $raw     = get_post_meta($loja_id, '_pos_venda_config', true);
+  $config  = $raw ? (array) json_decode($raw, true) : [];
+  $config  = array_merge(['ativo' => true], $config);
+  return new WP_REST_Response(['success' => true, 'config' => $config], 200);
+}
+
+/**
+ * POST /api/v1/lojas/{id}/pos-venda-config
+ */
+function mytheme_api_save_loja_pos_venda_config(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id   = intval($request->get_url_params()['id']);
+  $params    = $request->get_json_params();
+  $config    = $params['config'] ?? $params;
+  $sanitized = ['ativo' => !empty($config['ativo'])];
+  update_post_meta($loja_id, '_pos_venda_config', wp_json_encode($sanitized));
   return new WP_REST_Response(['success' => true, 'config' => $sanitized], 200);
 }

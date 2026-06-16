@@ -1,6 +1,6 @@
 import React from "react"
 import { requireAuth, isAdmin } from '@/lib/auth'
-import { getLojaMetasConfig } from '@/lib/api-loja'
+import { getLojaMetasConfig, getLojaPosVendaConfig } from '@/lib/api-loja'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { SidebarProvider } from '@/components/dashboard/sidebar-context'
@@ -18,13 +18,18 @@ export default async function DashboardLayout({
 }) {
   const user = await requireAuth()
 
-  const isLoja     = user.role === 'loja' && user.loja_ids.length > 0
-  const metasAtivo = isLoja ? await getLojaMetasConfig(user.loja_ids[0]) : false
+  const isLoja       = user.role === 'loja' && user.loja_ids.length > 0
+  const [metasAtivo, posVendaAtivo] = isLoja
+    ? await Promise.all([
+        getLojaMetasConfig(user.loja_ids[0]),
+        getLojaPosVendaConfig(user.loja_ids[0]),
+      ])
+    : [false, false]
 
   return (
     <SidebarProvider>
       <div className="min-h-screen bg-background">
-        <DashboardSidebar user={user} metasAtivo={metasAtivo} />
+        <DashboardSidebar user={user} metasAtivo={metasAtivo} posVendaAtivo={posVendaAtivo} />
         <LayoutShell>
           <DashboardHeader user={user} />
           <main className="flex-1 p-4 lg:p-8 pb-20 lg:pb-8 min-w-0 overflow-x-hidden">
