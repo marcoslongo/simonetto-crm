@@ -730,6 +730,18 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
         'loja_id'  => $loja_id ?: null,
         'origem'   => 'proprio',
       ]);
+
+      // Fallback: se falhou por loja inválida, tenta sem loja para não perder o lead
+      if (is_wp_error($new_lead) && $new_lead->get_error_code() === 'invalid_store') {
+        error_log('[AUTO-LEAD] loja_id invalida, tentando sem loja | phone=' . $phone . ' loja_id=' . var_export($loja_id, true));
+        $new_lead = Lead_Handler::create([
+          'nome'     => $nome,
+          'telefone' => $phone,
+          'loja_id'  => null,
+          'origem'   => 'proprio',
+        ]);
+      }
+
       if (is_wp_error($new_lead)) {
         error_log('[AUTO-LEAD] erro ao criar lead: ' . $new_lead->get_error_message() . ' | phone=' . $phone . ' loja_id=' . var_export($loja_id, true) . ' nome=' . $nome);
         return new WP_REST_Response(['status' => 'lead_not_found', 'phone' => $phone], 200);
