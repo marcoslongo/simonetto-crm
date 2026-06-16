@@ -186,7 +186,7 @@ export interface VendaRealizada {
   lead_id: string
   valor?: number | null
   data_venda?: string | null
-  forma_pagamento?: FormaPagamento | null
+  forma_pagamento?: string | null
   numero_pedido?: string | null
   numero_nf?: string | null
   serie_nf?: string | null

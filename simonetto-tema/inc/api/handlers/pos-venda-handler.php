@@ -256,12 +256,15 @@ class Pos_Venda_Handler
          vr.data_venda      AS venda_data_venda,
          vr.numero_pedido   AS venda_numero_pedido,
          vr.forma_pagamento AS venda_forma_pagamento,
+         vr.observacoes     AS venda_observacoes,
+         u.display_name     AS venda_atendente_nome,
          (SELECT COUNT(*) FROM {$t_asst} pa
           WHERE pa.pos_venda_id = pv.id
             AND pa.status NOT IN ('resolvida','encerrada')) AS assistencias_abertas
        FROM {$t_pv} pv
        LEFT JOIN {$t_lead} l   ON l.id = pv.lead_id
        LEFT JOIN {$t_vr}   vr  ON vr.lead_id = pv.lead_id
+       LEFT JOIN {$wpdb->users} u ON u.ID = l.responsavel_id
        WHERE {$where}
        ORDER BY pv.updated_at DESC",
       ...$bindings
@@ -303,13 +306,14 @@ class Pos_Venda_Handler
          vr.numero_pedido   AS venda_numero_pedido,
          vr.forma_pagamento AS venda_forma_pagamento,
          vr.observacoes     AS venda_observacoes,
-         vr.atendente_nome  AS venda_atendente_nome,
+         u.display_name     AS venda_atendente_nome,
          (SELECT COUNT(*) FROM {$t_asst} pa
           WHERE pa.pos_venda_id = pv.id
             AND pa.status NOT IN ('resolvida','encerrada')) AS assistencias_abertas
        FROM {$t_pv} pv
        LEFT JOIN {$t_lead} l   ON l.id = pv.lead_id
        LEFT JOIN {$t_vr}   vr  ON vr.lead_id = pv.lead_id
+       LEFT JOIN {$wpdb->users} u ON u.ID = l.responsavel_id
        WHERE pv.id = %d",
       $id
     );

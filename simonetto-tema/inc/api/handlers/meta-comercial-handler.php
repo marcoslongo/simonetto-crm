@@ -160,10 +160,17 @@ class Meta_Comercial_Handler
     $fim               = DateTime::createFromFormat('Y-m-d', $meta['data_fim']);
     $dias_restantes    = $fim && $fim >= $hoje ? (int) $hoje->diff($fim)->days : 0;
 
+    $usuario_nome = null;
+    if ($meta['usuario_id'] !== null) {
+      $user         = get_userdata($meta['usuario_id']);
+      $usuario_nome = $user ? $user->display_name : 'Usuário #' . $meta['usuario_id'];
+    }
+
     return array_merge($meta, [
-      'valor_realizado'   => $valor_realizado,
+      'usuario_nome'        => $usuario_nome,
+      'valor_realizado'     => $valor_realizado,
       'percentual_atingido' => $percentual,
-      'dias_restantes'    => $dias_restantes,
+      'dias_restantes'      => $dias_restantes,
     ]);
   }
 

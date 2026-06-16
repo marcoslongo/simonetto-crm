@@ -1938,10 +1938,10 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               )}
               {vendaRealizada.forma_pagamento && (
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                  {({
+                  {vendaRealizada.forma_pagamento.split(',').map(v => ({
                     dinheiro: 'Dinheiro', cartao_credito: 'Crédito', cartao_debito: 'Débito',
                     pix: 'Pix', boleto: 'Boleto', financiamento: 'Financ.', cheque: 'Cheque', outro: 'Outro',
-                  } as Record<string, string>)[vendaRealizada.forma_pagamento] ?? vendaRealizada.forma_pagamento}
+                  } as Record<string, string>)[v] ?? v).join(' + ')}
                 </span>
               )}
             </div>

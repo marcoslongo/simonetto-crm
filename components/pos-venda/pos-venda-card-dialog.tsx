@@ -35,9 +35,25 @@ import {
   ChevronRight,
   StickyNote,
   Info,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { FaWhatsapp } from 'react-icons/fa'
 import { ChatPanel } from '@/components/chat/chat-panel'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { PosVenda, PosVendaHistorico, PosVendaNota, PosVendaAssistencia, StatusAssistencia } from '@/lib/types'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -89,7 +105,63 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ cla
 }
 
 // ── aba Resumo ────────────────────────────────────────────────────────────────
-function AbaResumo({ pv }: { pv: PosVenda }) {
+function AbaResumo({ pv, isGerente, onUpdated }: { pv: PosVenda; isGerente?: boolean; onUpdated?: (updated: PosVenda) => void }) {
+  const [editingResponsavel, setEditingResponsavel] = useState(false)
+  const [selectedResponsavelId, setSelectedResponsavelId] = useState<string>(
+    pv.responsavel_id ? String(pv.responsavel_id) : 'none'
+  )
+  const [currentResponsavelNome, setCurrentResponsavelNome] = useState(pv.responsavel_nome ?? '')
+  const [savingResponsavel, setSavingResponsavel] = useState(false)
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([])
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false)
+
+  useEffect(() => {
+    setSelectedResponsavelId(pv.responsavel_id ? String(pv.responsavel_id) : 'none')
+    setCurrentResponsavelNome(pv.responsavel_nome ?? '')
+    setEditingResponsavel(false)
+  }, [pv.id])
+
+  const handleEditResponsavel = async () => {
+    setEditingResponsavel(true)
+    if (usuarios.length === 0) {
+      setLoadingUsuarios(true)
+      try {
+        const res = await fetch(`/api/lojas/${pv.loja_id}/usuarios`)
+        const data = await res.json()
+        if (data.success) setUsuarios(data.usuarios ?? [])
+      } catch { /* ignore */ }
+      finally { setLoadingUsuarios(false) }
+    }
+  }
+
+  const handleSaveResponsavel = async () => {
+    const responsavelId = selectedResponsavelId === 'none' ? null : Number(selectedResponsavelId)
+    setSavingResponsavel(true)
+    try {
+      const res = await fetch(`/api/pos-vendas/${pv.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsavel_id: responsavelId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const novoNome = responsavelId ? (usuarios.find(u => u.id === responsavelId)?.nome ?? '') : ''
+        setCurrentResponsavelNome(novoNome)
+        setEditingResponsavel(false)
+        onUpdated?.({ ...pv, responsavel_id: responsavelId, responsavel_nome: novoNome || null })
+        toast.success('Responsável atualizado.')
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao atualizar responsável.')
+      }
+    } catch { toast.error('Erro ao atualizar responsável.') }
+    finally { setSavingResponsavel(false) }
+  }
+
+  const handleCancelEditResponsavel = () => {
+    setSelectedResponsavelId(pv.responsavel_id ? String(pv.responsavel_id) : 'none')
+    setEditingResponsavel(false)
+  }
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-border bg-card p-5">
@@ -117,7 +189,7 @@ function AbaResumo({ pv }: { pv: PosVenda }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoRow icon={DollarSign} label="Valor"         value={formatMoeda(pv.venda_valor)} />
           <InfoRow icon={Calendar}   label="Data da Venda" value={formatDate(pv.venda_data_venda)} />
-          <InfoRow icon={CreditCard} label="Forma Pgto."   value={pv.venda_forma_pagamento ? FORMA_PAGAMENTO_LABEL[pv.venda_forma_pagamento] ?? pv.venda_forma_pagamento : undefined} />
+          <InfoRow icon={CreditCard} label="Forma Pgto."   value={pv.venda_forma_pagamento ? pv.venda_forma_pagamento.split(',').map(v => FORMA_PAGAMENTO_LABEL[v] ?? v).join(' + ') : undefined} />
           <InfoRow icon={Package}    label="Nº do Pedido"  value={pv.venda_numero_pedido ? `#${pv.venda_numero_pedido}` : undefined} />
           <InfoRow icon={User}       label="Vendedor"      value={pv.venda_atendente_nome} />
         </div>
@@ -137,10 +209,80 @@ function AbaResumo({ pv }: { pv: PosVenda }) {
           <p className="text-sm font-semibold">Dados do Pós-Venda</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InfoRow icon={User}  label="Responsável"       value={pv.responsavel_nome} />
           <InfoRow icon={Clock} label="Criado em"         value={formatDateTime(pv.created_at)} />
           <InfoRow icon={Clock} label="Nesta etapa desde" value={formatDateTime(pv.etapa_desde)} />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">Responsável pelo Pós-Venda</p>
+          </div>
+          {isGerente && !editingResponsavel && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleEditResponsavel}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Alterar responsável</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {editingResponsavel ? (
+          <div className="space-y-3">
+            {loadingUsuarios ? (
+              <div className="flex items-center justify-center py-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+              </div>
+            ) : (
+              <Select value={selectedResponsavelId} onValueChange={setSelectedResponsavelId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um responsável…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Sem responsável —</SelectItem>
+                  {usuarios.map(u => (
+                    <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleSaveResponsavel}
+                disabled={savingResponsavel || loadingUsuarios}
+                className="gap-1.5 flex-1"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {savingResponsavel ? 'Salvando...' : 'Confirmar'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEditResponsavel}
+                disabled={savingResponsavel}
+                className="gap-1.5"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-base font-medium text-card-foreground">
+            {currentResponsavelNome || '—'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -535,6 +677,7 @@ export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, cu
   const assistenciasAbertas = pv.assistencias_abertas ?? 0
 
   return (
+    <TooltipProvider>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={[
         'flex flex-col overflow-hidden p-0 gap-0',
@@ -605,7 +748,11 @@ export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, cu
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
             <TabsContent value="resumo" className="mt-0 space-y-6">
-              <AbaResumo pv={pv} />
+              <AbaResumo
+                pv={pv}
+                isGerente={isGerente}
+                onUpdated={updated => { setPv(updated); onUpdated(updated) }}
+              />
             </TabsContent>
 
             <TabsContent value="atendimento" className="mt-0">
@@ -638,5 +785,6 @@ export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, cu
         </Tabs>
       </DialogContent>
     </Dialog>
+    </TooltipProvider>
   )
 }

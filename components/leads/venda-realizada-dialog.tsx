@@ -12,13 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { CheckCircle2, DollarSign } from "lucide-react"
 import { VendasRealizadasConfig, VendaRealizada, FormaPagamento } from "@/lib/types"
@@ -66,7 +60,7 @@ export function VendaRealizadaDialog({
 }: VendaRealizadaDialogProps) {
   const [valorFormatado, setValorFormatado] = useState("")
   const [dataVenda, setDataVenda] = useState(() => new Date().toISOString().split("T")[0])
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "">("")
+  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([])
   const [numeroPedido, setNumeroPedido] = useState("")
   const [numeroNf, setNumeroNf] = useState("")
   const [serieNf, setSerieNf] = useState("")
@@ -86,7 +80,7 @@ export function VendaRealizadaDialog({
 
   const temDados =
     valorFormatado.trim() !== "" ||
-    formaPagamento !== "" ||
+    formasPagamento.length > 0 ||
     numeroPedido.trim() !== "" ||
     numeroNf.trim() !== "" ||
     serieNf.trim() !== "" ||
@@ -107,7 +101,7 @@ export function VendaRealizadaDialog({
         lead_id: leadId,
         valor: valorFormatado ? parseCurrency(valorFormatado) : null,
         data_venda: dataVenda || null,
-        forma_pagamento: (formaPagamento as FormaPagamento) || null,
+        forma_pagamento: formasPagamento.length > 0 ? formasPagamento.join(',') : null,
         numero_pedido: numeroPedido.trim() || null,
         numero_nf: numeroNf.trim() || null,
         serie_nf: serieNf.trim() || null,
@@ -190,19 +184,28 @@ export function VendaRealizadaDialog({
             {campos.forma_pagamento && (
               <div className="space-y-1.5">
                 <Label>Forma de pagamento</Label>
-                <Select
-                  value={formaPagamento}
-                  onValueChange={v => setFormaPagamento(v as FormaPagamento)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORMAS_PAGAMENTO.map(f => (
-                      <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {FORMAS_PAGAMENTO.map(f => {
+                    const selected = formasPagamento.includes(f.value)
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => setFormasPagamento(prev =>
+                          selected ? prev.filter(v => v !== f.value) : [...prev, f.value]
+                        )}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm border transition-colors",
+                          selected
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white text-foreground border-border hover:border-emerald-400"
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

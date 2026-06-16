@@ -1277,25 +1277,39 @@ export function LeadDetailsModal({
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs">Forma de pagamento</Label>
-                          <Select
-                            value={vendaForm.forma_pagamento ?? "_none"}
-                            onValueChange={v => setVendaForm(f => ({ ...f, forma_pagamento: v === "_none" ? null : v as FormaPagamento }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="_none">— Nenhuma —</SelectItem>
-                              <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                              <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                              <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                              <SelectItem value="pix">Pix</SelectItem>
-                              <SelectItem value="boleto">Boleto Bancário</SelectItem>
-                              <SelectItem value="financiamento">Financiamento</SelectItem>
-                              <SelectItem value="cheque">Cheque</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-wrap gap-2">
+                            {([
+                              { value: "dinheiro",       label: "Dinheiro" },
+                              { value: "cartao_credito", label: "Cartão de Crédito" },
+                              { value: "cartao_debito",  label: "Cartão de Débito" },
+                              { value: "pix",            label: "Pix" },
+                              { value: "boleto",         label: "Boleto Bancário" },
+                              { value: "financiamento",  label: "Financiamento" },
+                              { value: "cheque",         label: "Cheque" },
+                              { value: "outro",          label: "Outro" },
+                            ] as { value: FormaPagamento; label: string }[]).map(f => {
+                              const selected = vendaForm.forma_pagamento?.split(',').includes(f.value) ?? false
+                              return (
+                                <button
+                                  key={f.value}
+                                  type="button"
+                                  onClick={() => setVendaForm(prev => {
+                                    const current = prev.forma_pagamento ? prev.forma_pagamento.split(',') : []
+                                    const updated = selected ? current.filter(v => v !== f.value) : [...current, f.value]
+                                    return { ...prev, forma_pagamento: updated.length > 0 ? updated.join(',') : null }
+                                  })}
+                                  className={cn(
+                                    "px-3 py-1.5 rounded-full text-xs border transition-colors",
+                                    selected
+                                      ? "bg-emerald-600 text-white border-emerald-600"
+                                      : "bg-white text-foreground border-border hover:border-emerald-400"
+                                  )}
+                                >
+                                  {f.label}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="vd-pedido" className="text-xs">Número do pedido</Label>
@@ -1387,13 +1401,13 @@ export function LeadDetailsModal({
                               <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                               <div>
                                 <p className="text-xs text-muted-foreground">Forma de pagamento</p>
-                                <p className="text-sm font-medium capitalize">
-                                  {({
+                                <p className="text-sm font-medium">
+                                  {vendaRealizada.forma_pagamento.split(',').map(v => ({
                                     dinheiro: "Dinheiro", cartao_credito: "Cartão de Crédito",
                                     cartao_debito: "Cartão de Débito", pix: "Pix",
                                     boleto: "Boleto", financiamento: "Financiamento",
                                     cheque: "Cheque", outro: "Outro",
-                                  } as Record<string, string>)[vendaRealizada.forma_pagamento] ?? vendaRealizada.forma_pagamento}
+                                  } as Record<string, string>)[v] ?? v).join(' + ')}
                                 </p>
                               </div>
                             </div>

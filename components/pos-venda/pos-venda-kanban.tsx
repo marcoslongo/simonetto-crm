@@ -50,6 +50,7 @@ import {
   Package,
   LayoutGrid,
   GripVertical,
+  Check,
 } from 'lucide-react'
 import {
   Popover,
@@ -111,6 +112,16 @@ function getInitials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
 }
 
+function AvatarBadge({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  return avatarUrl ? (
+    <img src={avatarUrl} alt={name} className="h-5 w-5 rounded-full object-cover shrink-0 ring-1 ring-white" />
+  ) : (
+    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[#2463eb]/15 text-[#2463eb] font-semibold text-[9px] shrink-0">
+      {getInitials(name)}
+    </span>
+  )
+}
+
 const INITIAL_VISIBLE = 20
 const LOAD_MORE_STEP = 20
 
@@ -126,17 +137,71 @@ function DraggableCard({
   pv,
   onClick,
   isSaving,
+  isGerente,
+  onResponsavelChange,
 }: {
   pv: PosVenda
   etapaLabel: string
   onClick: (pv: PosVenda) => void
   isSaving: boolean
+  isGerente?: boolean
+  onResponsavelChange?: (pvId: number, responsavelId: number | null, responsavelNome: string | null) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: pv.id })
   const style = { transform: CSS.Translate.toString(transform) }
   const tempoNaEtapa = formatTempoNaEtapa(pv.etapa_desde)
   const hasAssistencia = (pv.assistencias_abertas ?? 0) > 0
   const isAssistencia = pv.etapa === 'assistencia_tecnica'
+
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; avatar_url?: string | null }[]>([])
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false)
+  const [savingResp, setSavingResp] = useState(false)
+
+  const handleOpenPopover = async (open: boolean) => {
+    setPopoverOpen(open)
+    if (open && usuarios.length === 0) {
+      setLoadingUsuarios(true)
+      try {
+        const res = await fetch(`/api/lojas/${pv.loja_id}/usuarios`)
+        const data = await res.json()
+        if (data.success) setUsuarios(data.usuarios ?? [])
+      } catch { /* ignore */ }
+      finally { setLoadingUsuarios(false) }
+    }
+  }
+
+  const handleSelectResp = async (userId: number | null) => {
+    setSavingResp(true)
+    try {
+      const res = await fetch(`/api/pos-vendas/${pv.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsavel_id: userId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const nome = userId ? (usuarios.find(u => u.id === userId)?.nome ?? null) : null
+        onResponsavelChange?.(pv.id, userId, nome)
+        setPopoverOpen(false)
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao atualizar responsável.')
+      }
+    } catch { toast.error('Erro ao atualizar responsável.') }
+    finally { setSavingResp(false) }
+  }
+
+  const responsavelBadge = pv.responsavel_nome ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
+      <AvatarBadge name={pv.responsavel_nome} />
+      <span className="max-w-24 truncate">{pv.responsavel_nome}</span>
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60">
+      <User className="h-3 w-3 shrink-0" />
+      Sem responsável
+    </span>
+  )
 
   return (
     <div
@@ -164,64 +229,108 @@ function DraggableCard({
         </div>
       )}
 
-      <button
-        className="w-full text-left focus-visible:outline-none cursor-pointer min-w-0 flex-1"
-        onClick={() => onClick(pv)}
-      >
-        {/* nome + assistência */}
-        <div className="flex items-center gap-1.5 mb-1">
-          <p className="truncate text-sm font-medium text-foreground flex-1">
-            {pv.lead_nome || '—'}
-          </p>
-          {hasAssistencia && (
-            <span title="Assistência técnica aberta" className="shrink-0">
-              <Wrench className="h-3.5 w-3.5 text-orange-500" />
-            </span>
-          )}
-        </div>
-
-        {/* pedido + valor + data */}
-        {(pv.venda_numero_pedido || pv.venda_valor != null || pv.venda_data_venda) && (
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {pv.venda_numero_pedido && (
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-mono text-slate-600">
-                #{pv.venda_numero_pedido}
-              </span>
-            )}
-            {pv.venda_valor != null && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                {formatMoeda(pv.venda_valor)}
-              </span>
-            )}
-            {pv.venda_data_venda && (
-              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600 border border-emerald-200">
-                {format(new Date(pv.venda_data_venda + 'T00:00:00'), 'dd/MM/yyyy')}
+      <div className="min-w-0 flex-1">
+        <button
+          className="w-full text-left focus-visible:outline-none cursor-pointer"
+          onClick={() => onClick(pv)}
+        >
+          {/* nome + assistência */}
+          <div className="flex items-center gap-1.5 mb-1">
+            <p className="truncate text-sm font-medium text-foreground flex-1">
+              {pv.lead_nome || '—'}
+            </p>
+            {hasAssistencia && (
+              <span title="Assistência técnica aberta" className="shrink-0">
+                <Wrench className="h-3.5 w-3.5 text-orange-500" />
               </span>
             )}
           </div>
-        )}
+
+          {/* pedido + valor + data */}
+          {(pv.venda_numero_pedido || pv.venda_valor != null || pv.venda_data_venda) && (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {pv.venda_numero_pedido && (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-mono text-slate-600">
+                  #{pv.venda_numero_pedido}
+                </span>
+              )}
+              {pv.venda_valor != null && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  {formatMoeda(pv.venda_valor)}
+                </span>
+              )}
+              {pv.venda_data_venda && (
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600 border border-emerald-200">
+                  {format(new Date(pv.venda_data_venda + 'T00:00:00'), 'dd/MM/yyyy')}
+                </span>
+              )}
+            </div>
+          )}
+        </button>
 
         {/* responsável + tempo na etapa */}
         <div className="mt-2 flex items-center justify-between gap-2">
-          {pv.responsavel_nome ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
-              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[#2463eb]/15 text-[#2463eb] font-semibold text-[9px] shrink-0">
-                {getInitials(pv.responsavel_nome)}
-              </span>
-              <span className="max-w-24 truncate">{pv.responsavel_nome}</span>
-            </span>
+          {isGerente && onResponsavelChange ? (
+            <Popover open={popoverOpen} onOpenChange={handleOpenPopover}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={e => e.stopPropagation()}
+                  className="focus-visible:outline-none hover:opacity-80 transition-opacity"
+                >
+                  {responsavelBadge}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="start" className="w-52 p-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">
+                  Responsável
+                </p>
+                {loadingUsuarios || savingResp ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => handleSelectResp(null)}
+                      className={cn(
+                        'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted',
+                        !pv.responsavel_id && 'font-medium text-foreground'
+                      )}
+                    >
+                      {!pv.responsavel_id ? <Check className="h-3 w-3 shrink-0" /> : <span className="w-3 shrink-0" />}
+                      <span>— Sem responsável —</span>
+                    </button>
+                    {usuarios.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleSelectResp(u.id)}
+                        className={cn(
+                          'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left transition-colors hover:bg-muted',
+                          pv.responsavel_id === u.id && 'font-medium text-foreground'
+                        )}
+                      >
+                        {pv.responsavel_id === u.id
+                          ? <Check className="h-3 w-3 shrink-0" />
+                          : <span className="w-3 shrink-0" />
+                        }
+                        <AvatarBadge name={u.nome} avatarUrl={u.avatar_url} />
+                        <span className="truncate">{u.nome}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted-foreground/30 px-2.5 py-1 text-[11px] text-muted-foreground/60">
-              <User className="h-3 w-3 shrink-0" />
-              Sem responsável
-            </span>
+            responsavelBadge
           )}
           <div className="flex items-center gap-1 shrink-0 text-[10px] text-muted-foreground">
             <Clock className="h-3 w-3" />
             {tempoNaEtapa}
           </div>
         </div>
-      </button>
+      </div>
     </div>
   )
 }
@@ -265,10 +374,11 @@ interface KanbanColProps {
   onMoveColuna?: (c: PosVendaColuna, d: 'left' | 'right') => void
   isFirst?: boolean
   isLast?: boolean
+  onResponsavelChange?: (pvId: number, responsavelId: number | null, responsavelNome: string | null) => void
 }
 
 const KanbanCol = React.memo(function KanbanCol({
-  coluna, items, styles, onCardClick, visibleCount, onLoadMore, isLoadingMore, savingIds, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast,
+  coluna, items, styles, onCardClick, visibleCount, onLoadMore, isLoadingMore, savingIds, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast, onResponsavelChange,
 }: KanbanColProps) {
   const { setNodeRef, isOver } = useDroppable({ id: coluna.slug })
   const [colSearch, setColSearch] = useState('')
@@ -361,6 +471,8 @@ const KanbanCol = React.memo(function KanbanCol({
                 etapaLabel={coluna.label}
                 onClick={onCardClick}
                 isSaving={savingIds.has(pv.id)}
+                isGerente={isGerente}
+                onResponsavelChange={onResponsavelChange}
               />
             ))
           )}
@@ -417,6 +529,11 @@ export function PosVendaKanban({ lojaIds, currentUser, isGerente }: PosVendaKanb
   const [canScrollRight, setCanScrollRight] = useState(false)
 
   const primaryLojaId = lojaIds[0] ?? null
+
+  const handleResponsavelChange = useCallback((pvId: number, responsavelId: number | null, responsavelNome: string | null) => {
+    setItems(prev => prev.map(p => p.id === pvId ? { ...p, responsavel_id: responsavelId, responsavel_nome: responsavelNome } : p))
+    setSelectedPv(prev => prev?.id === pvId ? { ...prev, responsavel_id: responsavelId, responsavel_nome: responsavelNome } : prev)
+  }, [])
 
   // ── buscar colunas ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -776,6 +893,7 @@ export function PosVendaKanban({ lojaIds, currentUser, isGerente }: PosVendaKanb
                     onMoveColuna={moveColuna}
                     isFirst={idx === 0}
                     isLast={idx === colunas.length - 1}
+                    onResponsavelChange={handleResponsavelChange}
                   />
                 </div>
               ))}
