@@ -895,6 +895,15 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
       }
 
       toast.success('Lead movido com sucesso.')
+
+      // Cria pós-venda automaticamente ao mover para venda_realizada
+      if (novoStatus === 'venda_realizada' && lead.loja_id) {
+        fetch('/api/pos-vendas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead_id: lead.id, loja_id: Number(lead.loja_id) }),
+        }).catch(() => {})
+      }
     } catch {
       setLeads((prev) =>
         prev.map((l) => String(l.id) === leadId ? { ...l, status: statusAnterior } : l)

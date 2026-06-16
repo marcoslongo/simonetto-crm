@@ -275,6 +275,83 @@ export interface MetasDashboardData {
   ranking: MetaRankingItem[]
 }
 
+// ─── Pós-Venda ───────────────────────────────────────────────────────────────
+
+export interface PosVendaColuna {
+  id: number
+  loja_id: number
+  slug: string
+  label: string
+  cor: string
+  ordem: number
+  fixo: number | boolean
+}
+
+export interface PosVenda {
+  id: number
+  lead_id: number
+  loja_id: number
+  etapa: string
+  etapa_desde: string
+  responsavel_id: number | null
+  responsavel_nome: string | null
+  criado_por_id: number | null
+  criado_por_nome: string | null
+  created_at: string
+  updated_at: string
+  // campos enriquecidos do lead
+  lead_nome?: string | null
+  lead_telefone?: string | null
+  lead_email?: string | null
+  lead_cidade?: string | null
+  lead_estado?: string | null
+  loja_nome?: string | null
+  // campos enriquecidos da venda
+  venda_valor?: number | null
+  venda_data_venda?: string | null
+  venda_numero_pedido?: string | null
+  venda_forma_pagamento?: string | null
+  venda_observacoes?: string | null
+  venda_atendente_nome?: string | null
+  // contadores
+  assistencias_abertas?: number | null
+}
+
+export interface PosVendaHistorico {
+  id: number
+  pos_venda_id: number
+  etapa_anterior: string | null
+  etapa_nova: string
+  usuario_id: number | null
+  usuario_nome: string | null
+  comentario: string | null
+  created_at: string
+}
+
+export interface PosVendaNota {
+  id: number
+  pos_venda_id: number
+  usuario_id: number | null
+  usuario_nome: string | null
+  conteudo: string
+  created_at: string
+}
+
+export type StatusAssistencia = 'aberta' | 'em_atendimento' | 'aguardando_cliente' | 'resolvida' | 'encerrada'
+
+export interface PosVendaAssistencia {
+  id: number
+  pos_venda_id: number
+  status: StatusAssistencia
+  descricao: string
+  solucao: string | null
+  responsavel_id: number | null
+  responsavel_nome: string | null
+  data_conclusao: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface StoreTimeRanking {
   loja_id: string;
   loja_nome: string;

@@ -26,6 +26,7 @@ import {
   LogOut,
   ChevronRight,
   Medal,
+  Wrench,
 } from 'lucide-react'
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go"
 import { Button } from '@/components/ui/button'
@@ -121,6 +122,7 @@ function buildNavigation(user: UserType, metasAtivo: boolean) {
       group: 'Operações',
       items: [
         { name: 'Atendimentos', href: '/crm/atendimentos', icon: Phone },
+        { name: 'Pós-Venda', href: '/crm/pos-venda', icon: Wrench },
         ...(metasAtivo ? [{ name: 'Metas Comerciais', href: '/metas', icon: Medal }] : []),
         { name: 'Minha Agenda', href: '/crm/calendario', icon: CalendarDays },
         { name: 'Agenda da Loja', href: '/crm/agenda', icon: CalendarRange },

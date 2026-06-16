@@ -688,9 +688,9 @@ export function LeadDetailsModal({
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                       <User className="h-4 w-4 text-primary" />
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-sm font-semibold">
                       Informações de Contato
-                    </h3>
+                    </p>
                   </div>
                   <div className="space-y-4">
                     {/* Email */}
@@ -788,9 +788,9 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <DollarSign className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="text-sm font-semibold">
                         Áreas de Interesse
-                      </h3>
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {lead.interesse?.split(",").map((item) => {
@@ -817,9 +817,9 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
                         <DollarSign className="h-4 w-4 text-emerald-500" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="text-sm font-semibold">
                         Expectativa de Investimento
-                      </h3>
+                      </p>
                     </div>
                     <span className="text-2xl font-bold text-card-foreground">
                       {lead.expectativa_investimento}
@@ -833,9 +833,9 @@ export function LeadDetailsModal({
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                           <Store className="h-4 w-4 text-primary" />
                         </div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="text-sm font-semibold">
                           Loja de Origem
-                        </h3>
+                        </p>
                       </div>
                       {isAdmin && !editingLoja && (
                         <Tooltip>
@@ -905,9 +905,9 @@ export function LeadDetailsModal({
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                           <User className="h-4 w-4 text-primary" />
                         </div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="text-sm font-semibold">
                           Atendente
-                        </h3>
+                        </p>
                       </div>
                       {lead.loja_id && !editingResponsavel && (
                         <Tooltip>
@@ -983,9 +983,9 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <Tag className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex-1">
+                      <p className="text-sm font-semibold flex-1">
                         Etiquetas
-                      </h3>
+                      </p>
                       {lead.loja_id && (
                         <EtiquetasPicker
                           leadId={lead.id}
@@ -1013,22 +1013,24 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <Calendar className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="text-sm font-semibold">
                         Registro
-                      </h3>
+                      </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Criado:</span>
-                        <span className="text-card-foreground font-medium">
-                          {formatDate(lead.data_criacao)}
-                        </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3">
+                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-medium">Criado em</p>
+                          <p className="text-sm text-foreground">{formatDate(lead.data_criacao)}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Atualizado:</span>
-                        <span className="text-card-foreground font-medium">
-                          {formatDate(lead.data_atualizacao)}
-                        </span>
+                      <div className="flex items-start gap-3">
+                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-medium">Atualizado em</p>
+                          <p className="text-sm text-foreground">{formatDate(lead.data_atualizacao)}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1041,9 +1043,9 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100">
                         <XCircle className="h-4 w-4 text-red-600" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-red-700">
+                      <p className="text-sm font-semibold text-red-700">
                         Motivos da Não Realização
-                      </h3>
+                      </p>
                     </div>
 
                     {loadingVnr ? (
@@ -1131,9 +1133,9 @@ export function LeadDetailsModal({
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                         <MessageSquare className="h-4 w-4 text-primary" />
                       </div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      <p className="text-sm font-semibold">
                         Mensagem do Lead
-                      </h3>
+                      </p>
                     </div>
                     <div className="p-4 rounded-lg bg-muted/40">
                       <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
@@ -1187,9 +1189,9 @@ export function LeadDetailsModal({
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                       <Sparkles className="h-4 w-4 text-primary" />
                     </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-sm font-semibold">
                       Assistente de IA
-                    </h3>
+                    </p>
                   </div>
                   <AiLeadPanel lead={lead} />
                 </div>
@@ -1204,9 +1206,9 @@ export function LeadDetailsModal({
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
                           <ShoppingBag className="h-4 w-4 text-emerald-600" />
                         </div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="text-sm font-semibold">
                           Dados da Venda
-                        </h3>
+                        </p>
                       </div>
                       {!editingVenda && (
                         <div className="flex items-center gap-2">
@@ -1447,59 +1449,49 @@ export function LeadDetailsModal({
               )}
 
               {/* Histórico */}
-              <TabsContent value="historico" className="mt-0">
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <Clock className="h-4 w-4 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Histórico de Ações
-                    </h3>
+              <TabsContent value="historico" className="mt-0 space-y-4">
+                {loadingActions && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                   </div>
-                  {loadingActions && (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                    </div>
-                  )}
-                  {!loadingActions && actions.length === 0 && (
-                    <div className="py-8 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Nenhuma ação registrada ainda.
-                      </p>
-                    </div>
-                  )}
-                  {!loadingActions && actions.length > 0 && (
-                    <div className="space-y-3">
-                      {actions.map((action, i) => (
-                        <div
-                          key={i}
-                          className="p-4 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <Badge variant="outline" className="font-medium">
+                )}
+                {!loadingActions && actions.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Nenhuma ação registrada ainda.
+                  </p>
+                )}
+                {!loadingActions && actions.length > 0 && (
+                  <div className="space-y-3">
+                    {actions.map((action, i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="h-2 w-2 rounded-full mt-1.5 shrink-0 bg-blue-400" />
+                          <div className="w-px flex-1 bg-border mt-1" />
+                        </div>
+                        <div className="pb-3 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs font-medium px-2 py-0.5">
                               {action.tipo_contato}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground/60">
                               {formatDate(action.criado_em)}
                             </span>
                           </div>
                           {action.usuario_nome && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                              <User className="h-3 w-3" />
-                              <span>{action.usuario_nome}</span>
-                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              <User className="h-3 w-3 inline mr-1" />{action.usuario_nome}
+                            </p>
                           )}
                           {action.observacao && (
-                            <p className="text-sm text-muted-foreground mt-2">
+                            <p className="text-sm text-foreground mt-1 bg-muted/40 rounded-lg px-3 py-2">
                               {action.observacao}
                             </p>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </div>
           </Tabs>
