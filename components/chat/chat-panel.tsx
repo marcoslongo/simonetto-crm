@@ -440,7 +440,7 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
 
       {/* Área de mensagens com fundo característico do WhatsApp */}
       <div
-        className="flex-1 overflow-y-auto min-h-[200px] max-h-[320px] px-3 py-2 space-y-0.5"
+        className="flex-1 overflow-y-auto min-h-[200px] max-h-[420px] px-3 py-2 space-y-0.5"
         style={{
           backgroundColor: "#e5ddd5",
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M0 0h80v80H0z' fill='none'/%3E%3Ccircle cx='40' cy='40' r='1' fill='rgba(0,0,0,0.05)'/%3E%3C/svg%3E")`,
@@ -677,7 +677,7 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={pendingAudio || pendingFile ? "Legenda (opcional)..." : "Mensagem"}
-              className="w-full bg-white dark:bg-[#2a3942] rounded-[21px] px-4 py-[9px] text-[14px] leading-[1.4] resize-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-[#8696a0] min-h-[42px] max-h-[100px] overflow-y-auto block"
+              className="w-full bg-white dark:bg-[#2a3942] rounded-[21px] px-4 py-[9px] text-[14px] leading-[1.4] resize-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-[#8696a0] min-h-[42px] max-h-[160px] overflow-y-auto block"
               rows={1}
               disabled={enviando}
             />
