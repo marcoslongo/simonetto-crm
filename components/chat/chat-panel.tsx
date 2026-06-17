@@ -426,7 +426,7 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
                       setBlocking(false);
                     }}
                     disabled={blocking}
-                    className="flex-1 text-xs px-3 py-1.5 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-60"
+                    className="flex-1 text-xs px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-60"
                   >
                     {blocking ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                     Confirmar
