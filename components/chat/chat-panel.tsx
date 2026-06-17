@@ -6,7 +6,7 @@ import data from "@emoji-mart/data";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FaWhatsapp } from "react-icons/fa";
-import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square, Camera, Smile, Sticker, LockKeyhole } from "lucide-react";
+import { Send, AlertCircle, Check, CheckCheck, Paperclip, FileText, X, Loader2, Play, Pause, Mic, Square, Camera, Smile, Sticker, LockKeyhole, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +46,7 @@ interface ChatPanelProps {
   lojaId?: number | null;
   avatarUrl?: string | null;
   leadNome?: string;
+  onBlock?: () => Promise<void>;
 }
 
 function DateSeparator({ date }: { date: Date }) {
@@ -64,7 +65,7 @@ function DateSeparator({ date }: { date: Date }) {
   );
 }
 
-export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome }: ChatPanelProps) {
+export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlock }: ChatPanelProps) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -77,6 +78,8 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome }: Cha
   const [pendingAudio, setPendingAudio] = useState<{ blob: Blob; url: string } | null>(null);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isStickerOpen, setIsStickerOpen] = useState(false);
+  const [isBlockOpen, setIsBlockOpen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -386,14 +389,53 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome }: Cha
           </p>
           <p className="text-[11px] text-white/55 font-mono truncate leading-tight">{telefone}</p>
         </div>
-        {wpState === "open" && (
-          <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {wpState === "open" && (
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25d366] opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#25d366]" />
             </span>
-          </div>
-        )}
+          )}
+          {onBlock && (
+            <Popover open={isBlockOpen} onOpenChange={setIsBlockOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className="p-1.5 rounded-full hover:bg-white/15 text-white/60 hover:text-white transition-colors"
+                  title="Não é lead — ignorar contato"
+                >
+                  <UserMinus className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="w-60 p-3">
+                <p className="text-sm font-semibold mb-1">Ignorar este contato?</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Mensagens futuras deste número não criarão nem atualizarão leads.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsBlockOpen(false)}
+                    className="flex-1 text-xs px-3 py-1.5 rounded-md border hover:bg-muted transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setBlocking(true);
+                      await onBlock();
+                      setIsBlockOpen(false);
+                      setBlocking(false);
+                    }}
+                    disabled={blocking}
+                    className="flex-1 text-xs px-3 py-1.5 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors flex items-center justify-center gap-1 disabled:opacity-60"
+                  >
+                    {blocking ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Confirmar
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
       </div>
 
       {/* Área de mensagens com fundo característico do WhatsApp */}

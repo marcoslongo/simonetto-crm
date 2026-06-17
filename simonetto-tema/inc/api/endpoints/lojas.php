@@ -174,6 +174,25 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET/POST/DELETE /api/v1/usuarios/me/whatsapp-blocklist — lista de contatos pessoais ignorados
+  register_rest_route('api/v1', '/usuarios/me/whatsapp-blocklist', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_whatsapp_blocklist',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_add_whatsapp_blocklist',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'DELETE',
+      'callback'            => 'mytheme_api_remove_whatsapp_blocklist',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
   // GET/POST /api/v1/usuarios/me/whatsapp-auto-lead — criar lead automaticamente para novos contatos
   register_rest_route('api/v1', '/usuarios/me/whatsapp-auto-lead', [
     [
@@ -1136,6 +1155,73 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
       'followup_compliance'   => $compliance_pct,
     ],
   ], 200);
+}
+
+/**
+ * GET /api/v1/usuarios/me/whatsapp-blocklist
+ */
+function mytheme_api_get_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id   = get_current_user_id();
+  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
+  $blocklist = is_array($raw) ? array_values($raw) : [];
+  return new WP_REST_Response(['success' => true, 'blocklist' => $blocklist], 200);
+}
+
+/**
+ * POST /api/v1/usuarios/me/whatsapp-blocklist
+ * Body: { phone: string, nome: string }
+ */
+function mytheme_api_add_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = get_current_user_id();
+  $body    = $request->get_json_params();
+  $phone   = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
+  $nome    = sanitize_text_field((string) ($body['nome'] ?? ''));
+
+  if (!$phone) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Telefone inválido.'], 400);
+  }
+
+  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
+  $blocklist = is_array($raw) ? $raw : [];
+
+  foreach ($blocklist as $entry) {
+    if (($entry['phone'] ?? '') === $phone) {
+      return new WP_REST_Response(['success' => true, 'blocklist' => array_values($blocklist)], 200);
+    }
+  }
+
+  $blocklist[] = [
+    'phone'        => $phone,
+    'nome'         => $nome ?: $phone,
+    'bloqueado_em' => current_time('c'),
+  ];
+
+  update_user_meta($user_id, '_whatsapp_auto_lead_blocklist', $blocklist);
+  return new WP_REST_Response(['success' => true, 'blocklist' => array_values($blocklist)], 200);
+}
+
+/**
+ * DELETE /api/v1/usuarios/me/whatsapp-blocklist
+ * Body: { phone: string }
+ */
+function mytheme_api_remove_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id = get_current_user_id();
+  $body    = $request->get_json_params();
+  $phone   = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
+
+  if (!$phone) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Telefone inválido.'], 400);
+  }
+
+  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
+  $blocklist = is_array($raw) ? $raw : [];
+  $blocklist = array_values(array_filter($blocklist, fn($e) => ($e['phone'] ?? '') !== $phone));
+
+  update_user_meta($user_id, '_whatsapp_auto_lead_blocklist', $blocklist);
+  return new WP_REST_Response(['success' => true, 'blocklist' => $blocklist], 200);
 }
 
 /**

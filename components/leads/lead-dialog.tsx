@@ -1161,6 +1161,19 @@ export function LeadDetailsModal({
                   lojaId={lead.loja_id ? Number(lead.loja_id) : null}
                   avatarUrl={lead.avatar_url}
                   leadNome={lead.nome}
+                  onBlock={async () => {
+                    const res = await fetch('/api/usuarios/me/whatsapp-blocklist', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ phone: lead.telefone, nome: lead.nome }),
+                    })
+                    const data = await res.json()
+                    if (data.success) {
+                      toast.success('Contato bloqueado. Mensagens futuras serão ignoradas.')
+                    } else {
+                      toast.error('Erro ao bloquear contato.')
+                    }
+                  }}
                 />
               </TabsContent>
 

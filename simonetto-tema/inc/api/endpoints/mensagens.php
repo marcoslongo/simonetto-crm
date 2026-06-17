@@ -667,6 +667,16 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   $phone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $chat));
 
+  // Verifica blocklist — contatos marcados como pessoais são ignorados silenciosamente
+  $bl_raw = get_user_meta($usuario_id, '_whatsapp_auto_lead_blocklist', true);
+  $bl     = is_array($bl_raw) ? $bl_raw : [];
+  foreach ($bl as $entry) {
+    $bl_phone = preg_replace('/\D/', '', is_array($entry) ? ($entry['phone'] ?? '') : (string) $entry);
+    if ($bl_phone && $bl_phone === $phone) {
+      return new WP_REST_Response(['status' => 'ok'], 200);
+    }
+  }
+
   // Tipos de mensagem de sistema — ignorar silenciosamente sem criar lead
   $system_msg_types = [
     'senderKeyDistributionMessage',

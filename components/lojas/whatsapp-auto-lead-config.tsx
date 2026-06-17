@@ -2,21 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import { FaWhatsapp } from 'react-icons/fa'
-import { UserPlus, Loader2 } from 'lucide-react'
+import { UserPlus, Loader2, ShieldX, X } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+
+interface BlockedContact {
+  phone: string
+  nome: string
+  bloqueado_em: string
+}
 
 export function WhatsAppAutoLeadConfig() {
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [blocklist, setBlocklist] = useState<BlockedContact[]>([])
+  const [removing, setRemoving] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/usuarios/me/whatsapp-auto-lead', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => { if (d.success) setEnabled(d.enabled) })
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/usuarios/me/whatsapp-auto-lead', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/usuarios/me/whatsapp-blocklist', { cache: 'no-store' }).then(r => r.json()),
+    ]).then(([autoLead, bl]) => {
+      if (autoLead.success) setEnabled(autoLead.enabled)
+      if (bl.success) setBlocklist(bl.blocklist ?? [])
+    }).finally(() => setLoading(false))
   }, [])
 
   async function toggle(value: boolean) {
@@ -38,6 +49,28 @@ export function WhatsAppAutoLeadConfig() {
       toast.error('Erro ao salvar configuração.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function removeFromBlocklist(phone: string) {
+    setRemoving(phone)
+    try {
+      const res = await fetch('/api/usuarios/me/whatsapp-blocklist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setBlocklist(data.blocklist ?? [])
+        toast.success('Contato removido da lista.')
+      } else {
+        toast.error('Erro ao remover contato.')
+      }
+    } catch {
+      toast.error('Erro ao remover contato.')
+    } finally {
+      setRemoving(null)
     }
   }
 
@@ -91,6 +124,51 @@ export function WhatsAppAutoLeadConfig() {
                 </span>
               </div>
             )}
+
+            {/* Contatos ignorados (blocklist) */}
+            <div className="pt-2 border-t space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldX className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">Contatos ignorados</p>
+                {blocklist.length > 0 && (
+                  <span className="ml-auto text-[11px] font-medium bg-slate-100 text-slate-600 rounded-full px-2 py-0.5">
+                    {blocklist.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Mensagens desses contatos não criam nem atualizam leads. Para adicionar um contato à lista, abra o atendimento do lead e clique em <strong>Não é lead</strong>.
+              </p>
+
+              {blocklist.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Nenhum contato ignorado.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {blocklist.map(entry => (
+                    <li
+                      key={entry.phone}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{entry.nome}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">{entry.phone}</p>
+                      </div>
+                      <button
+                        onClick={() => removeFromBlocklist(entry.phone)}
+                        disabled={removing === entry.phone}
+                        className="shrink-0 p-1 rounded hover:bg-slate-200 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remover da lista"
+                      >
+                        {removing === entry.phone
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <X className="h-3.5 w-3.5" />
+                        }
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </>
         )}
       </div>
