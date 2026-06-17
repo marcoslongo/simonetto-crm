@@ -384,6 +384,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const isFirstKanbanPollRef = useRef(true)
   const [lastUnreadAt, setLastUnreadAt] = useState<Record<string, number>>({})
   const [autoAtribuirResponsavel, setAutoAtribuirResponsavel] = useState(true)
+  const [permitirEdicaoAtendente, setPermitirEdicaoAtendente] = useState(false)
   const [vendasConfig, setVendasConfig] = useState<VendasRealizadasConfig>(VENDAS_CONFIG_PADRAO)
   const [pendingVendaRealizada, setPendingVendaRealizada] = useState<Lead | null>(null)
   const [vendasCache, setVendasCache] = useState<Record<string, VendaRealizada>>({})
@@ -438,6 +439,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
       .then(data => {
         if (data.success) {
           setAutoAtribuirResponsavel(data.auto_atribuir_responsavel ?? true)
+          setPermitirEdicaoAtendente(data.permitir_edicao_lead_atendente ?? false)
         }
       })
       .catch(() => {})
@@ -1285,6 +1287,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
           isGerente={isGerente}
+          permitirEdicaoAtendente={permitirEdicaoAtendente}
           lojas={lojas}
           currentUserId={currentUser?.id}
           onFollowupUpdate={(next) => {

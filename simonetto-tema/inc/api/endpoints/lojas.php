@@ -1188,10 +1188,13 @@ function mytheme_api_get_loja_leads_config(WP_REST_Request $request): WP_REST_Re
   // Default true: se nunca foi salvo, assume ativado
   $auto_atribuir  = $auto_atribuir === '' ? true : (bool) $auto_atribuir;
 
+  $permitir_edicao = (bool) get_post_meta($loja_id, '_permitir_edicao_lead_atendente', true);
+
   return new WP_REST_Response([
-    'success'                      => true,
-    'ocultar_leads_nao_atribuidos' => $ocultar,
-    'auto_atribuir_responsavel'    => $auto_atribuir,
+    'success'                          => true,
+    'ocultar_leads_nao_atribuidos'     => $ocultar,
+    'auto_atribuir_responsavel'        => $auto_atribuir,
+    'permitir_edicao_lead_atendente'   => $permitir_edicao,
   ], 200);
 }
 
@@ -1221,10 +1224,18 @@ function mytheme_api_save_loja_leads_config(WP_REST_Request $request): WP_REST_R
     $auto_atribuir      = $auto_atribuir_meta === '' ? true : (bool) $auto_atribuir_meta;
   }
 
+  if (isset($body['permitir_edicao_lead_atendente'])) {
+    $permitir_edicao = (bool) $body['permitir_edicao_lead_atendente'];
+    update_post_meta($loja_id, '_permitir_edicao_lead_atendente', $permitir_edicao ? '1' : '');
+  } else {
+    $permitir_edicao = (bool) get_post_meta($loja_id, '_permitir_edicao_lead_atendente', true);
+  }
+
   return new WP_REST_Response([
-    'success'                      => true,
-    'ocultar_leads_nao_atribuidos' => $ocultar,
-    'auto_atribuir_responsavel'    => $auto_atribuir,
+    'success'                        => true,
+    'ocultar_leads_nao_atribuidos'   => $ocultar,
+    'auto_atribuir_responsavel'      => $auto_atribuir,
+    'permitir_edicao_lead_atendente' => $permitir_edicao,
   ], 200);
 }
 

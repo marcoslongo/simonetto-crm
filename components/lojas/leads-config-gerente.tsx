@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { EyeOff, Loader2, UserCheck } from 'lucide-react'
+import { EyeOff, Loader2, UserCheck, FilePen } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -13,9 +13,11 @@ interface Props {
 export function LeadsConfigGerente({ lojaId }: Props) {
   const [ocultar, setOcultar] = useState(false)
   const [autoAtribuir, setAutoAtribuir] = useState(true)
+  const [permitirEdicao, setPermitirEdicao] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingAuto, setSavingAuto] = useState(false)
+  const [savingEdicao, setSavingEdicao] = useState(false)
 
   useEffect(() => {
     fetch(`/api/lojas/${lojaId}/leads-config`, { cache: 'no-store' })
@@ -24,6 +26,7 @@ export function LeadsConfigGerente({ lojaId }: Props) {
         if (d.success) {
           setOcultar(d.ocultar_leads_nao_atribuidos)
           setAutoAtribuir(d.auto_atribuir_responsavel ?? true)
+          setPermitirEdicao(d.permitir_edicao_lead_atendente ?? false)
         }
       })
       .finally(() => setLoading(false))
@@ -78,6 +81,32 @@ export function LeadsConfigGerente({ lojaId }: Props) {
       toast.error('Erro ao salvar configuração.')
     } finally {
       setSavingAuto(false)
+    }
+  }
+
+  async function togglePermitirEdicao(value: boolean) {
+    setSavingEdicao(true)
+    try {
+      const res = await fetch(`/api/lojas/${lojaId}/leads-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permitir_edicao_lead_atendente: value }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPermitirEdicao(value)
+        toast.success(
+          value
+            ? 'Atendentes podem editar dados dos leads.'
+            : 'Edição de leads restrita a gerentes.'
+        )
+      } else {
+        toast.error('Erro ao salvar configuração.')
+      }
+    } catch {
+      toast.error('Erro ao salvar configuração.')
+    } finally {
+      setSavingEdicao(false)
     }
   }
 
@@ -152,6 +181,30 @@ export function LeadsConfigGerente({ lojaId }: Props) {
                   id="auto-atribuir-toggle"
                   checked={autoAtribuir}
                   onCheckedChange={toggleAutoAtribuir}
+                />
+              )}
+            </div>
+
+            <div className="border-t pt-4 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <FilePen className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="permitir-edicao-toggle" className="text-sm font-medium">
+                    Permitir edição de dados pelo atendente
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Quando ativado, atendentes podem editar os dados dos leads (nome, telefone,
+                  e-mail, cidade e estado). Gerentes sempre podem editar.
+                </p>
+              </div>
+              {savingEdicao ? (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />
+              ) : (
+                <Switch
+                  id="permitir-edicao-toggle"
+                  checked={permitirEdicao}
+                  onCheckedChange={togglePermitirEdicao}
                 />
               )}
             </div>

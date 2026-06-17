@@ -148,6 +148,7 @@ interface LeadDialogProps {
   onMessagesRead?: (leadId: string) => void;
   isAdmin?: boolean;
   isGerente?: boolean;
+  permitirEdicaoAtendente?: boolean;
   lojas?: LojaOption[];
   currentUserId?: number;
   onFollowupUpdate?: (next: { em: string; descricao?: string | null } | null) => void;
@@ -181,11 +182,13 @@ export function LeadDetailsModal({
   onMessagesRead,
   isAdmin,
   isGerente,
+  permitirEdicaoAtendente,
   lojas = [],
   currentUserId,
   onFollowupUpdate,
 }: LeadDialogProps) {
   const router = useRouter();
+  const canEdit = isAdmin || isGerente || permitirEdicaoAtendente;
 
   // Marca mensagens como lidas quando o dialog abre
   useEffect(() => {
@@ -587,45 +590,49 @@ export function LeadDetailsModal({
                 </div>
               </div>
 
-              {(isAdmin || isGerente) && (
+              {(canEdit || (isAdmin || isGerente)) && (
                 <div className="flex items-center gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 cursor-pointer"
-                    onClick={() => setEditingDados(true)}
-                  >
-                    <Pencil size={14} />
-                    Editar dados
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" className="gap-2 cursor-pointer">
-                        <Trash2 size={14} />
-                        Excluir lead
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Essa ação não pode ser desfeita.
-                          <br />
-                          Lead: <strong>{lead.nome}</strong>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteLead}
-                          disabled={loadingDelete}
-                          className="bg-destructive text-white"
-                        >
-                          {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 cursor-pointer"
+                      onClick={() => setEditingDados(true)}
+                    >
+                      <Pencil size={14} />
+                      Editar dados
+                    </Button>
+                  )}
+                  {(isAdmin || isGerente) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="gap-2 cursor-pointer">
+                          <Trash2 size={14} />
+                          Excluir lead
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Essa ação não pode ser desfeita.
+                            <br />
+                            Lead: <strong>{lead.nome}</strong>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteLead}
+                            disabled={loadingDelete}
+                            className="bg-destructive text-white"
+                          >
+                            {loadingDelete ? "Excluindo..." : "Confirmar exclusão"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               )}
             </DialogHeader>
@@ -909,7 +916,7 @@ export function LeadDetailsModal({
                           Atendente
                         </p>
                       </div>
-                      {lead.loja_id && !editingResponsavel && (
+                      {lead.loja_id && canEdit && !editingResponsavel && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
