@@ -674,11 +674,16 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
             <textarea
               ref={textareaRef}
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+              }}
               onKeyDown={handleKeyDown}
               placeholder={pendingAudio || pendingFile ? "Legenda (opcional)..." : "Mensagem"}
-              className="w-full bg-white dark:bg-[#2a3942] rounded-[21px] px-4 py-[9px] text-[14px] leading-[1.4] resize-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-[#8696a0] min-h-[42px] max-h-[160px] overflow-y-auto block"
-              rows={1}
+              className="w-full bg-white dark:bg-[#2a3942] rounded-[21px] px-4 py-[9px] text-[14px] leading-[1.4] resize-none outline-none text-gray-800 dark:text-gray-100 placeholder:text-[#8696a0] overflow-y-auto block"
+              style={{ minHeight: "80px", maxHeight: "160px" }}
+              rows={3}
               disabled={enviando}
             />
           </div>
