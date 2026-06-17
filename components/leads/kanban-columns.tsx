@@ -1899,7 +1899,20 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
                   )}
                 </div>
 
-                <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
+                <div className="flex items-center gap-2">
+                  {lead.avatar_url ? (
+                    <img
+                      src={lead.avatar_url}
+                      alt={lead.nome}
+                      className="h-7 w-7 rounded-full object-cover shrink-0 border border-border"
+                    />
+                  ) : (
+                    <div className="h-7 w-7 rounded-full shrink-0 bg-[#075e54]/10 flex items-center justify-center text-[11px] font-semibold text-[#075e54]">
+                      {lead.nome.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
+                </div>
 
                 {lead.email && (
                   <p className="truncate text-xs text-muted-foreground">{lead.email}</p>

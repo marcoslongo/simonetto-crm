@@ -44,6 +44,8 @@ interface ChatPanelProps {
   leadId: string;
   telefone: string;
   lojaId?: number | null;
+  avatarUrl?: string | null;
+  leadNome?: string;
 }
 
 function DateSeparator({ date }: { date: Date }) {
@@ -62,7 +64,7 @@ function DateSeparator({ date }: { date: Date }) {
   );
 }
 
-export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
+export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome }: ChatPanelProps) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -371,11 +373,17 @@ export function ChatPanel({ leadId, telefone, lojaId }: ChatPanelProps) {
 
       {/* Header estilo WhatsApp */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-[#075e54] dark:bg-[#1f2c34] shrink-0">
-        <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-          <FaWhatsapp className="h-[18px] w-[18px] text-white" />
+        <div className="h-9 w-9 rounded-full shrink-0 overflow-hidden bg-white/20 flex items-center justify-center">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={leadNome ?? "Contato"} className="h-full w-full object-cover" />
+          ) : (
+            <FaWhatsapp className="h-[18px] w-[18px] text-white" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-white leading-tight">WhatsApp</p>
+          <p className="text-[13px] font-semibold text-white leading-tight truncate">
+            {leadNome ?? "WhatsApp"}
+          </p>
           <p className="text-[11px] text-white/55 font-mono truncate leading-tight">{telefone}</p>
         </div>
         {wpState === "open" && (

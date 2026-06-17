@@ -193,6 +193,35 @@ add_action('admin_init', function () {
   update_option($option_key, true);
 });
 
+// ===============================
+// Migração: adicionar coluna avatar_url à wp_leads
+// ===============================
+add_action('admin_init', function () {
+  global $wpdb;
+
+  $option_key = 'simonetto_leads_avatar_url_migration_v1';
+  if (get_option($option_key)) {
+    return;
+  }
+
+  $table = $wpdb->prefix . 'leads';
+
+  $col_exists = $wpdb->get_results($wpdb->prepare(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'avatar_url'",
+    DB_NAME, $table
+  ));
+
+  if (empty($col_exists)) {
+    $wpdb->query(
+      "ALTER TABLE `{$table}`
+       ADD COLUMN `avatar_url` VARCHAR(500) NULL DEFAULT NULL"
+    );
+  }
+
+  update_option($option_key, true);
+});
+
 
 // ===============================
 // Remover o post type padrão "post"

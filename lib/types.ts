@@ -94,6 +94,7 @@ export interface Lead {
   classificacao?: "quente" | "morno" | "frio";
   score?: number;
   unread_count?: number;
+  avatar_url?: string | null;
   responsavel_id?: number | null;
   responsavel_nome?: string | null;
   responsavel_avatar_url?: string | null;
