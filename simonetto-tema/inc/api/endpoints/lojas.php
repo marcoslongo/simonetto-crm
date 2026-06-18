@@ -1158,14 +1158,36 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
 }
 
 /**
+ * Retorna a loja_id do usuário (user meta ou ACF como fallback).
+ */
+function mytheme_get_blocklist_loja_id(int $user_id): ?int
+{
+  $raw = get_user_meta($user_id, 'loja_id', true);
+  if (is_array($raw) && !empty($raw)) {
+    $first = $raw[0];
+    return intval(is_object($first) ? $first->ID : $first) ?: null;
+  }
+  if (!empty($raw)) {
+    return intval(is_object($raw) ? $raw->ID : $raw) ?: null;
+  }
+  if (function_exists('get_field')) {
+    $acf = get_field('loja_id', 'user_' . $user_id);
+    if (is_array($acf) && !empty($acf)) {
+      $first = $acf[0];
+      return intval(is_object($first) ? $first->ID : $first) ?: null;
+    }
+  }
+  return null;
+}
+
+/**
  * GET /api/v1/usuarios/me/whatsapp-blocklist
  */
 function mytheme_api_get_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
 {
-  $user_id   = get_current_user_id();
-  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
-  $blocklist = is_array($raw) ? array_values($raw) : [];
-  return new WP_REST_Response(['success' => true, 'blocklist' => $blocklist], 200);
+  $loja_id   = mytheme_get_blocklist_loja_id(get_current_user_id());
+  $blocklist = $loja_id ? (get_option('_crm_blocklist_loja_' . $loja_id) ?: []) : [];
+  return new WP_REST_Response(['success' => true, 'blocklist' => array_values($blocklist)], 200);
 }
 
 /**
@@ -1174,17 +1196,21 @@ function mytheme_api_get_whatsapp_blocklist(WP_REST_Request $request): WP_REST_R
  */
 function mytheme_api_add_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
 {
-  $user_id = get_current_user_id();
-  $body    = $request->get_json_params();
-  $phone   = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
-  $nome    = sanitize_text_field((string) ($body['nome'] ?? ''));
+  $loja_id = mytheme_get_blocklist_loja_id(get_current_user_id());
+  if (!$loja_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Usuário sem loja associada.'], 400);
+  }
+
+  $body  = $request->get_json_params();
+  $phone = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
+  $nome  = sanitize_text_field((string) ($body['nome'] ?? ''));
 
   if (!$phone) {
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Telefone inválido.'], 400);
   }
 
-  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
-  $blocklist = is_array($raw) ? $raw : [];
+  $key       = '_crm_blocklist_loja_' . $loja_id;
+  $blocklist = get_option($key) ?: [];
 
   foreach ($blocklist as $entry) {
     if (($entry['phone'] ?? '') === $phone) {
@@ -1198,7 +1224,7 @@ function mytheme_api_add_whatsapp_blocklist(WP_REST_Request $request): WP_REST_R
     'bloqueado_em' => current_time('c'),
   ];
 
-  update_user_meta($user_id, '_whatsapp_auto_lead_blocklist', $blocklist);
+  update_option($key, $blocklist);
   return new WP_REST_Response(['success' => true, 'blocklist' => array_values($blocklist)], 200);
 }
 
@@ -1208,19 +1234,23 @@ function mytheme_api_add_whatsapp_blocklist(WP_REST_Request $request): WP_REST_R
  */
 function mytheme_api_remove_whatsapp_blocklist(WP_REST_Request $request): WP_REST_Response
 {
-  $user_id = get_current_user_id();
-  $body    = $request->get_json_params();
-  $phone   = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
+  $loja_id = mytheme_get_blocklist_loja_id(get_current_user_id());
+  if (!$loja_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Usuário sem loja associada.'], 400);
+  }
+
+  $body  = $request->get_json_params();
+  $phone = preg_replace('/\D/', '', (string) ($body['phone'] ?? ''));
 
   if (!$phone) {
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Telefone inválido.'], 400);
   }
 
-  $raw       = get_user_meta($user_id, '_whatsapp_auto_lead_blocklist', true);
-  $blocklist = is_array($raw) ? $raw : [];
+  $key       = '_crm_blocklist_loja_' . $loja_id;
+  $blocklist = get_option($key) ?: [];
   $blocklist = array_values(array_filter($blocklist, fn($e) => ($e['phone'] ?? '') !== $phone));
 
-  update_user_meta($user_id, '_whatsapp_auto_lead_blocklist', $blocklist);
+  update_option($key, $blocklist);
   return new WP_REST_Response(['success' => true, 'blocklist' => $blocklist], 200);
 }
 
