@@ -1164,14 +1164,17 @@ export function LeadDetailsModal({
                   avatarUrl={lead.avatar_url}
                   leadNome={lead.nome}
                   onBlock={async () => {
-                    const res = await fetch('/api/usuarios/me/whatsapp-blocklist', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ phone: lead.telefone, nome: lead.nome }),
-                    })
-                    const data = await res.json()
-                    if (data.success) {
-                      toast.success('Contato bloqueado. Mensagens futuras serão ignoradas.')
+                    const [blRes, delRes] = await Promise.all([
+                      fetch('/api/usuarios/me/whatsapp-blocklist', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: lead.telefone, nome: lead.nome }),
+                      }),
+                      fetch(`/api/leads/${lead.id}`, { method: 'DELETE' }),
+                    ])
+                    const blData = await blRes.json()
+                    if (blData.success && delRes.ok) {
+                      toast.success('Contato bloqueado e lead removido.')
                       onOpenChange(false)
                       onLeadRemoved?.()
                     } else {
