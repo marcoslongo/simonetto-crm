@@ -28,7 +28,7 @@ interface ArquivosLeadProps {
   isAdmin?: boolean
 }
 
-const MAX_BYTES = 3 * 1024 * 1024 // 3 MB
+const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
@@ -72,7 +72,7 @@ export function ArquivosLead({ leadId, currentUserId, isAdmin }: ArquivosLeadPro
   }, [leadId])
 
   const validate = (file: File): string | null => {
-    if (file.size > MAX_BYTES) return `"${file.name}" ultrapassa o limite de 3 MB.`
+    if (file.size > MAX_BYTES) return `"${file.name}" ultrapassa o limite de 10 MB.`
     if (!ALLOWED_TYPES.includes(file.type)) return `"${file.name}" tem formato não permitido.`
     return null
   }
@@ -147,7 +147,7 @@ export function ArquivosLead({ leadId, currentUserId, isAdmin }: ArquivosLeadPro
             {uploading ? 'Enviando…' : 'Clique ou arraste arquivos aqui'}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            PDF, Imagens, Word, Excel · Máx 3 MB por arquivo
+            PDF, Imagens, Word, Excel · Máx 10 MB por arquivo
           </p>
         </div>
         <input
