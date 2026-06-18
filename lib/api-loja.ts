@@ -329,6 +329,10 @@ export interface ConversaoPorLojaItem {
   em_negociacao: number
   nao_atendido: number
   taxa_conversao: number
+  total_industria: number
+  total_proprio: number
+  taxa_conversao_industria: number
+  taxa_conversao_proprio: number
 }
 
 export interface FunilPorAtendenteItem {

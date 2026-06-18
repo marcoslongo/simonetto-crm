@@ -278,7 +278,17 @@ class Stats_Handler
         ROUND(
           SUM(l.status = 'venda_realizada') * 100.0 /
           NULLIF(SUM(l.status IN ('venda_realizada', 'venda_nao_realizada')), 0), 2
-        ) AS taxa_conversao
+        ) AS taxa_conversao,
+        SUM(l.origem = 'industria') AS total_industria,
+        SUM(l.origem = 'proprio') AS total_proprio,
+        ROUND(
+          SUM(l.status = 'venda_realizada' AND l.origem = 'industria') * 100.0 /
+          NULLIF(SUM((l.status IN ('venda_realizada', 'venda_nao_realizada')) AND (l.origem = 'industria')), 0), 2
+        ) AS taxa_conversao_industria,
+        ROUND(
+          SUM(l.status = 'venda_realizada' AND l.origem = 'proprio') * 100.0 /
+          NULLIF(SUM((l.status IN ('venda_realizada', 'venda_nao_realizada')) AND (l.origem = 'proprio')), 0), 2
+        ) AS taxa_conversao_proprio
       FROM {$table_leads} l
       INNER JOIN {$table_posts} p
         ON p.ID = l.loja_id AND p.post_type = 'lojas'
@@ -289,13 +299,17 @@ class Stats_Handler
 
     $results = $wpdb->get_results($sql, ARRAY_A);
     foreach ($results as &$row) {
-      $row['loja_id']             = (int)   $row['loja_id'];
-      $row['total_leads']         = (int)   $row['total_leads'];
-      $row['vendas_realizadas']   = (int)   $row['vendas_realizadas'];
-      $row['vendas_nao_realizadas'] = (int) $row['vendas_nao_realizadas'];
-      $row['em_negociacao']       = (int)   $row['em_negociacao'];
-      $row['nao_atendido']        = (int)   $row['nao_atendido'];
-      $row['taxa_conversao']      = (float) $row['taxa_conversao'];
+      $row['loja_id']                  = (int)   $row['loja_id'];
+      $row['total_leads']              = (int)   $row['total_leads'];
+      $row['vendas_realizadas']        = (int)   $row['vendas_realizadas'];
+      $row['vendas_nao_realizadas']    = (int)   $row['vendas_nao_realizadas'];
+      $row['em_negociacao']            = (int)   $row['em_negociacao'];
+      $row['nao_atendido']             = (int)   $row['nao_atendido'];
+      $row['taxa_conversao']           = (float) $row['taxa_conversao'];
+      $row['total_industria']          = (int)   $row['total_industria'];
+      $row['total_proprio']            = (int)   $row['total_proprio'];
+      $row['taxa_conversao_industria'] = (float) ($row['taxa_conversao_industria'] ?? 0);
+      $row['taxa_conversao_proprio']   = (float) ($row['taxa_conversao_proprio']   ?? 0);
     }
     return $results;
   }

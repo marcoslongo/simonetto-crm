@@ -127,6 +127,7 @@ export function ChartFunilPorAtendente({ data }: Props) {
                 <th className="text-left pb-2 font-semibold px-3">Atendente</th>
                 <th className="text-right pb-2 font-semibold">Leads</th>
                 <th className="text-right pb-2 font-semibold">Vendas</th>
+                <th className="text-right pb-2 font-semibold">Perdidos</th>
                 <th className="text-right pb-2 font-semibold">Taxa</th>
                 <th className="text-right pb-2 font-semibold">Ciclo médio</th>
               </tr>
@@ -160,6 +161,7 @@ export function ChartFunilPorAtendente({ data }: Props) {
                     </td>
                     <td className="py-2 text-right tabular-nums text-slate-500">{row.total_leads}</td>
                     <td className="py-2 text-right tabular-nums text-emerald-600 font-semibold">{row.vendas_realizadas}</td>
+                    <td className="py-2 text-right tabular-nums text-red-500 font-semibold">{row.vendas_nao_realizadas}</td>
                     <td className="py-2 text-right tabular-nums font-bold">
                       <span className={`inline-flex items-center gap-0.5 ${isAboveAvg ? 'text-emerald-600' : 'text-slate-400'}`}>
                         {row.taxa_conversao ?? 0}%

@@ -7,7 +7,7 @@ import {
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Store, ChevronLeft, ChevronRight, Trophy, AlertTriangle } from "lucide-react"
+import { TrendingUp, Store, ChevronLeft, ChevronRight, Trophy, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { ConversaoPorLojaItem } from "@/lib/api-loja"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -15,50 +15,76 @@ import { EmptyState } from "@/components/ui/empty-state"
 const PAGE_SIZE = 10
 const RANKING_SIZE = 10
 
-interface Props {
-  data: ConversaoPorLojaItem[]
+type OrigemView = 'geral' | 'industria' | 'proprio'
+type RankingView = 'top' | 'bottom' | 'all'
+
+const ORIGEM_LABELS: Record<OrigemView, string> = {
+  geral:     'Geral',
+  industria: 'Indústria',
+  proprio:   'Próprio',
 }
 
-function CustomTooltip({ active, payload }: any) {
+function getTaxa(row: ConversaoPorLojaItem, origem: OrigemView): number {
+  if (origem === 'industria') return row.taxa_conversao_industria
+  if (origem === 'proprio')   return row.taxa_conversao_proprio
+  return row.taxa_conversao
+}
+
+function getTotal(row: ConversaoPorLojaItem, origem: OrigemView): number {
+  if (origem === 'industria') return row.total_industria
+  if (origem === 'proprio')   return row.total_proprio
+  return row.total_leads
+}
+
+function CustomTooltip({ active, payload, origem }: any) {
   if (!active || !payload?.length) return null
-  const d = payload[0].payload
+  const d = payload[0].payload as ConversaoPorLojaItem
+  const taxa = getTaxa(d, origem)
+  const total = getTotal(d, origem)
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-lg px-4 py-3 text-sm min-w-48">
-      <p className="font-semibold text-[#16255c] mb-2">{d.loja_nome}</p>
+      <p className="font-semibold text-[#16255c] mb-1">{d.loja_nome}</p>
+      <p className="text-xs text-slate-400 mb-2">{ORIGEM_LABELS[origem as OrigemView]}</p>
       <div className="space-y-1 text-xs">
         <div className="flex justify-between gap-4">
           <span className="text-slate-500">Total leads</span>
-          <span className="font-medium">{d.total_leads}</span>
+          <span className="font-medium">{total}</span>
         </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-emerald-600">Venda realizada</span>
-          <span className="font-medium text-emerald-600">{d.vendas_realizadas}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-blue-600">Em negociação</span>
-          <span className="font-medium text-blue-600">{d.em_negociacao}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-red-500">Venda não realizada</span>
-          <span className="font-medium text-red-500">{d.vendas_nao_realizadas}</span>
-        </div>
+        {origem === 'geral' && (<>
+          <div className="flex justify-between gap-4">
+            <span className="text-emerald-600">Venda realizada</span>
+            <span className="font-medium text-emerald-600">{d.vendas_realizadas}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-blue-600">Em negociação</span>
+            <span className="font-medium text-blue-600">{d.em_negociacao}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-red-500">Venda não realizada</span>
+            <span className="font-medium text-red-500">{d.vendas_nao_realizadas}</span>
+          </div>
+        </>)}
         <div className="flex justify-between gap-4 border-t pt-1 mt-1">
           <span className="text-slate-700 font-semibold">Taxa de conversão</span>
-          <span className="font-bold text-emerald-600">{d.taxa_conversao}%</span>
+          <span className="font-bold text-emerald-600">{taxa}%</span>
         </div>
       </div>
     </div>
   )
 }
 
-type RankingView = 'top' | 'bottom' | 'all'
-
-function RankingTable({ items, avg, offset = 0, type }: { items: ConversaoPorLojaItem[], avg: number, offset?: number, type: 'top' | 'bottom' }) {
+function RankingTable({ items, avg, offset = 0, type, origem }: {
+  items: ConversaoPorLojaItem[]
+  avg: number
+  offset?: number
+  type: 'top' | 'bottom'
+  origem: OrigemView
+}) {
   return (
     <div className="space-y-1">
       {items.map((row, i) => {
-        const pos = type === 'top' ? offset + i + 1 : offset + i + 1
-        const isAbove = row.taxa_conversao >= avg
+        const taxa = getTaxa(row, origem)
+        const isAbove = taxa >= avg
         return (
           <div key={row.loja_id} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
             type === 'top' ? 'hover:bg-emerald-50' : 'hover:bg-red-50'
@@ -66,15 +92,15 @@ function RankingTable({ items, avg, offset = 0, type }: { items: ConversaoPorLoj
             <span className={`text-xs font-bold w-6 text-center shrink-0 ${
               type === 'top' ? 'text-emerald-600' : 'text-red-500'
             }`}>
-              {pos}º
+              {offset + i + 1}º
             </span>
             <span className="flex-1 text-sm text-slate-700 truncate">{row.loja_nome}</span>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-400 tabular-nums">{row.vendas_realizadas}/{row.total_leads}</span>
+              <span className="text-xs text-slate-400 tabular-nums">{getTotal(row, origem)}</span>
               <span className={`text-sm font-bold tabular-nums w-14 text-right ${
                 isAbove ? 'text-emerald-600' : 'text-slate-400'
               }`}>
-                {row.taxa_conversao}%
+                {taxa}%
               </span>
             </div>
           </div>
@@ -84,9 +110,10 @@ function RankingTable({ items, avg, offset = 0, type }: { items: ConversaoPorLoj
   )
 }
 
-export function ChartConversaoPorLoja({ data }: Props) {
+export function ChartConversaoPorLoja({ data }: { data: ConversaoPorLojaItem[] }) {
   const [page, setPage] = useState(0)
   const [rankingView, setRankingView] = useState<RankingView>('all')
+  const [origem, setOrigem] = useState<OrigemView>('geral')
 
   if (!data.length) {
     return (
@@ -106,17 +133,24 @@ export function ChartConversaoPorLoja({ data }: Props) {
     )
   }
 
-  const sorted = [...data].sort((a, b) => b.taxa_conversao - a.taxa_conversao)
-  const avg = data.reduce((s, d) => s + d.taxa_conversao, 0) / data.length
+  const hasProprio = data.some(d => d.total_proprio > 0)
+
+  const sorted = [...data].sort((a, b) => getTaxa(b, origem) - getTaxa(a, origem))
+  const avg = sorted.reduce((s, d) => s + getTaxa(d, origem), 0) / sorted.length
   const top10 = sorted.slice(0, RANKING_SIZE)
   const bottom10 = [...sorted].slice(-RANKING_SIZE).reverse()
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
   const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
+  const handleOrigemChange = (v: OrigemView) => {
+    setOrigem(v)
+    setPage(0)
+  }
+
   return (
     <Card className="border-0 card-surface-elevated">
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -126,21 +160,41 @@ export function ChartConversaoPorLoja({ data }: Props) {
               <CardDescription className="text-slate-500 mt-0.5">
                 {data.length} loja{data.length !== 1 ? 's' : ''} · média{" "}
                 <span className="font-semibold text-emerald-600">{avg.toFixed(1)}%</span>
+                {" · "}<span className="text-slate-400">{ORIGEM_LABELS[origem]}</span>
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
-            {([['all', 'Ranking'], ['top', 'Top 10'], ['bottom', 'Bottom 10']] as [RankingView, string][]).map(([v, label]) => (
-              <button
-                key={v}
-                onClick={() => setRankingView(v)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  rankingView === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+
+          <div className="flex flex-col gap-2 items-end">
+            {/* Filtro de origem */}
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+              {(['geral', 'industria', ...(hasProprio ? ['proprio'] : [])] as OrigemView[]).map(v => (
+                <button
+                  key={v}
+                  onClick={() => handleOrigemChange(v)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    origem === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {ORIGEM_LABELS[v]}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro de ranking */}
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+              {([['all', 'Ranking'], ['top', 'Top 10'], ['bottom', 'Bottom 10']] as [RankingView, string][]).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setRankingView(v)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    rankingView === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -152,7 +206,7 @@ export function ChartConversaoPorLoja({ data }: Props) {
               <Trophy className="h-4 w-4 text-emerald-600" />
               <p className="text-sm font-semibold text-emerald-700">Melhores conversores da rede</p>
             </div>
-            <RankingTable items={top10} avg={avg} offset={0} type="top" />
+            <RankingTable items={top10} avg={avg} offset={0} type="top" origem={origem} />
           </div>
         )}
         {rankingView === 'bottom' && (
@@ -161,7 +215,7 @@ export function ChartConversaoPorLoja({ data }: Props) {
               <AlertTriangle className="h-4 w-4 text-red-500" />
               <p className="text-sm font-semibold text-red-600">Precisam de atenção</p>
             </div>
-            <RankingTable items={bottom10} avg={avg} offset={sorted.length - RANKING_SIZE} type="bottom" />
+            <RankingTable items={bottom10} avg={avg} offset={sorted.length - RANKING_SIZE} type="bottom" origem={origem} />
           </div>
         )}
         {rankingView === 'all' && (<>
@@ -188,18 +242,18 @@ export function ChartConversaoPorLoja({ data }: Props) {
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f1f5f9" }} />
-              <Bar dataKey="taxa_conversao" radius={[0, 4, 4, 0]} maxBarSize={32}>
+              <Tooltip content={<CustomTooltip origem={origem} />} cursor={{ fill: "#f1f5f9" }} />
+              <Bar dataKey={origem === 'geral' ? 'taxa_conversao' : origem === 'industria' ? 'taxa_conversao_industria' : 'taxa_conversao_proprio'} radius={[0, 4, 4, 0]} maxBarSize={32}>
                 <LabelList
-                  dataKey="taxa_conversao"
+                  dataKey={origem === 'geral' ? 'taxa_conversao' : origem === 'industria' ? 'taxa_conversao_industria' : 'taxa_conversao_proprio'}
                   position="right"
-                  formatter={(v: number) => `${v}%`}
+                  formatter={(v: number) => `${v ?? 0}%`}
                   style={{ fontSize: 11, fontWeight: 600, fill: "#059669" }}
                 />
                 {pageData.map(entry => (
                   <Cell
                     key={entry.loja_id}
-                    fill={entry.taxa_conversao >= avg ? "#10b981" : "#94a3b8"}
+                    fill={getTaxa(entry, origem) >= avg ? "#10b981" : "#94a3b8"}
                   />
                 ))}
               </Bar>
@@ -215,22 +269,27 @@ export function ChartConversaoPorLoja({ data }: Props) {
             <span className="text-right">Taxa</span>
           </div>
           <div className="space-y-0.5 mt-2">
-            {pageData.map((row, i) => (
-              <div key={row.loja_id} className="grid grid-cols-5 gap-2 text-xs py-1.5 rounded-md px-1 hover:bg-slate-100 transition-colors">
-                <span className="col-span-2 text-slate-700 font-medium truncate">
-                  <span className="text-slate-400 mr-1">{page * PAGE_SIZE + i + 1}.</span>
-                  {row.loja_nome}
-                </span>
-                <span className="text-right text-slate-500 tabular-nums">{row.total_leads}</span>
-                <span className="text-right text-emerald-600 font-medium tabular-nums">{row.vendas_realizadas}</span>
-                <span
-                  className="text-right font-bold tabular-nums"
-                  style={{ color: row.taxa_conversao >= avg ? '#059669' : '#94a3b8' }}
-                >
-                  {row.taxa_conversao}%
-                </span>
-              </div>
-            ))}
+            {pageData.map((row, i) => {
+              const taxa = getTaxa(row, origem)
+              return (
+                <div key={row.loja_id} className="grid grid-cols-5 gap-2 text-xs py-1.5 rounded-md px-1 hover:bg-slate-100 transition-colors">
+                  <span className="col-span-2 text-slate-700 font-medium truncate">
+                    <span className="text-slate-400 mr-1">{page * PAGE_SIZE + i + 1}.</span>
+                    {row.loja_nome}
+                  </span>
+                  <span className="text-right text-slate-500 tabular-nums">{getTotal(row, origem)}</span>
+                  <span className="text-right text-emerald-600 font-medium tabular-nums">
+                    {origem === 'geral' ? row.vendas_realizadas : '—'}
+                  </span>
+                  <span
+                    className="text-right font-bold tabular-nums"
+                    style={{ color: taxa >= avg ? '#059669' : '#94a3b8' }}
+                  >
+                    {taxa}%
+                  </span>
+                </div>
+              )
+            })}
           </div>
 
           {totalPages > 1 && (
