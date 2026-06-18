@@ -1297,6 +1297,9 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                 : l
             ))
           }}
+          onLeadRemoved={() => {
+            setLeads(prev => prev.filter(l => String(l.id) !== String(selectedLead.id)))
+          }}
         />
       )}
 

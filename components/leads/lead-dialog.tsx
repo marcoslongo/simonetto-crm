@@ -152,6 +152,7 @@ interface LeadDialogProps {
   lojas?: LojaOption[];
   currentUserId?: number;
   onFollowupUpdate?: (next: { em: string; descricao?: string | null } | null) => void;
+  onLeadRemoved?: () => void;
 }
 
 const interestLabels: Record<string, string> = {
@@ -186,6 +187,7 @@ export function LeadDetailsModal({
   lojas = [],
   currentUserId,
   onFollowupUpdate,
+  onLeadRemoved,
 }: LeadDialogProps) {
   const router = useRouter();
   const canEdit = isAdmin || isGerente || permitirEdicaoAtendente;
@@ -1170,6 +1172,8 @@ export function LeadDetailsModal({
                     const data = await res.json()
                     if (data.success) {
                       toast.success('Contato bloqueado. Mensagens futuras serão ignoradas.')
+                      onOpenChange(false)
+                      onLeadRemoved?.()
                     } else {
                       toast.error('Erro ao bloquear contato.')
                     }
