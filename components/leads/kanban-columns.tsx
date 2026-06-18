@@ -311,6 +311,7 @@ interface KanbanColumnsProps {
   onLeadClick?: (lead: Lead) => void
   isAdmin?: boolean
   isGerente?: boolean
+  isSupervisor?: boolean
   lojas?: Array<{ id: number; nome: string }>
   lojaId?: string | number
   lojaIds?: number[]
@@ -341,7 +342,7 @@ function playNotificationSound() {
   } catch {}
 }
 
-export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, isGerente, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
+export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, isAdmin, isGerente, isSupervisor, lojas = [], lojaId, lojaIds, currentUser }: KanbanColumnsProps) {
   const isMobile = useIsMobile()
   const [mobileActiveTab, setMobileActiveTab] = useState<string>('nao_atendido')
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
@@ -1287,6 +1288,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
           onMessagesRead={handleMessagesRead}
           isAdmin={isAdmin}
           isGerente={isGerente}
+          isSupervisor={isSupervisor}
           permitirEdicaoAtendente={permitirEdicaoAtendente}
           lojas={lojas}
           currentUserId={currentUser?.id}

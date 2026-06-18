@@ -190,11 +190,13 @@ class Loja_Handler
     $resultado = [];
     foreach ($users as $user) {
       $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
+      $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
       $resultado[] = [
         'id'         => (int) $user->ID,
         'nome'       => $user->display_name,
         'email'      => $user->user_email,
         'avatar_url' => $avatar_url,
+        'is_gerente' => $is_gerente,
       ];
     }
 

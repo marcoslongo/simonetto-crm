@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
@@ -97,5 +97,25 @@ export async function GET() {
     })
   }
 
+  return NextResponse.json(data, { status: res.status })
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ success: false }, { status: 401 })
+  if (session.user.role !== 'administrator') {
+    return NextResponse.json({ success: false }, { status: 403 })
+  }
+
+  const token = await getAuthToken()
+  const body = await req.json().catch(() => ({}))
+
+  const res = await fetch(`${WP_API_BASE}/admin/usuarios`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  const data = await res.json().catch(() => ({ success: false }))
   return NextResponse.json(data, { status: res.status })
 }

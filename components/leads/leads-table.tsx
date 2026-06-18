@@ -47,6 +47,7 @@ interface LeadsTableProps {
   showLoja?: boolean;
   isAdmin?: boolean;
   isGerente?: boolean;
+  isSupervisor?: boolean;
   lojas?: LojaOption[];
   statusLabels?: Record<string, string>;
 }
@@ -114,7 +115,7 @@ const classificacaoMap: Record<string, { label: string; colorClass: string; Icon
   },
 };
 
-export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, lojas = [], statusLabels = {} }: LeadsTableProps) {
+export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, isSupervisor, lojas = [], statusLabels = {} }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -343,6 +344,7 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, lojas 
           onOpenChange={setIsModalOpen}
           isAdmin={isAdmin}
           isGerente={isGerente}
+          isSupervisor={isSupervisor}
           lojas={lojas}
         />
       )}

@@ -148,6 +148,7 @@ interface LeadDialogProps {
   onMessagesRead?: (leadId: string) => void;
   isAdmin?: boolean;
   isGerente?: boolean;
+  isSupervisor?: boolean;
   permitirEdicaoAtendente?: boolean;
   lojas?: LojaOption[];
   currentUserId?: number;
@@ -183,6 +184,7 @@ export function LeadDetailsModal({
   onMessagesRead,
   isAdmin,
   isGerente,
+  isSupervisor,
   permitirEdicaoAtendente,
   lojas = [],
   currentUserId,
@@ -231,7 +233,7 @@ export function LeadDetailsModal({
     lead.responsavel_nome ?? ""
   );
   const [savingResponsavel, setSavingResponsavel] = useState(false);
-  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string }[]>([]);
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string; is_gerente: boolean }[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
 
   const [vendaNaoRealizada, setVendaNaoRealizada] = useState<VendaNaoRealizada | null>(null);
@@ -393,7 +395,18 @@ export function LeadDetailsModal({
     try {
       const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`);
       const data = await res.json();
-      if (res.ok) setUsuarios(data.usuarios || []);
+      if (res.ok) {
+        let lista = data.usuarios || [];
+        // Supervisor vê só gerentes; gerente de loja vê só atendentes
+        if (!isAdmin) {
+          if (isSupervisor) {
+            lista = lista.filter((u: { is_gerente: boolean }) => u.is_gerente);
+          } else if (isGerente) {
+            lista = lista.filter((u: { is_gerente: boolean }) => !u.is_gerente);
+          }
+        }
+        setUsuarios(lista);
+      }
     } catch {
       toast.error("Erro ao carregar usuários");
     } finally {
@@ -945,7 +958,7 @@ export function LeadDetailsModal({
                             onValueChange={setSelectedResponsavelId}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecione um atendente..." />
+                              <SelectValue placeholder={isSupervisor ? "Selecione um gerente…" : "Selecione um atendente…"} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">— Sem atendente —</SelectItem>

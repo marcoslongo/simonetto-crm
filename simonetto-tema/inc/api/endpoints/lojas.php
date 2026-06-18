@@ -127,10 +127,24 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
 
+  // POST /api/v1/admin/usuarios — criar novo usuário
+  register_rest_route('api/v1', '/admin/usuarios', [
+    'methods'             => 'POST',
+    'callback'            => 'mytheme_api_admin_create_usuario',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
   // POST /api/v1/admin/usuarios/{id}/whatsapp-config — admin configura instância de um usuário
   register_rest_route('api/v1', '/admin/usuarios/(?P<id>\d+)/whatsapp-config', [
     'methods'             => 'POST',
     'callback'            => 'mytheme_api_admin_save_user_whatsapp_config',
+    'permission_callback' => 'mytheme_api_is_administrator',
+  ]);
+
+  // POST /api/v1/admin/usuarios/{id}/lojas-config — admin atribui lojas e define gerente
+  register_rest_route('api/v1', '/admin/usuarios/(?P<id>\d+)/lojas-config', [
+    'methods'             => 'POST',
+    'callback'            => 'mytheme_api_admin_save_user_lojas_config',
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
 
@@ -857,18 +871,74 @@ function mytheme_api_admin_list_usuarios(WP_REST_Request $request): WP_REST_Resp
       $loja_ids = [intval($loja_ids_raw)];
     }
 
+    $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
+
     $resultado[] = [
       'id'               => (int) $user->ID,
       'nome'             => $user->display_name,
       'email'            => $user->user_email,
       'role'             => $user->roles[0] ?? 'subscriber',
       'loja_ids'         => $loja_ids,
+      'is_gerente'       => $is_gerente,
       'instance'         => $instance ?: null,
       'connection_state' => $connection_state ?: ($instance ? 'open' : 'not_configured'),
     ];
   }
 
   return new WP_REST_Response(['success' => true, 'usuarios' => $resultado], 200);
+}
+
+/**
+ * POST /api/v1/admin/usuarios
+ */
+function mytheme_api_admin_create_usuario(WP_REST_Request $request): WP_REST_Response
+{
+  $body  = $request->get_json_params() ?: [];
+  $nome  = sanitize_text_field($body['nome']  ?? '');
+  $email = sanitize_email($body['email'] ?? '');
+  $senha = $body['senha'] ?? '';
+  $role  = in_array($body['role'] ?? '', ['administrator', 'loja'], true)
+    ? $body['role']
+    : 'loja';
+
+  if (empty($nome) || empty($email) || empty($senha)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Nome, e-mail e senha são obrigatórios.'], 400);
+  }
+
+  if (!is_email($email)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'E-mail inválido.'], 400);
+  }
+
+  if (email_exists($email) || username_exists($email)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Já existe um usuário com este e-mail.'], 409);
+  }
+
+  $user_id = wp_create_user($email, $senha, $email);
+
+  if (is_wp_error($user_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $user_id->get_error_message()], 500);
+  }
+
+  wp_update_user(['ID' => $user_id, 'display_name' => $nome]);
+
+  $user    = new WP_User($user_id);
+  $wp_role = $role === 'administrator' ? 'administrator' : (get_role('loja') ? 'loja' : 'subscriber');
+  $user->set_role($wp_role);
+
+  return new WP_REST_Response([
+    'success'  => true,
+    'mensagem' => 'Usuário criado com sucesso.',
+    'usuario'  => [
+      'id'               => $user_id,
+      'nome'             => $nome,
+      'email'            => $email,
+      'role'             => $role,
+      'loja_ids'         => [],
+      'is_gerente'       => false,
+      'instance'         => null,
+      'connection_state' => 'not_configured',
+    ],
+  ], 201);
 }
 
 /**
@@ -894,6 +964,33 @@ function mytheme_api_admin_save_user_whatsapp_config(WP_REST_Request $request): 
   }
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração salva.'], 200);
+}
+
+/**
+ * POST /api/v1/admin/usuarios/{id}/lojas-config
+ */
+function mytheme_api_admin_save_user_lojas_config(WP_REST_Request $request): WP_REST_Response
+{
+  $target_user_id = (int) $request['id'];
+
+  if (!get_user_by('id', $target_user_id)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Usuário não encontrado.'], 404);
+  }
+
+  $body       = $request->get_json_params() ?: [];
+  $loja_ids   = isset($body['loja_ids']) && is_array($body['loja_ids'])
+    ? array_values(array_filter(array_map('intval', $body['loja_ids'])))
+    : [];
+  $is_gerente = !empty($body['is_gerente']);
+
+  // Salva via ACF — fonte do JWT e da query get_usuarios()
+  update_field('loja_id',   $loja_ids,            'user_' . $target_user_id);
+  update_field('is_gerente', $is_gerente ? 1 : 0, 'user_' . $target_user_id);
+
+  // Sincroniza usermeta direto — fonte do endpoint GET /admin/usuarios
+  update_user_meta($target_user_id, 'loja_ids', $loja_ids);
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração de lojas salva.'], 200);
 }
 
 // -------------------------------------------------------------------------
