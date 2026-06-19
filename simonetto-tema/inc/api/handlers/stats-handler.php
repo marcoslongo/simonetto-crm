@@ -756,4 +756,59 @@ class Stats_Handler
       'lojas' => $lojas,
     ];
   }
+
+  /**
+   * Conversão por etiqueta: taxa de fechamento agrupada por tag do lead.
+   */
+  public static function conversao_por_etiqueta(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
+  {
+    global $wpdb;
+    $t_leads    = $wpdb->prefix . 'leads';
+    $t_etiquetas = $wpdb->prefix . 'etiquetas';
+    $t_pivot    = $wpdb->prefix . 'lead_etiquetas';
+
+    $where = 'WHERE l.loja_id IS NOT NULL';
+    if ($exclude_proprio) {
+      $where .= " AND l.origem != 'proprio'";
+    }
+    if (!empty($loja_ids)) {
+      $loja_ids    = array_values(array_map('intval', $loja_ids));
+      $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
+      $where       .= $wpdb->prepare(" AND l.loja_id IN ($placeholders)", ...$loja_ids);
+    }
+    if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
+    if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
+
+    $sql = "
+      SELECT
+        e.id   AS etiqueta_id,
+        e.nome AS etiqueta_nome,
+        e.cor  AS etiqueta_cor,
+        COUNT(DISTINCT l.id)                                         AS total_leads,
+        SUM(l.status = 'venda_realizada')                           AS vendas_realizadas,
+        SUM(l.status = 'venda_nao_realizada')                       AS vendas_nao_realizadas,
+        SUM(l.status = 'em_negociacao')                             AS em_negociacao,
+        ROUND(
+          SUM(l.status = 'venda_realizada') * 100.0 /
+          NULLIF(SUM(l.status IN ('venda_realizada', 'venda_nao_realizada')), 0), 2
+        ) AS taxa_conversao
+      FROM {$t_pivot} le
+      INNER JOIN {$t_etiquetas} e ON e.id = le.etiqueta_id
+      INNER JOIN {$t_leads} l     ON l.id = le.lead_id
+      {$where}
+      GROUP BY e.id, e.nome, e.cor
+      ORDER BY taxa_conversao DESC
+    ";
+
+    $results = $wpdb->get_results($sql, ARRAY_A);
+    foreach ($results as &$row) {
+      $row['etiqueta_id']          = (int)   $row['etiqueta_id'];
+      $row['total_leads']          = (int)   $row['total_leads'];
+      $row['vendas_realizadas']    = (int)   $row['vendas_realizadas'];
+      $row['vendas_nao_realizadas']= (int)   $row['vendas_nao_realizadas'];
+      $row['em_negociacao']        = (int)   $row['em_negociacao'];
+      $row['taxa_conversao']       = (float) ($row['taxa_conversao'] ?? 0);
+    }
+    return $results;
+  }
 }

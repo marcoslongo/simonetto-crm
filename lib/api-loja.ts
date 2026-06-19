@@ -355,6 +355,34 @@ export interface TempoPorEtapaItem {
   tipo: 'ativo' | 'fechado'
 }
 
+export interface ConversaoPorEtiquetaItem {
+  etiqueta_id: number
+  etiqueta_nome: string
+  etiqueta_cor: string
+  total_leads: number
+  vendas_realizadas: number
+  vendas_nao_realizadas: number
+  em_negociacao: number
+  taxa_conversao: number
+}
+
+export async function getConversaoPorEtiqueta(lojaIds: number[] = [], from?: string, to?: string): Promise<ConversaoPorEtiquetaItem[]> {
+  const qs = new URLSearchParams()
+  if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))
+  if (from) qs.set('from', from)
+  if (to)   qs.set('to', to)
+  const headers = await getAuthHeaders()
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/stats/conversao-por-etiqueta${qs.toString() ? `?${qs}` : ''}`,
+      { next: { revalidate: from || to ? 0 : 60 }, headers }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data ?? []
+  } catch { return [] }
+}
+
 export async function getConversaoPorLoja(lojaIds: number[] = [], from?: string, to?: string): Promise<ConversaoPorLojaItem[]> {
   const qs = new URLSearchParams()
   if (lojaIds.length) qs.set('loja_ids', lojaIds.join(','))

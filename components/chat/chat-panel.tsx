@@ -81,6 +81,10 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
   const [isBlockOpen, setIsBlockOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const isInitialLoadRef = useRef(true);
+  const prevMsgCountRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -134,9 +138,28 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
     return () => clearInterval(interval);
   }, [buscarMensagens]);
 
+  const scrollToBottom = (instant = false) => {
+    bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
+  };
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mensagens]);
+    if (loading) return;
+
+    const newCount = mensagens.length;
+    const prevCount = prevMsgCountRef.current;
+    prevMsgCountRef.current = newCount;
+
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      scrollToBottom(true);
+      return;
+    }
+
+    // só rola se chegou mensagem nova E o usuário está no final
+    if (newCount > prevCount && isAtBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [mensagens, loading]);
 
   useEffect(() => {
     return () => {
@@ -332,6 +355,7 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
         body: JSON.stringify({ lead_id: Number(leadId), loja_id: lojaId, tipo_contato: "whatsapp", observacao }),
       }).catch(() => {});
 
+      isAtBottomRef.current = true;
       await buscarMensagens();
       textareaRef.current?.focus();
     } catch {
@@ -440,6 +464,12 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
 
       {/* Área de mensagens com fundo característico do WhatsApp */}
       <div
+        ref={scrollContainerRef}
+        onScroll={() => {
+          const el = scrollContainerRef.current;
+          if (!el) return;
+          isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
         className="flex-1 overflow-y-auto min-h-[200px] max-h-[420px] px-3 py-2 space-y-0.5"
         style={{
           backgroundColor: "#e5ddd5",

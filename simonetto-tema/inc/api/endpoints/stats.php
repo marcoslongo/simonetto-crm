@@ -90,6 +90,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_administrator',
   ));
 
+  // Conversão agrupada por etiqueta
+  register_rest_route('api/v1', '/stats/conversao-por-etiqueta', array(
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_stats_conversao_por_etiqueta',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ));
+
   // Monitor de capacidade: active_leads por loja em uma única query
   register_rest_route('api/v1', '/stats/capacidade-rede', array(
     'methods'             => 'GET',
@@ -268,4 +275,23 @@ function mytheme_api_stats_capacidade_rede(WP_REST_Request $request): WP_REST_Re
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $data = Stats_Handler::capacidade_rede($exclude_proprio);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
+}
+
+/**
+ * GET /api/v1/stats/conversao-por-etiqueta
+ * Taxa de conversão agrupada por etiqueta do lead.
+ * Parâmetros: loja_ids, from, to
+ */
+function mytheme_api_stats_conversao_por_etiqueta(WP_REST_Request $request): WP_REST_Response
+{
+  $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
+  $loja_ids = [];
+  $raw = $request->get_param('loja_ids');
+  if ($raw) {
+    $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
+  }
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+  $data = Stats_Handler::conversao_por_etiqueta($loja_ids, $from, $to, $exclude_proprio);
+  return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }

@@ -6,6 +6,7 @@ import {
   getVnrStats,
   getMultiLojaStatusFunil,
   getConversaoPorLoja,
+  getConversaoPorEtiqueta,
   getFunilPorAtendente,
   getTempoPorEtapa,
   getMultiLojaKanbanColumns,
@@ -15,6 +16,7 @@ import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
 import { ChartFunilKanban } from '@/components/dashboard/chart-funil-kanban'
 import { ChartConversaoPorLoja } from '@/components/dashboard/chart-conversao-por-loja'
+import { ChartConversaoPorEtiqueta } from '@/components/dashboard/chart-conversao-por-etiqueta'
 import { ChartFunilPorAtendente } from '@/components/dashboard/chart-funil-por-atendente'
 import { ChartTempoPorEtapa } from '@/components/dashboard/chart-tempo-por-etapa'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
@@ -76,6 +78,11 @@ async function VnrChart({ lojaIds }: { lojaIds: number[] }) {
 async function ConversaoChart({ lojaIds, from, to }: { lojaIds: number[]; from?: string; to?: string }) {
   const data = await getConversaoPorLoja(lojaIds, from, to)
   return <ChartConversaoPorLoja data={data} />
+}
+
+async function ConversaoEtiquetaChart({ lojaIds, from, to }: { lojaIds: number[]; from?: string; to?: string }) {
+  const data = await getConversaoPorEtiqueta(lojaIds, from, to)
+  return <ChartConversaoPorEtiqueta data={data} />
 }
 
 async function TempoPorEtapaChart({ lojaIds, from, to }: { lojaIds: number[]; from?: string; to?: string }) {
@@ -224,6 +231,9 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
             <ConversaoChart lojaIds={lojaIds} from={from} to={to} />
           </Suspense>
         </div>
+        <Suspense key={`etiqueta-${from}-${to}`} fallback={<ChartSkeleton height="h-64" />}>
+          <ConversaoEtiquetaChart lojaIds={lojaIds} from={from} to={to} />
+        </Suspense>
       </section>
 
       {/* ── Seção 3: Onde está o gargalo? */}
