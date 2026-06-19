@@ -21,6 +21,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true',
   ]);
 
+  // GET /api/v1/lp/{token}/leads — consulta leads da loja via token (público)
+  register_rest_route('api/v1', '/lp/(?P<token>[a-f0-9]{48})/leads', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_lp_get_leads',
+    'permission_callback' => '__return_true',
+  ]);
+
   // GET /api/v1/lojas/{id}/integration — retorna token e snippet (autenticado)
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/integration', [
     'methods'             => 'GET',
@@ -153,6 +160,74 @@ function mytheme_api_generate_loja_token(WP_REST_Request $request)
     'snippet'  => $snippet,
     'mensagem' => 'Token gerado com sucesso.',
   ], 201);
+}
+
+/**
+ * GET /api/v1/lp/{token}/leads
+ *
+ * Retorna leads paginados da loja identificada pelo token.
+ * Parâmetros opcionais: status, from (YYYY-MM-DD), to (YYYY-MM-DD),
+ *                       page (padrão 1), per_page (padrão 50, máx 200)
+ */
+function mytheme_api_lp_get_leads(WP_REST_Request $request): WP_REST_Response
+{
+  $token = sanitize_text_field($request['token']);
+  $loja  = Loja_Handler::get_by_token($token);
+
+  if (!$loja) {
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Token de integração inválido.',
+    ], 401);
+  }
+
+  $loja_id  = (int) $loja->ID;
+  $page     = max(1, (int) ($request->get_param('page')     ?? 1));
+  $per_page = min(200, max(1, (int) ($request->get_param('per_page') ?? 50)));
+
+  $status = sanitize_text_field($request->get_param('status') ?? '');
+  $valid_statuses = ['nao_atendido', 'em_negociacao', 'venda_realizada', 'venda_nao_realizada'];
+  if (!in_array($status, $valid_statuses, true)) $status = '';
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  // Reutiliza Lead_Handler::list() — mesma query usada internamente, testada em produção
+  $result = Lead_Handler::list([
+    'loja_id'  => $loja_id,
+    'page'     => $page,
+    'per_page' => $per_page,
+    'status'   => $status,
+    'from'     => $from,
+    'to'       => $to,
+  ]);
+
+  // Campos públicos expostos externamente
+  $public_fields = [
+    'id', 'nome', 'email', 'telefone', 'status', 'classificacao',
+    'cidade', 'estado', 'interesse', 'expectativa_investimento',
+    'mensagem', 'utm_source', 'utm_medium', 'utm_campaign',
+    'data_criacao',
+  ];
+
+  $data = array_map(function ($lead) use ($public_fields) {
+    $out = array_intersect_key($lead, array_flip($public_fields));
+    $out['etiquetas'] = array_map(
+      fn($e) => ['nome' => $e['nome'], 'cor' => $e['cor']],
+      $lead['etiquetas'] ?? []
+    );
+    return $out;
+  }, $result['leads']);
+
+  return new WP_REST_Response([
+    'success'     => true,
+    'loja'        => $loja->post_title,
+    'total'       => $result['total'],
+    'page'        => $result['page'],
+    'per_page'    => $result['per_page'],
+    'total_pages' => $result['total_pages'],
+    'data'        => $data,
+  ], 200);
 }
 
 /**
