@@ -195,8 +195,10 @@ add_action('admin_init', function () {
 
 // ===============================
 // Migração: adicionar coluna avatar_url à wp_leads
+// Usa 'init' (não 'admin_init') para rodar em qualquer requisição WordPress,
+// incluindo chamadas REST da API — não depende de visita ao painel admin.
 // ===============================
-add_action('admin_init', function () {
+add_action('init', function () {
   global $wpdb;
 
   $option_key = 'simonetto_leads_avatar_url_migration_v1';

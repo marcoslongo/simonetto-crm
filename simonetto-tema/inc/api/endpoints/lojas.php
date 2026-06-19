@@ -188,6 +188,15 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET /api/v1/debug/whatsapp-avatar?phone=55679... — diagnóstico do fetch de avatar (remover após resolver)
+  register_rest_route('api/v1', '/debug/whatsapp-avatar', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_debug_whatsapp_avatar',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
   // GET/POST/DELETE /api/v1/usuarios/me/whatsapp-blocklist — lista de contatos pessoais ignorados
   register_rest_route('api/v1', '/usuarios/me/whatsapp-blocklist', [
     [
@@ -1275,6 +1284,85 @@ function mytheme_get_blocklist_loja_id(int $user_id): ?int
     }
   }
   return null;
+}
+
+/**
+ * GET /api/v1/debug/whatsapp-avatar?phone=55679...
+ * Testa o fetch de avatar do Evolution GO e retorna a resposta bruta para diagnóstico.
+ * REMOVER após resolver o problema.
+ */
+function mytheme_api_debug_whatsapp_avatar(WP_REST_Request $request): WP_REST_Response
+{
+  $user_id  = get_current_user_id();
+  $phone    = sanitize_text_field($request->get_param('phone') ?? '');
+  $evo_url  = get_option('evolution_api_url', '');
+  $evo_key  = get_user_meta($user_id, '_evolution_api_key', true);
+  $evo_inst = get_user_meta($user_id, '_evolution_instance', true);
+
+  $phone_clean = preg_replace('/\D/', '', $phone);
+  if ($phone_clean && !str_starts_with($phone_clean, '55')) {
+    $phone_clean = '55' . $phone_clean;
+  }
+
+  // Verifica se a coluna avatar_url existe
+  global $wpdb;
+  $col_exists = $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'avatar_url'",
+    DB_NAME, $wpdb->prefix . 'leads'
+  ));
+
+  $debug = [
+    'evo_url'      => $evo_url ?: '(vazio)',
+    'evo_key'      => $evo_key ? substr($evo_key, 0, 6) . '...' : '(vazio)',
+    'evo_instance' => $evo_inst ?: '(vazio)',
+    'phone_input'  => $phone,
+    'phone_clean'  => $phone_clean ?: '(vazio)',
+    'coluna_avatar_url_existe' => (int) $col_exists > 0,
+    'api_response' => null,
+    'avatar_url_encontrada' => null,
+  ];
+
+  if ($evo_url && $evo_key && $evo_inst && $phone_clean) {
+    $endpoint = trailingslashit($evo_url) . 'user/avatar';
+    $body_sent = [
+      'instanceId' => $evo_inst,
+      'number'     => $phone_clean,
+      'preview'    => false,
+    ];
+
+    $response = wp_remote_post($endpoint, [
+      'timeout'   => 10,
+      'sslverify' => false,
+      'headers'   => [
+        'apikey'       => $evo_key,
+        'Content-Type' => 'application/json',
+      ],
+      'body' => wp_json_encode($body_sent),
+    ]);
+
+    $debug['endpoint_chamado'] = $endpoint;
+    $debug['body_enviado']     = $body_sent;
+
+    if (is_wp_error($response)) {
+      $debug['api_response'] = ['wp_error' => $response->get_error_message()];
+    } else {
+      $http_code  = wp_remote_retrieve_response_code($response);
+      $raw_body   = wp_remote_retrieve_body($response);
+      $parsed     = json_decode($raw_body, true);
+      $debug['api_response'] = [
+        'http_code'  => $http_code,
+        'body_raw'   => $raw_body,
+        'body_parsed' => $parsed,
+      ];
+      $debug['avatar_url_encontrada'] = $parsed['profilePictureUrl']
+        ?? ($parsed['data']['profilePictureUrl']
+        ?? ($parsed['avatar']
+        ?? ($parsed['url'] ?? null)));
+    }
+  }
+
+  return new WP_REST_Response(['success' => true, 'debug' => $debug], 200);
 }
 
 /**
