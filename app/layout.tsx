@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Toaster } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { PWARegister } from "@/components/pwa-register"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -16,6 +17,13 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Noxus - Lead Ops',
   description: 'Sistema de gestão de leads para múltiplas unidades',
+  manifest: '/manifest.webmanifest',
+  themeColor: '#16255c',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Noxus',
+  },
   icons: {
     icon: [
       { url: '/icon-dark.ico', media: '(prefers-color-scheme: light)' },
@@ -30,8 +38,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-theme="light">
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
+        <PWARegister />
         <Toaster />
         <TooltipProvider>{children}</TooltipProvider>
         <Analytics />
