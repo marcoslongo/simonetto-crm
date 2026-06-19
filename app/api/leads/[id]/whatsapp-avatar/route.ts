@@ -64,7 +64,7 @@ export async function GET(
         number: creds.phone,
         preview: false,
       }),
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(30000),
     })
 
     const rawBody = await avatarRes.text()

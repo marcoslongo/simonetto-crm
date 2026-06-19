@@ -1,6 +1,22 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+
+// Semáforo: limita fetches de avatar a 3 simultâneos para não sobrecarregar Evolution GO
+const avatarQueue: Array<() => void> = []
+let avatarActive = 0
+const AVATAR_CONCURRENCY = 3
+function acquireAvatarSlot(): Promise<void> {
+  return new Promise(resolve => {
+    if (avatarActive < AVATAR_CONCURRENCY) { avatarActive++; resolve() }
+    else avatarQueue.push(() => { avatarActive++; resolve() })
+  })
+}
+function releaseAvatarSlot() {
+  avatarActive--
+  const next = avatarQueue.shift()
+  if (next) next()
+}
 import {
   DndContext,
   DragEndEvent,
@@ -1780,19 +1796,27 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
 
   // Busca avatar lazily quando o card renderiza e não tem foto no banco ainda
   useEffect(() => {
-    console.log(`[kanban-avatar] lead=${lead.id} origem=${lead.origem} cardAvatar=${cardAvatar}`)
     if (cardAvatar || lead.origem !== 'proprio') return
-    console.log(`[kanban-avatar] fetching avatar for lead=${lead.id}`)
-    fetch(`/api/leads/${lead.id}/whatsapp-avatar`)
-      .then(r => r.json())
-      .then((d: { avatarUrl: string | null }) => {
+    let cancelled = false
+    ;(async () => {
+      await acquireAvatarSlot()
+      if (cancelled) { releaseAvatarSlot(); return }
+      try {
+        console.log(`[kanban-avatar] fetching lead=${lead.id}`)
+        const r = await fetch(`/api/leads/${lead.id}/whatsapp-avatar`)
+        const d = await r.json() as { avatarUrl: string | null }
         console.log(`[kanban-avatar] lead=${lead.id} resultado:`, d)
-        if (d.avatarUrl) {
+        if (!cancelled && d.avatarUrl) {
           setCardAvatar(d.avatarUrl)
           onLeadUpdate({ ...lead, avatar_url: d.avatarUrl })
         }
-      })
-      .catch((err) => console.log(`[kanban-avatar] lead=${lead.id} error:`, err))
+      } catch (err) {
+        console.log(`[kanban-avatar] lead=${lead.id} error:`, err)
+      } finally {
+        releaseAvatarSlot()
+      }
+    })()
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id])
 
