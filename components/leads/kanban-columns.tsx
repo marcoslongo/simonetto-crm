@@ -1776,6 +1776,22 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
   })
 
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? [])
+  const [cardAvatar, setCardAvatar] = useState<string | null>(lead.avatar_url ?? null)
+
+  // Busca avatar lazily quando o card renderiza e não tem foto no banco ainda
+  useEffect(() => {
+    if (cardAvatar || lead.origem !== 'proprio') return
+    fetch(`/api/leads/${lead.id}/whatsapp-avatar`)
+      .then(r => r.json())
+      .then((d: { avatarUrl: string | null }) => {
+        if (d.avatarUrl) {
+          setCardAvatar(d.avatarUrl)
+          onLeadUpdate({ ...lead, avatar_url: d.avatarUrl })
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead.id])
 
   const handleEtiquetasUpdate = (updated: Etiqueta[]) => {
     setEtiquetas(updated)
@@ -1905,9 +1921,9 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {lead.avatar_url ? (
+                  {cardAvatar ? (
                     <img
-                      src={lead.avatar_url}
+                      src={cardAvatar}
                       alt={lead.nome}
                       className="h-7 w-7 rounded-full object-cover shrink-0 border border-border"
                     />
