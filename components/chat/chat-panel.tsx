@@ -32,6 +32,7 @@ interface Mensagem {
   wamid: string | null;
   criado_em: string;
   metadata?: MensagemMetadata | null;
+  usuario_nome?: string | null;
 }
 
 interface PendingFile {
@@ -872,6 +873,11 @@ function MessageBubble({ mensagem }: { mensagem: Mensagem }) {
         {!isEnviada && mensagem.metadata?.contact_name && (
           <p className="text-[12px] font-semibold mb-1 text-[#06cf9c]">
             {mensagem.metadata.contact_name}
+          </p>
+        )}
+        {isEnviada && mensagem.usuario_nome && (
+          <p className="text-[11px] font-semibold mb-1 text-[#00a884]/80">
+            {mensagem.usuario_nome}
           </p>
         )}
 

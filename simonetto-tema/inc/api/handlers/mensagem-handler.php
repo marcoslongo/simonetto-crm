@@ -23,9 +23,11 @@ class Mensagem_Handler
     $table = $wpdb->prefix . 'mensagens';
 
     $rows = $wpdb->get_results($wpdb->prepare(
-      "SELECT * FROM {$table}
-       WHERE lead_id = %d
-       ORDER BY criado_em ASC",
+      "SELECT m.*, u.display_name AS usuario_nome
+       FROM {$table} m
+       LEFT JOIN {$wpdb->users} u ON u.ID = m.usuario_id
+       WHERE m.lead_id = %d
+       ORDER BY m.criado_em ASC",
       $lead_id
     ), ARRAY_A);
 
@@ -248,6 +250,7 @@ class Mensagem_Handler
       'lead_id'       => intval($row['lead_id']),
       'loja_id'       => $row['loja_id'] ? intval($row['loja_id']) : null,
       'usuario_id'    => $row['usuario_id'] ? intval($row['usuario_id']) : null,
+      'usuario_nome'  => $row['usuario_nome'] ?? null,
       'conteudo'      => $row['conteudo'],
       'direcao'       => $row['direcao'],
       'canal'         => $row['canal'],
