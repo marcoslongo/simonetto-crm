@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Sistema de gestão de leads para múltiplas unidades',
     start_url: '/',
     display: 'standalone',
-    orientation: 'portrait',
+    orientation: 'any',
     background_color: '#16255c',
     theme_color: '#16255c',
     icons: [
