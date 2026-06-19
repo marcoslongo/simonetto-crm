@@ -414,22 +414,38 @@ function mytheme_fetch_whatsapp_avatar(string $evo_url, string $evo_key, string 
     $phone_clean = '55' . $phone_clean;
   }
 
-  $url = trailingslashit($evo_url) . 'chat/profilePicture/' . rawurlencode($instance_id) . '?number=' . $phone_clean;
-
-  $response = wp_remote_get($url, [
+  // Evolution GO: POST /user/avatar  { instanceId, number, preview }
+  $response = wp_remote_post(trailingslashit($evo_url) . 'user/avatar', [
     'timeout'   => 8,
     'sslverify' => false,
-    'headers'   => ['apikey' => $evo_key],
+    'headers'   => [
+      'apikey'       => $evo_key,
+      'Content-Type' => 'application/json',
+    ],
+    'body' => wp_json_encode([
+      'instanceId' => $instance_id,
+      'number'     => $phone_clean,
+      'preview'    => false,
+    ]),
   ]);
 
-  if (is_wp_error($response)) return null;
+  if (is_wp_error($response)) {
+    error_log('[AVATAR] wp_error: ' . $response->get_error_message());
+    return null;
+  }
 
   $code = wp_remote_retrieve_response_code($response);
-  if ($code !== 200) return null;
+  $raw  = wp_remote_retrieve_body($response);
+  if ($code !== 200) {
+    error_log('[AVATAR] http=' . $code . ' body=' . substr($raw, 0, 200));
+    return null;
+  }
 
-  $body = json_decode(wp_remote_retrieve_body($response), true);
-  // Evolution GO pode retornar { profilePictureUrl: "..." } ou { data: { profilePictureUrl: "..." } }
-  return $body['profilePictureUrl'] ?? ($body['data']['profilePictureUrl'] ?? null);
+  $body = json_decode($raw, true);
+  return $body['profilePictureUrl']
+      ?? ($body['data']['profilePictureUrl']
+      ?? ($body['avatar']
+      ?? ($body['url'] ?? null)));
 }
 
 // -------------------------------------------------------------------------
