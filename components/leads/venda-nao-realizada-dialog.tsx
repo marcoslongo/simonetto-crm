@@ -25,6 +25,7 @@ const MOTIVOS = [
   { key: "motivo_produto_inadequado", label: "Produto não atendeu a necessidade" },
   { key: "motivo_contato_perdido",    label: "Contato perdido / cliente sumiu" },
   { key: "motivo_atendimento",        label: "Problema no atendimento" },
+  { key: "motivo_desqualificado",     label: "Lead Desqualificado ou Sem Fundamento" },
   { key: "motivo_outro",              label: "Outro motivo" },
 ] as const
 

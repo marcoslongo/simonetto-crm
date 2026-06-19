@@ -1817,6 +1817,7 @@ function mytheme_api_leads_vnr_stats(WP_REST_Request $request)
     'motivo_produto_inadequado' => 'Produto não atendeu a necessidade',
     'motivo_contato_perdido'    => 'Contato perdido / cliente sumiu',
     'motivo_atendimento'        => 'Problema no atendimento',
+    'motivo_desqualificado'     => 'Lead Desqualificado ou Sem Fundamento',
     'motivo_outro'              => 'Outro motivo',
   ];
 
@@ -1899,7 +1900,7 @@ function mytheme_api_get_venda_nao_realizada(WP_REST_Request $request)
     'motivo_preco', 'motivo_concorrencia', 'motivo_prazo_entrega',
     'motivo_pagamento', 'motivo_financiamento', 'motivo_obra_pendente',
     'motivo_indecisao', 'motivo_produto_inadequado', 'motivo_contato_perdido',
-    'motivo_atendimento', 'motivo_outro',
+    'motivo_atendimento', 'motivo_desqualificado', 'motivo_outro',
   ];
 
   foreach ($bool_fields as $field) {
@@ -1961,7 +1962,7 @@ function mytheme_api_save_venda_nao_realizada(WP_REST_Request $request)
     'motivo_preco', 'motivo_concorrencia', 'motivo_prazo_entrega',
     'motivo_pagamento', 'motivo_financiamento', 'motivo_obra_pendente',
     'motivo_indecisao', 'motivo_produto_inadequado', 'motivo_contato_perdido',
-    'motivo_atendimento', 'motivo_outro',
+    'motivo_atendimento', 'motivo_desqualificado', 'motivo_outro',
   ];
 
   $data = [

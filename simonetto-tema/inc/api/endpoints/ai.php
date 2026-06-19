@@ -300,6 +300,7 @@ function mytheme_ai_get_contexto(WP_REST_Request $request): WP_REST_Response
       SUM(v.motivo_produto_inadequado) AS produto_inadequado,
       SUM(v.motivo_contato_perdido)    AS contato_perdido,
       SUM(v.motivo_atendimento)        AS atendimento,
+      SUM(v.motivo_desqualificado)     AS desqualificado,
       SUM(v.motivo_outro)              AS outro,
       COUNT(*)                         AS total
     FROM ($vnr_query) AS v
@@ -316,6 +317,7 @@ function mytheme_ai_get_contexto(WP_REST_Request $request): WP_REST_Response
     'produto_inadequado' => 'Produto inadequado',
     'contato_perdido'    => 'Contato perdido',
     'atendimento'        => 'Problema no atendimento',
+    'desqualificado'     => 'Lead Desqualificado ou Sem Fundamento',
     'outro'              => 'Outro motivo',
   ];
   $motivos_vnr = [];

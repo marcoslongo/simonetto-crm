@@ -193,6 +193,35 @@ add_action('admin_init', function () {
   update_option($option_key, true);
 });
 
+// ===============================
+// Migração: adicionar coluna motivo_desqualificado à wp_lead_venda_nao_realizada
+// ===============================
+add_action('admin_init', function () {
+  global $wpdb;
+
+  $option_key = 'simonetto_vnr_desqualificado_migration_v1';
+  if (get_option($option_key)) {
+    return;
+  }
+
+  $table = $wpdb->prefix . 'lead_venda_nao_realizada';
+
+  $col_exists = $wpdb->get_results($wpdb->prepare(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'motivo_desqualificado'",
+    DB_NAME, $table
+  ));
+
+  if (empty($col_exists)) {
+    $wpdb->query(
+      "ALTER TABLE `{$table}`
+       ADD COLUMN `motivo_desqualificado` TINYINT(1) NOT NULL DEFAULT 0
+       AFTER `motivo_atendimento`"
+    );
+  }
+
+  update_option($option_key, true);
+});
 
 // ===============================
 // Remover o post type padrão "post"
