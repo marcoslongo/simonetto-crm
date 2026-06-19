@@ -80,6 +80,7 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
   const [isStickerOpen, setIsStickerOpen] = useState(false);
   const [isBlockOpen, setIsBlockOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
+  const [resolvedAvatar, setResolvedAvatar] = useState<string | null>(avatarUrl ?? null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
@@ -137,6 +138,16 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
     const interval = setInterval(buscarMensagens, 5000);
     return () => clearInterval(interval);
   }, [buscarMensagens]);
+
+  // Busca avatar do WhatsApp via Next.js (que chama Evolution GO diretamente)
+  // só quando não veio do banco ainda
+  useEffect(() => {
+    if (avatarUrl) { setResolvedAvatar(avatarUrl); return; }
+    fetch(`/api/leads/${leadId}/whatsapp-avatar`)
+      .then(r => r.json())
+      .then((d: { avatarUrl: string | null }) => { if (d.avatarUrl) setResolvedAvatar(d.avatarUrl); })
+      .catch(() => {});
+  }, [leadId, avatarUrl]);
 
   const scrollToBottom = (instant = false) => {
     bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
@@ -401,8 +412,8 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
       {/* Header estilo WhatsApp */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-[#075e54] dark:bg-[#1f2c34] shrink-0">
         <div className="h-9 w-9 rounded-full shrink-0 overflow-hidden bg-white/20 flex items-center justify-center">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={leadNome ?? "Contato"} className="h-full w-full object-cover" />
+          {resolvedAvatar ? (
+            <img src={resolvedAvatar} alt={leadNome ?? "Contato"} className="h-full w-full object-cover" />
           ) : (
             <FaWhatsapp className="h-[18px] w-[18px] text-white" />
           )}
