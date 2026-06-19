@@ -193,7 +193,7 @@ add_action('rest_api_init', function () {
     [
       'methods'             => 'GET',
       'callback'            => 'mytheme_api_debug_whatsapp_avatar',
-      'permission_callback' => fn() => current_user_can('read'),
+      'permission_callback' => '__return_true',
     ],
   ]);
 
@@ -1293,7 +1293,8 @@ function mytheme_get_blocklist_loja_id(int $user_id): ?int
  */
 function mytheme_api_debug_whatsapp_avatar(WP_REST_Request $request): WP_REST_Response
 {
-  $user_id  = get_current_user_id();
+  // Aceita user_id como param para debug sem autenticação
+  $user_id  = (int) ($request->get_param('user_id') ?? get_current_user_id());
   $phone    = sanitize_text_field($request->get_param('phone') ?? '');
   $evo_url  = get_option('evolution_api_url', '');
   $evo_key  = get_user_meta($user_id, '_evolution_api_key', true);
