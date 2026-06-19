@@ -226,7 +226,7 @@ add_action('rest_api_init', function () {
     [
       'methods'             => 'GET',
       'callback'            => 'mytheme_api_get_loja_leads_config',
-      'permission_callback' => 'mytheme_api_is_gerente',
+      'permission_callback' => 'mytheme_api_is_authenticated',
     ],
     [
       'methods'             => 'POST',
@@ -1403,11 +1403,15 @@ function mytheme_api_get_loja_leads_config(WP_REST_Request $request): WP_REST_Re
 
   $permitir_edicao = (bool) get_post_meta($loja_id, '_permitir_edicao_lead_atendente', true);
 
+  $kanban_card_campos_raw = get_post_meta($loja_id, '_kanban_card_campos', true);
+  $kanban_card_campos     = $kanban_card_campos_raw ? json_decode($kanban_card_campos_raw, true) : null;
+
   return new WP_REST_Response([
     'success'                          => true,
     'ocultar_leads_nao_atribuidos'     => $ocultar,
     'auto_atribuir_responsavel'        => $auto_atribuir,
     'permitir_edicao_lead_atendente'   => $permitir_edicao,
+    'kanban_card_campos'               => $kanban_card_campos,
   ], 200);
 }
 
@@ -1444,11 +1448,27 @@ function mytheme_api_save_loja_leads_config(WP_REST_Request $request): WP_REST_R
     $permitir_edicao = (bool) get_post_meta($loja_id, '_permitir_edicao_lead_atendente', true);
   }
 
+  if (isset($body['kanban_card_campos']) && is_array($body['kanban_card_campos'])) {
+    $allowed = ['telefone', 'email', 'cidade', 'mensagem', 'expectativa_investimento'];
+    $campos  = [];
+    foreach ($allowed as $key) {
+      if (isset($body['kanban_card_campos'][$key])) {
+        $campos[$key] = (bool) $body['kanban_card_campos'][$key];
+      }
+    }
+    update_post_meta($loja_id, '_kanban_card_campos', wp_json_encode($campos));
+    $kanban_card_campos = $campos;
+  } else {
+    $raw                = get_post_meta($loja_id, '_kanban_card_campos', true);
+    $kanban_card_campos = $raw ? json_decode($raw, true) : null;
+  }
+
   return new WP_REST_Response([
     'success'                        => true,
     'ocultar_leads_nao_atribuidos'   => $ocultar,
     'auto_atribuir_responsavel'      => $auto_atribuir,
     'permitir_edicao_lead_atendente' => $permitir_edicao,
+    'kanban_card_campos'             => $kanban_card_campos,
   ], 200);
 }
 
