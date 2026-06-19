@@ -14,12 +14,12 @@ async function getAuthToken(): Promise<string | null> {
 // (WordPress não consegue alcançar o Evolution GO por restrições de rede no servidor)
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ leadId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession()
   if (!session) return NextResponse.json({ avatarUrl: null }, { status: 401 })
 
-  const { leadId } = await params
+  const { id: leadId } = await params
   const token = await getAuthToken()
 
   // 1. Busca credenciais do lead no WordPress
