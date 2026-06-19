@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isSupervisor, isGerente as checkIsGerente } from '@/lib/auth'
 import {
   getMultiLojaStats,
   getMultiLojaStatusFunil,
@@ -32,9 +32,9 @@ export const metadata = {
   description: 'Visão geral da sua unidade',
 }
 
-async function StatsCardsWrapper({ lojaIds }: { lojaIds: number[] }) {
+async function StatsCardsWrapper({ lojaIds, sublabel }: { lojaIds: number[]; sublabel?: string }) {
   const stats = await getMultiLojaStats(lojaIds)
-  return <StatsCards stats={stats} />
+  return <StatsCards stats={stats} sublabel={sublabel} />
 }
 
 async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
@@ -302,7 +302,12 @@ export default async function CrmDashboardPage() {
 
   const isLoja    = user.role === 'loja'
   const lojaIds   = isLoja ? user.loja_ids : []
-  const isGerente = user.is_gerente
+  const isGerente = checkIsGerente(user)
+  const isSupv    = isSupervisor(user)
+
+  // Quando o perfil não permite ver não-atribuídos, stats vêm filtradas pelo backend
+  const verNaoAtribuidos = user.perfil_acesso?.ver_leads_nao_atribuidos ?? user.is_gerente ?? false
+  const statsAtribuidosApenas = isLoja && !isSupv && !verNaoAtribuidos
 
   const lojasVinculadas =
     isLoja && lojaIds.length > 1
@@ -368,7 +373,10 @@ export default async function CrmDashboardPage() {
 
       {/* Stats gerais da loja */}
       <Suspense fallback={<StatsCardsSkeleton />}>
-        <StatsCardsWrapper lojaIds={lojaIds} />
+        <StatsCardsWrapper
+          lojaIds={lojaIds}
+          sublabel={statsAtribuidosApenas ? 'Atribuídos a mim' : 'Todos os leads'}
+        />
       </Suspense>
 
       {/* Status do Funil */}

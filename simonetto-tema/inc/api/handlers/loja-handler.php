@@ -191,12 +191,32 @@ class Loja_Handler
     foreach ($users as $user) {
       $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
       $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
+
+      // Derivar nível efetivo do perfil de acesso (se configurado)
+      $perfil_id     = get_field('perfil_acesso_id', 'user_' . $user->ID);
+      $nivel_efetivo = $is_gerente ? 'gerente' : 'atendente';
+      if ($perfil_id) {
+        $nivel_efetivo = get_field('nivel_atribuicao', intval($perfil_id)) ?: $nivel_efetivo;
+      }
+
+      // Supervisores gerenciam a rede toda — não aparecem na lista de uma loja específica
+      if ($nivel_efetivo === 'supervisor') continue;
+
+      // Loja primária do usuário (primeira da lista)
+      $raw_loja       = get_field('loja_id', 'user_' . $user->ID);
+      $user_loja_ids  = is_array($raw_loja)
+        ? array_values(array_filter(array_map('intval', $raw_loja)))
+        : ($raw_loja ? [intval($raw_loja)] : []);
+      $loja_primaria  = $user_loja_ids[0] ?? null;
+
       $resultado[] = [
-        'id'         => (int) $user->ID,
-        'nome'       => $user->display_name,
-        'email'      => $user->user_email,
-        'avatar_url' => $avatar_url,
-        'is_gerente' => $is_gerente,
+        'id'               => (int) $user->ID,
+        'nome'             => $user->display_name,
+        'email'            => $user->user_email,
+        'avatar_url'       => $avatar_url,
+        'is_gerente'       => $is_gerente,
+        'nivel_atribuicao' => $nivel_efetivo,
+        'loja_primaria_id' => $loja_primaria,
       ];
     }
 
@@ -206,11 +226,12 @@ class Loja_Handler
   /**
    * Estatísticas gerais da loja
    */
-  public static function get_stats($loja_id, bool $exclude_proprio = false)
+  public static function get_stats($loja_id, bool $exclude_proprio = false, int $responsavel_id = 0)
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
     $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+    $resp_filter    = $responsavel_id > 0 ? " AND responsavel_id = {$responsavel_id}" : '';
 
     $stats = $wpdb->get_row($wpdb->prepare("
       SELECT
@@ -224,7 +245,7 @@ class Loja_Handler
         SUM(CASE WHEN data_criacao >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
                   AND data_criacao < DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as mes_anterior
       FROM {$table_leads}
-      WHERE loja_id = %d{$proprio_filter}
+      WHERE loja_id = %d{$proprio_filter}{$resp_filter}
     ", $loja_id));
 
     return array(

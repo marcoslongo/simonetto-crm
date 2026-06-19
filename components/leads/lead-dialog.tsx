@@ -48,6 +48,7 @@ import {
   CalendarClock,
   History,
   Paperclip,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Lead, VendaNaoRealizada, VendaRealizada, FormaPagamento, Etiqueta } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
@@ -225,6 +226,41 @@ export function LeadDetailsModal({
   const [currentLojaNome, setCurrentLojaNome] = useState(lead.loja_nome ?? "");
   const [savingLoja, setSavingLoja] = useState(false);
 
+  const [transferindoLoja, setTransferindoLoja] = useState(false);
+  const [selectedTransferLojaId, setSelectedTransferLojaId] = useState<string>('');
+  const [savingTransfer, setSavingTransfer] = useState(false);
+
+  const handleTransferirLoja = async () => {
+    if (!selectedTransferLojaId) return;
+    setSavingTransfer(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/transferir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loja_id: Number(selectedTransferLojaId) }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const { toast } = await import('sonner');
+        toast.error(data.mensagem ?? 'Erro ao transferir lead.');
+        return;
+      }
+      const lojaDestino = lojas.find(l => String(l.id) === selectedTransferLojaId);
+      setCurrentLojaNome(lojaDestino?.nome ?? '');
+      setCurrentResponsavelNome('');
+      setTransferindoLoja(false);
+      setSelectedTransferLojaId('');
+      const { toast } = await import('sonner');
+      toast.success(`Lead transferido para ${lojaDestino?.nome ?? 'nova loja'}.`);
+      if (onLeadRemoved) onLeadRemoved(); // atualiza o kanban/tabela
+    } catch {
+      const { toast } = await import('sonner');
+      toast.error('Erro de conexão.');
+    } finally {
+      setSavingTransfer(false);
+    }
+  };
+
   const [editingResponsavel, setEditingResponsavel] = useState(false);
   const [selectedResponsavelId, setSelectedResponsavelId] = useState<string>(
     lead.responsavel_id ? String(lead.responsavel_id) : "none"
@@ -233,7 +269,7 @@ export function LeadDetailsModal({
     lead.responsavel_nome ?? ""
   );
   const [savingResponsavel, setSavingResponsavel] = useState(false);
-  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string; is_gerente: boolean }[]>([]);
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; email: string; is_gerente: boolean; nivel_atribuicao?: string }[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
 
   const [vendaNaoRealizada, setVendaNaoRealizada] = useState<VendaNaoRealizada | null>(null);
@@ -390,23 +426,33 @@ export function LeadDetailsModal({
 
   const handleEditResponsavel = async () => {
     setEditingResponsavel(true);
-    if (!lead.loja_id) return;
     setLoadingUsuarios(true);
     try {
-      const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`);
-      const data = await res.json();
-      if (res.ok) {
-        let lista = data.usuarios || [];
-        // Supervisor vê só gerentes; gerente de loja vê só atendentes
+      type UsuarioRaw = { id: number; nome: string; email: string; is_gerente: boolean; nivel_atribuicao?: string; loja_primaria_id?: number };
+
+      let lista: UsuarioRaw[] = [];
+
+      if (isSupervisor && lojas.length > 0) {
+        // Supervisor: busca gerentes de TODAS as lojas em paralelo e mescla sem duplicatas
+        const respostas = await Promise.all(
+          lojas.map(l => fetch(`/api/lojas/${l.id}/usuarios`).then(r => r.json()))
+        );
+        const todos = respostas.flatMap((d: { usuarios?: UsuarioRaw[] }) => d.usuarios ?? []);
+        const seen = new Set<number>();
+        todos.forEach(u => { if (!seen.has(u.id)) { seen.add(u.id); lista.push(u); } });
+        // Filtra apenas gerentes (não supervisores, não atendentes)
+        lista = lista.filter(u => u.nivel_atribuicao === 'gerente' || (!u.nivel_atribuicao && u.is_gerente));
+      } else if (lead.loja_id) {
+        // Gerente de loja: busca atendentes da loja do lead
+        const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`);
+        const data = await res.json();
+        lista = data.usuarios ?? [];
         if (!isAdmin) {
-          if (isSupervisor) {
-            lista = lista.filter((u: { is_gerente: boolean }) => u.is_gerente);
-          } else if (isGerente) {
-            lista = lista.filter((u: { is_gerente: boolean }) => !u.is_gerente);
-          }
+          lista = lista.filter(u => u.nivel_atribuicao === 'atendente' || (!u.nivel_atribuicao && !u.is_gerente));
         }
-        setUsuarios(lista);
       }
+
+      setUsuarios(lista);
     } catch {
       toast.error("Erro ao carregar usuários");
     } finally {
@@ -435,8 +481,15 @@ export function LeadDetailsModal({
         ? usuarios.find((u) => u.id === responsavelId)
         : null;
       setCurrentResponsavelNome(novoResponsavel?.nome ?? "");
+
+      // Se o responsável é gerente, o backend muda a loja automaticamente — atualiza o display
+      if (novoResponsavel && (novoResponsavel.nivel_atribuicao === 'gerente' || (!novoResponsavel.nivel_atribuicao && novoResponsavel.is_gerente))) {
+        const lojaDestino = lojas.find(l => Number(l.id) === novoResponsavel.loja_primaria_id);
+        if (lojaDestino) setCurrentLojaNome(lojaDestino.nome);
+      }
+
       setEditingResponsavel(false);
-      toast.success("Atendente atualizado com sucesso");
+      toast.success(isSupervisor ? "Gerente atribuído com sucesso" : "Atendente atualizado com sucesso");
       router.refresh();
     } catch {
       toast.error("Erro ao atualizar atendente");
@@ -928,7 +981,7 @@ export function LeadDetailsModal({
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <p className="text-sm font-semibold">
-                          Atendente
+                          {isSupervisor ? "Gerente responsável" : "Atendente"}
                         </p>
                       </div>
                       {lead.loja_id && canEdit && !editingResponsavel && (
@@ -998,6 +1051,83 @@ export function LeadDetailsModal({
                       </p>
                     )}
                   </div>
+
+                  {/* Transferir Loja — apenas supervisor */}
+                  {isSupervisor && lojas.length > 1 && (
+                    <div className="rounded-xl border border-border bg-card p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                            <Store className="h-4 w-4 text-primary" />
+                          </div>
+                          <p className="text-sm font-semibold">Loja do lead</p>
+                        </div>
+                        {!transferindoLoja && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => { setTransferindoLoja(true); setSelectedTransferLojaId(''); }}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"
+                              >
+                                <ArrowLeftRight className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Transferir para outra loja</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+
+                      {transferindoLoja ? (
+                        <div className="space-y-3">
+                          <Select
+                            value={selectedTransferLojaId}
+                            onValueChange={setSelectedTransferLojaId}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione a loja destino…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lojas
+                                .filter(l => String(l.id) !== String(lead.loja_id))
+                                .map(l => (
+                                  <SelectItem key={l.id} value={String(l.id)}>
+                                    {l.nome}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            O responsável atual será removido ao transferir.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleTransferirLoja}
+                              disabled={savingTransfer || !selectedTransferLojaId}
+                              className="gap-1.5 flex-1"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              {savingTransfer ? 'Transferindo…' : 'Confirmar'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setTransferindoLoja(false); setSelectedTransferLojaId(''); }}
+                              disabled={savingTransfer}
+                              className="gap-1.5"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-base font-medium text-card-foreground">
+                          {currentLojaNome || '—'}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Etiquetas */}
                   <div className="rounded-xl border border-border bg-card p-5 md:col-span-2">

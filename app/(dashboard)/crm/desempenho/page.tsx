@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireGerente } from '@/lib/auth'
+import { requireGerente, isSupervisor } from '@/lib/auth'
 import {
   getMultiLojaLeads30Days,
   getMultiLojaLeads12Months,
@@ -11,6 +11,7 @@ import {
   getTempoPorEtapa,
   getMultiLojaKanbanColumns,
 } from '@/lib/api-loja'
+import { getLojasServer } from '@/lib/server-lojas-service'
 import { ChartLeads12Months } from '@/components/dashboard/chart-leads-12-months'
 import { ChartLeads30Days } from '@/components/lojas/chart-line-30-days'
 import { ChartVnrMotivos } from '@/components/dashboard/chart-vnr-motivos'
@@ -21,7 +22,7 @@ import { ChartFunilPorAtendente } from '@/components/dashboard/chart-funil-por-a
 import { ChartTempoPorEtapa } from '@/components/dashboard/chart-tempo-por-etapa'
 import { DateFilterClient } from '@/components/ui/date-filter-client'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, BarChart2, TrendingDown, TrendingUp, Zap, CalendarDays } from 'lucide-react'
+import { AlertTriangle, BarChart2, TrendingDown, TrendingUp, Zap, CalendarDays, Store, Building2 } from 'lucide-react'
 
 export const metadata = {
   title: 'Desempenho | Noxus - Lead Ops',
@@ -172,13 +173,56 @@ async function InsightsBlock({ lojaIds, from, to }: { lojaIds: number[]; from?: 
   )
 }
 
+// ─── Escopo de dados (banner contextual) ──────────────────────────────────────
+
+async function EscopoBanner({
+  lojaIds,
+  isSupv,
+}: {
+  lojaIds: number[]
+  isSupv: boolean
+}) {
+  let lojaNames: string[] = []
+  try {
+    const lojas = await getLojasServer()
+    lojaNames = lojaIds
+      .map(id => lojas.find(l => String(l.id) === String(id))?.nome)
+      .filter(Boolean) as string[]
+  } catch {
+    lojaNames = lojaIds.map(id => `Loja ${id}`)
+  }
+
+  if (isSupv) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-[#16255c]/20 bg-[#16255c]/5 px-4 py-2.5">
+        <Building2 className="h-4 w-4 text-[#16255c] shrink-0" />
+        <p className="text-sm text-[#16255c] font-medium">
+          Supervisor — visualizando {lojaNames.length} loja{lojaNames.length !== 1 ? 's' : ''}:&nbsp;
+          <span className="font-normal">{lojaNames.join(', ')}</span>
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+      <Store className="h-4 w-4 text-slate-500 shrink-0" />
+      <p className="text-sm text-slate-600 font-medium">
+        Gerente de Loja —&nbsp;
+        <span className="font-normal">{lojaNames[0] ?? `Loja ${lojaIds[0]}`}</span>
+      </p>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DesempenhoPage({ searchParams }: DesempenhoPageProps) {
-  const user = await requireGerente()
+  const user    = await requireGerente()
   const { from, to } = await searchParams
   const isLoja  = user.role === 'loja'
   const lojaIds = isLoja ? user.loja_ids : []
+  const isSupv  = isSupervisor(user)
   const isFiltered = !!(from && to)
 
   return (
@@ -186,7 +230,11 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-[#16255c]">Desempenho</h2>
-          <p className="text-muted-foreground mt-1">Análise guiada do funil de vendas da sua unidade</p>
+          <p className="text-muted-foreground mt-1">
+            {isSupv
+              ? 'Visão consolidada da sua rede de lojas'
+              : 'Análise do funil de vendas da sua unidade'}
+          </p>
         </div>
         <div className="shrink-0">
           <Suspense fallback={null}>
@@ -194,6 +242,13 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
           </Suspense>
         </div>
       </div>
+
+      {/* Contexto de escopo */}
+      {isLoja && lojaIds.length > 0 && (
+        <Suspense fallback={null}>
+          <EscopoBanner lojaIds={lojaIds} isSupv={isSupv} />
+        </Suspense>
+      )}
 
       {isFiltered && (
         <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
@@ -223,13 +278,16 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
       {/* ── Seção 2: Por que aconteceu? */}
       <section className="space-y-4">
         <SectionHeader step="2" title="Por que aconteceu?" description="Causas de perda, origens e desempenho por unidade" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className={`grid grid-cols-1 gap-5 ${isSupv ? 'md:grid-cols-2' : ''}`}>
           <Suspense fallback={<ChartSkeleton />}>
             <VnrChart lojaIds={lojaIds} />
           </Suspense>
-          <Suspense key={`conversao-${from}-${to}`} fallback={<ChartSkeleton />}>
-            <ConversaoChart lojaIds={lojaIds} from={from} to={to} />
-          </Suspense>
+          {/* Comparativo por loja: só faz sentido para supervisor (múltiplas lojas) */}
+          {isSupv && (
+            <Suspense key={`conversao-${from}-${to}`} fallback={<ChartSkeleton />}>
+              <ConversaoChart lojaIds={lojaIds} from={from} to={to} />
+            </Suspense>
+          )}
         </div>
         <Suspense key={`etiqueta-${from}-${to}`} fallback={<ChartSkeleton height="h-64" />}>
           <ConversaoEtiquetaChart lojaIds={lojaIds} from={from} to={to} />
@@ -238,7 +296,7 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
 
       {/* ── Seção 3: Onde está o gargalo? */}
       <section className="space-y-4">
-        <SectionHeader step="3" title="Onde está o gargalo?" description="Tempo por etapa, SLA e desempenho individual da equipe" />
+        <SectionHeader step="3" title="Onde está o gargalo?" description="Tempo por etapa e desempenho individual da equipe" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Suspense key={`tempo-${from}-${to}`} fallback={<ChartSkeleton />}>
             <TempoPorEtapaChart lojaIds={lojaIds} from={from} to={to} />

@@ -13,6 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, RefreshCw, Search, Store, UserCircle, ShieldCheck, UserPlus, Eye, EyeOff, Copy, Shuffle } from 'lucide-react'
 import { toast } from 'sonner'
 
+interface PerfilAcesso {
+  id: number
+  nome: string
+  ver_leads_nao_atribuidos: boolean
+  pode_atribuir_leads: boolean
+  nivel_atribuicao: 'supervisor' | 'gerente' | 'atendente'
+  acesso_multiplas_lojas: boolean
+}
+
 interface Usuario {
   id: number
   nome: string
@@ -20,6 +29,7 @@ interface Usuario {
   role: string
   loja_ids: number[]
   is_gerente: boolean
+  perfil_acesso_id?: number | null
 }
 
 interface Loja {
@@ -36,6 +46,7 @@ interface DialogState {
 export function UsuariosLojasConfig() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [lojas, setLojas] = useState<Loja[]>([])
+  const [perfis, setPerfis] = useState<PerfilAcesso[]>([])
   const [filtered, setFiltered] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,6 +54,7 @@ export function UsuariosLojasConfig() {
 
   const [selectedLojasIds, setSelectedLojasIds] = useState<number[]>([])
   const [isGerente, setIsGerente] = useState(false)
+  const [selectedPerfilId, setSelectedPerfilId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [lojaSearch, setLojaSearch] = useState('')
 
@@ -114,9 +126,10 @@ export function UsuariosLojasConfig() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [usuariosRes, lojasRes] = await Promise.all([
+      const [usuariosRes, lojasRes, perfisRes] = await Promise.all([
         fetch('/api/admin/usuarios'),
         fetch('/api/lojas'),
+        fetch('/api/admin/perfis-acesso'),
       ])
 
       if (usuariosRes.status === 401) {
@@ -126,10 +139,15 @@ export function UsuariosLojasConfig() {
 
       const usuariosData = await usuariosRes.json()
       const lojasData = await lojasRes.json()
+      const perfisData = await perfisRes.json()
 
       if (usuariosData.success) {
         setUsuarios(usuariosData.usuarios)
         setFiltered(usuariosData.usuarios)
+      }
+
+      if (perfisData.success) {
+        setPerfis(perfisData.perfis ?? [])
       }
 
       const lojasArray: Loja[] = Array.isArray(lojasData)
@@ -162,12 +180,14 @@ export function UsuariosLojasConfig() {
     setDialog({ open: true, usuario })
     setSelectedLojasIds(usuario.loja_ids ?? [])
     setIsGerente(usuario.is_gerente ?? false)
+    setSelectedPerfilId(usuario.perfil_acesso_id ?? null)
   }
 
   const closeDialog = () => {
     setDialog({ open: false, usuario: null })
     setSelectedLojasIds([])
     setIsGerente(false)
+    setSelectedPerfilId(null)
     setLojaSearch('')
   }
 
@@ -186,7 +206,7 @@ export function UsuariosLojasConfig() {
       const res = await fetch(`/api/admin/usuarios/${dialog.usuario.id}/lojas-config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loja_ids: selectedLojasIds, is_gerente: isGerente }),
+        body: JSON.stringify({ loja_ids: selectedLojasIds, is_gerente: isGerente, perfil_acesso_id: selectedPerfilId }),
       })
       if (res.status === 401) { window.location.href = '/login'; return }
       const data = await res.json()
@@ -198,7 +218,7 @@ export function UsuariosLojasConfig() {
       const uid = dialog.usuario.id
       setUsuarios(prev =>
         prev.map(u =>
-          u.id === uid ? { ...u, loja_ids: selectedLojasIds, is_gerente: isGerente } : u
+          u.id === uid ? { ...u, loja_ids: selectedLojasIds, is_gerente: isGerente, perfil_acesso_id: selectedPerfilId } : u
         )
       )
       closeDialog()
@@ -245,7 +265,7 @@ export function UsuariosLojasConfig() {
             <tr className="border-b bg-slate-50 text-left">
               <th className="px-4 py-3 font-semibold text-slate-600">Usuário</th>
               <th className="px-4 py-3 font-semibold text-slate-600 hidden md:table-cell">Lojas atribuídas</th>
-              <th className="px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">Gerente</th>
+              <th className="px-4 py-3 font-semibold text-slate-600 hidden sm:table-cell">Perfil</th>
               <th className="px-4 py-3 font-semibold text-slate-600 text-right">Ação</th>
             </tr>
           </thead>
@@ -294,14 +314,26 @@ export function UsuariosLojasConfig() {
                   </td>
 
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    {u.is_gerente ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                        <ShieldCheck className="h-3 w-3" />
-                        Gerente
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400">Atendente</span>
-                    )}
+                    {(() => {
+                      const perfil = perfis.find(p => p.id === u.perfil_acesso_id)
+                      if (perfil) {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-[#16255c]/10 text-[#16255c]">
+                            <ShieldCheck className="h-3 w-3" />
+                            {perfil.nome}
+                          </span>
+                        )
+                      }
+                      if (u.is_gerente) {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                            <ShieldCheck className="h-3 w-3" />
+                            Gerente
+                          </span>
+                        )
+                      }
+                      return <span className="text-xs text-slate-400">Atendente</span>
+                    })()}
                   </td>
 
                   <td className="px-4 py-3 text-right">
@@ -409,14 +441,49 @@ export function UsuariosLojasConfig() {
               </>
             )}
 
-            {/* Seção Gerente */}
+            {/* Perfil de Acesso */}
+            {perfis.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">Perfil de Acesso</Label>
+                <Select
+                  value={selectedPerfilId ? String(selectedPerfilId) : 'sem-perfil'}
+                  onValueChange={v => setSelectedPerfilId(v === 'sem-perfil' ? null : Number(v))}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Selecione um perfil…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sem-perfil">
+                      <span className="text-slate-400">— Usar configuração legada —</span>
+                    </SelectItem>
+                    {perfis.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPerfilId && (() => {
+                  const p = perfis.find(x => x.id === selectedPerfilId)
+                  if (!p) return null
+                  return (
+                    <p className="text-[11px] text-slate-400">
+                      {p.ver_leads_nao_atribuidos ? 'Vê todos os leads' : 'Vê apenas leads atribuídos'}
+                      {p.pode_atribuir_leads ? ` · Atribui para ${p.nivel_atribuicao === 'supervisor' ? 'gerentes' : 'atendentes'}` : ' · Não atribui leads'}
+                    </p>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* Seção Gerente (legado — mantido para redes sem perfil configurado) */}
             <div
               className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-all cursor-pointer ${
                 isGerente
                   ? 'border-emerald-200 bg-emerald-50'
                   : 'border-slate-200 bg-slate-50'
-              }`}
-              onClick={() => setIsGerente(v => !v)}
+              } ${selectedPerfilId ? 'opacity-40 pointer-events-none' : ''}`}
+              onClick={() => { if (!selectedPerfilId) setIsGerente(v => !v) }}
             >
               <div className="flex items-center gap-3">
                 <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${

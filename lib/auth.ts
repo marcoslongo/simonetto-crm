@@ -141,7 +141,29 @@ export function isAdmin(user: User): boolean {
 }
 
 export function isGerente(user: User): boolean {
-  return isAdmin(user) || user.is_gerente === true
+  if (isAdmin(user)) return true
+  if (user.perfil_acesso) {
+    // nivel_atribuicao define a hierarquia; is_gerente legado é fallback adicional
+    return ['supervisor', 'gerente'].includes(user.perfil_acesso.nivel_atribuicao)
+      || user.is_gerente === true
+  }
+  return user.is_gerente === true
+}
+
+/** Retorna true se o usuário tem perfil de supervisor (nível de atribuição para gerentes). */
+export function isSupervisor(user: User): boolean {
+  if (isAdmin(user)) return true
+  if (user.perfil_acesso) return user.perfil_acesso.nivel_atribuicao === 'supervisor'
+  // fallback legado
+  return user.is_gerente && user.loja_ids.length > 1
+}
+
+/** Retorna true se o usuário pode atribuir leads para outros. */
+export function podeAtribuirLeads(user: User): boolean {
+  if (isAdmin(user)) return true
+  if (user.perfil_acesso) return user.perfil_acesso.pode_atribuir_leads
+  // fallback legado
+  return user.is_gerente === true
 }
 
 export function canAccessLoja(user: User, lojaId: number): boolean {

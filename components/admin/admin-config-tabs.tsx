@@ -1,11 +1,10 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Database, Server, Store, Users } from 'lucide-react'
+import { Database, Server, Users } from 'lucide-react'
 import { EvolutionServerSettings } from './evolution-server-settings'
 import { EvolutionInstances } from './evolution-instances'
 import { UsuariosWhatsAppList } from './usuarios-whatsapp-list'
-import { UsuariosLojasConfig } from './usuarios-lojas-config'
 
 export function AdminConfigTabs() {
   return (
@@ -29,10 +28,6 @@ export function AdminConfigTabs() {
             <Database className="h-4 w-4" />
             Instâncias
           </TabsTrigger>
-          <TabsTrigger value="lojas-acesso" className="flex items-center gap-1.5 text-sm">
-            <Store className="h-4 w-4" />
-            Acesso às Lojas
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="servidor" className="mt-0">
@@ -45,10 +40,6 @@ export function AdminConfigTabs() {
 
         <TabsContent value="instancias" className="mt-0">
           <EvolutionInstances />
-        </TabsContent>
-
-        <TabsContent value="lojas-acesso" className="mt-0">
-          <UsuariosLojasConfig />
         </TabsContent>
       </Tabs>
     </div>

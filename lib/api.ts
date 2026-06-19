@@ -87,6 +87,7 @@ export async function authenticateUser(
     is_gerente: data.acf?.is_gerente === true,
     is_master: data.acf?.is_master === true,
     avatar_url: data.acf?.avatar_url ?? null,
+    perfil_acesso: data.acf?.perfil_acesso ?? null,
   }
 
   return {

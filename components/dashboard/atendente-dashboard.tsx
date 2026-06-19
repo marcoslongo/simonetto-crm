@@ -110,7 +110,7 @@ export function AtendenteDashboard({ stats, userName, colunas }: AtendenteDashbo
       {/* Header pessoal */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-[#16255c]">Olá, {firstName} 👋</h3>
+          <h3 className="text-xl font-bold text-[#16255c]">Olá, {firstName}</h3>
           <p className="text-sm text-slate-500">Veja como está seu dia</p>
         </div>
         {totalUrgencias > 0 && (

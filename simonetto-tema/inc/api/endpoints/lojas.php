@@ -120,6 +120,13 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // GET /api/v1/perfis-acesso — listar perfis de acesso disponíveis
+  register_rest_route('api/v1', '/perfis-acesso', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_list_perfis_acesso',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET /api/v1/admin/usuarios — listar todos os usuários com status WhatsApp (admin)
   register_rest_route('api/v1', '/admin/usuarios', [
     'methods'             => 'GET',
@@ -263,6 +270,13 @@ add_action('rest_api_init', function () {
     ],
   ]);
 
+  // POST /api/v1/leads/{lead_id}/transferir — supervisor move lead para outra loja
+  register_rest_route('api/v1', '/leads/(?P<lead_id>\d+)/transferir', [
+    'methods'             => 'POST',
+    'callback'            => 'mytheme_api_lead_transferir_loja',
+    'permission_callback' => 'mytheme_api_is_gerente',
+  ]);
+
   // GET/POST /api/v1/lojas/{id}/vendas-config — configuração do módulo de vendas realizadas
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/vendas-config', [
     [
@@ -277,6 +291,54 @@ add_action('rest_api_init', function () {
     ],
   ]);
 });
+
+/**
+ * POST /api/v1/leads/{lead_id}/transferir
+ * Supervisor move um lead para outra loja. Responsável é zerado automaticamente.
+ */
+function mytheme_api_lead_transferir_loja(WP_REST_Request $request): WP_REST_Response
+{
+  $lead_id      = (int) $request['lead_id'];
+  $body         = $request->get_json_params() ?: [];
+  $nova_loja_id = isset($body['loja_id']) ? (int) $body['loja_id'] : 0;
+
+  if (!$nova_loja_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id é obrigatório.'], 400);
+  }
+
+  // Apenas supervisores (is_gerente + múltiplas lojas) ou admins podem transferir
+  if (!current_user_can('administrator')) {
+    $current_user_id = get_current_user_id();
+    $perfil          = crm_get_perfil_acesso($current_user_id);
+    $is_supervisor   = false;
+
+    if ($perfil) {
+      $is_supervisor = $perfil['nivel_atribuicao'] === 'supervisor';
+    } else {
+      $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);
+      $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
+      $loja_ids      = is_array($raw_loja) ? array_map('intval', $raw_loja) : ($raw_loja ? [intval($raw_loja)] : []);
+      $is_supervisor = $is_gerente && count($loja_ids) > 1;
+
+      // Valida que a loja destino pertence ao supervisor
+      if ($is_supervisor && !in_array($nova_loja_id, $loja_ids, true)) {
+        return new WP_REST_Response(['success' => false, 'mensagem' => 'Você não tem acesso a esta loja.'], 403);
+      }
+    }
+
+    if (!$is_supervisor) {
+      return new WP_REST_Response(['success' => false, 'mensagem' => 'Apenas supervisores podem transferir leads entre lojas.'], 403);
+    }
+  }
+
+  $result = Lead_Handler::transfer_loja($lead_id, $nova_loja_id);
+
+  if (is_wp_error($result)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $result->get_error_message()], $result->get_error_data('status') ?? 500);
+  }
+
+  return new WP_REST_Response(['success' => true, 'lead' => $result], 200);
+}
 
 /**
  * GET /api/v1/lojas
@@ -345,7 +407,8 @@ function mytheme_api_get_loja_stats($request)
   }
 
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
-  $stats = Loja_Handler::get_stats($loja_id, $exclude_proprio);
+
+  $stats = Loja_Handler::get_stats($loja_id, $exclude_proprio, crm_stats_responsavel_filter());
 
   return new WP_REST_Response([
     'success' => true,
@@ -418,30 +481,51 @@ function mytheme_api_get_loja_leads($request)
     ], 404);
   }
 
-  // Se a loja tem ocultar_leads_nao_atribuidos ativo e o usuário não é gerente/admin,
-  // força o filtro de responsável para o próprio usuário.
+  // Visibilidade de leads por perfil de acesso (ou fallback para is_gerente legado).
   $responsavel_id = intval($request->get_param('responsavel_id') ?? 0);
   $ocultar        = (bool) get_post_meta($loja_id, '_ocultar_leads_nao_atribuidos', true);
 
-  if ($ocultar && !current_user_can('administrator')) {
+  $include_unassigned = false;
+
+  if (!current_user_can('administrator')) {
     $current_user_id = get_current_user_id();
-    $is_gerente      = (bool) get_field('is_gerente', 'user_' . $current_user_id);
-    if (!$is_gerente) {
-      $responsavel_id = $current_user_id;
+    $perfil          = crm_get_perfil_acesso($current_user_id);
+
+    if ($perfil) {
+      if (!$perfil['ver_leads_nao_atribuidos']) {
+        $responsavel_id     = $current_user_id;
+        // Gerente pelo perfil: vê seus leads + inbox da loja (sem responsável)
+        $include_unassigned = in_array($perfil['nivel_atribuicao'], ['gerente', 'supervisor'], true);
+      }
+    } else {
+      // Fallback legado
+      $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);
+      $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
+      $user_loja_ids = is_array($raw_loja)
+        ? array_map('intval', $raw_loja)
+        : ($raw_loja ? [intval($raw_loja)] : []);
+      $is_supervisor = $is_gerente && count($user_loja_ids) > 1;
+
+      if (!$is_supervisor && $is_gerente) {
+        $responsavel_id     = $current_user_id;
+        $include_unassigned = true; // gerente vê inbox da loja também
+      } elseif (!$is_gerente && $ocultar) {
+        $responsavel_id = $current_user_id;
+      }
     }
   }
 
   $result = Lead_Handler::list([
-    'page'            => $request->get_param('page') ?: 1,
-    'per_page'        => $request->get_param('per_page') ?: 100,
-    'search'          => $request->get_param('search'),
-    'from'            => $request->get_param('from'),
-    'to'              => $request->get_param('to'),
-    'status'          => $request->get_param('status') ?? '',
-    'responsavel_id'  => $responsavel_id,
-    'loja_id'         => $loja_id,
-    // Administradores sem is_master não veem leads de origem 'proprio'
-    'exclude_proprio' => current_user_can('administrator') && !crm_current_user_is_master(),
+    'page'               => $request->get_param('page') ?: 1,
+    'per_page'           => $request->get_param('per_page') ?: 100,
+    'search'             => $request->get_param('search'),
+    'from'               => $request->get_param('from'),
+    'to'                 => $request->get_param('to'),
+    'status'             => $request->get_param('status') ?? '',
+    'responsavel_id'     => $responsavel_id,
+    'include_unassigned' => $include_unassigned,
+    'loja_id'            => $loja_id,
+    'exclude_proprio'    => current_user_can('administrator') && !crm_current_user_is_master(),
   ]);
 
   return new WP_REST_Response([
@@ -510,10 +594,12 @@ function mytheme_api_get_loja_status_funil($request)
   $table   = $wpdb->prefix . 'leads';
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $proprio_filter  = $exclude_proprio ? " AND origem != 'proprio'" : '';
+  $resp_id         = crm_stats_responsavel_filter();
+  $resp_filter     = $resp_id > 0 ? " AND responsavel_id = {$resp_id}" : '';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT status, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter} GROUP BY status",
+      "SELECT status, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter}{$resp_filter} GROUP BY status",
       $loja_id
     ),
     ARRAY_A
@@ -553,10 +639,12 @@ function mytheme_api_get_loja_classificacao($request)
   $table   = $wpdb->prefix . 'leads';
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $proprio_filter  = $exclude_proprio ? " AND origem != 'proprio'" : '';
+  $resp_id         = crm_stats_responsavel_filter();
+  $resp_filter     = $resp_id > 0 ? " AND responsavel_id = {$resp_id}" : '';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT classificacao, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter} GROUP BY classificacao",
+      "SELECT classificacao, COUNT(*) as total FROM {$table} WHERE loja_id = %d{$proprio_filter}{$resp_filter} GROUP BY classificacao",
       $loja_id
     ),
     ARRAY_A
@@ -843,6 +931,37 @@ function mytheme_api_save_whatsapp_settings(WP_REST_Request $request): WP_REST_R
 }
 
 // -------------------------------------------------------------------------
+// Perfis de Acesso
+// -------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/perfis-acesso
+ */
+function mytheme_api_list_perfis_acesso(): WP_REST_Response
+{
+  $posts = get_posts([
+    'post_type'      => 'perfil_acesso',
+    'post_status'    => 'publish',
+    'posts_per_page' => -1,
+    'orderby'        => 'title',
+    'order'          => 'ASC',
+  ]);
+
+  $perfis = array_map(function ($post) {
+    return [
+      'id'                       => (int) $post->ID,
+      'nome'                     => $post->post_title,
+      'ver_leads_nao_atribuidos' => (bool) get_field('ver_leads_nao_atribuidos', $post->ID),
+      'pode_atribuir_leads'      => (bool) get_field('pode_atribuir_leads',      $post->ID),
+      'nivel_atribuicao'         => get_field('nivel_atribuicao', $post->ID) ?: 'atendente',
+      'acesso_multiplas_lojas'   => (bool) get_field('acesso_multiplas_lojas',   $post->ID),
+    ];
+  }, $posts);
+
+  return new WP_REST_Response(['success' => true, 'perfis' => $perfis], 200);
+}
+
+// -------------------------------------------------------------------------
 // Admin — gerenciamento de usuários e WhatsApp
 // -------------------------------------------------------------------------
 
@@ -871,7 +990,8 @@ function mytheme_api_admin_list_usuarios(WP_REST_Request $request): WP_REST_Resp
       $loja_ids = [intval($loja_ids_raw)];
     }
 
-    $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
+    $is_gerente        = (bool) get_field('is_gerente', 'user_' . $user->ID);
+    $perfil_acesso_id  = (int) get_field('perfil_acesso_id', 'user_' . $user->ID) ?: null;
 
     $resultado[] = [
       'id'               => (int) $user->ID,
@@ -880,6 +1000,7 @@ function mytheme_api_admin_list_usuarios(WP_REST_Request $request): WP_REST_Resp
       'role'             => $user->roles[0] ?? 'subscriber',
       'loja_ids'         => $loja_ids,
       'is_gerente'       => $is_gerente,
+      'perfil_acesso_id' => $perfil_acesso_id,
       'instance'         => $instance ?: null,
       'connection_state' => $connection_state ?: ($instance ? 'open' : 'not_configured'),
     ];
@@ -977,15 +1098,26 @@ function mytheme_api_admin_save_user_lojas_config(WP_REST_Request $request): WP_
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Usuário não encontrado.'], 404);
   }
 
-  $body       = $request->get_json_params() ?: [];
-  $loja_ids   = isset($body['loja_ids']) && is_array($body['loja_ids'])
+  $body             = $request->get_json_params() ?: [];
+  $loja_ids         = isset($body['loja_ids']) && is_array($body['loja_ids'])
     ? array_values(array_filter(array_map('intval', $body['loja_ids'])))
     : [];
-  $is_gerente = !empty($body['is_gerente']);
+  $is_gerente       = !empty($body['is_gerente']);
+  $perfil_acesso_id = isset($body['perfil_acesso_id']) ? intval($body['perfil_acesso_id']) : null;
 
   // Salva via ACF — fonte do JWT e da query get_usuarios()
   update_field('loja_id',   $loja_ids,            'user_' . $target_user_id);
   update_field('is_gerente', $is_gerente ? 1 : 0, 'user_' . $target_user_id);
+
+  if ($perfil_acesso_id) {
+    $perfil_post = get_post($perfil_acesso_id);
+    if ($perfil_post && $perfil_post->post_type === 'perfil_acesso') {
+      update_field('perfil_acesso_id', $perfil_acesso_id, 'user_' . $target_user_id);
+    }
+  } else {
+    // null = sem perfil (limpa o campo)
+    update_field('perfil_acesso_id', '', 'user_' . $target_user_id);
+  }
 
   // Sincroniza usermeta direto — fonte do endpoint GET /admin/usuarios
   update_user_meta($target_user_id, 'loja_ids', $loja_ids);

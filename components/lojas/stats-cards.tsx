@@ -4,6 +4,7 @@ import type { LojaStats } from '@/lib/types-loja'
 
 interface StatsCardsProps {
   stats: LojaStats
+  sublabel?: string
 }
 
 function Delta({ current, previous, label }: { current: number; previous?: number; label: string }) {
@@ -26,7 +27,7 @@ function Delta({ current, previous, label }: { current: number; previous?: numbe
   )
 }
 
-export function StatsCards({ stats }: StatsCardsProps) {
+export function StatsCards({ stats, sublabel = 'Todos os leads' }: StatsCardsProps) {
   const cards = [
     { title: 'Total de Leads',   value: stats.total.toLocaleString('pt-BR'),  icon: Users,     delta: null },
     { title: 'Leads Hoje',       value: stats.hoje.toLocaleString('pt-BR'),   icon: Clock,     delta: <Delta current={stats.hoje}   previous={stats.ontem}           label="ontem" /> },
@@ -56,7 +57,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
             {delta ?? (
               <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                Todos os leads
+                {sublabel}
               </p>
             )}
           </CardContent>

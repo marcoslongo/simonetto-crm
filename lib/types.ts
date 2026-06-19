@@ -36,7 +36,17 @@ export interface AuthResponse {
     is_gerente?: boolean;
     is_master?: boolean;
     avatar_url?: string | null;
+    perfil_acesso?: PerfilAcesso | null;
   };
+}
+
+export interface PerfilAcesso {
+  id: number;
+  nome: string;
+  ver_leads_nao_atribuidos: boolean;
+  pode_atribuir_leads: boolean;
+  nivel_atribuicao: 'supervisor' | 'gerente' | 'atendente';
+  acesso_multiplas_lojas: boolean;
 }
 
 export interface User {
@@ -50,6 +60,7 @@ export interface User {
   is_gerente: boolean;
   is_master: boolean;
   avatar_url?: string | null;
+  perfil_acesso?: PerfilAcesso | null;
 }
 
 export interface Session {

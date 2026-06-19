@@ -38,19 +38,59 @@ function add_loja_role_userid_to_jwt($data, $user) {
     $is_master  = (bool) get_field('is_master',  'user_' . $user_id);
     $avatar_url = get_user_meta($user_id, '_crm_avatar_url', true) ?: null;
 
+    $perfil_acesso = crm_get_perfil_acesso($user_id);
+
     $data['user_id'] = $user_id;
     $data['role']    = $roles;
     $data['acf']     = [
-        'loja_ids'   => $loja_ids,
-        'is_gerente' => $is_gerente,
-        'is_master'  => $is_master,
-        'avatar_url' => $avatar_url,
+        'loja_ids'      => $loja_ids,
+        'is_gerente'    => $is_gerente,
+        'is_master'     => $is_master,
+        'avatar_url'    => $avatar_url,
+        'perfil_acesso' => $perfil_acesso,
     ];
 
     return $data;
 }
 
+/**
+ * Retorna as configurações do perfil de acesso do usuário (ou null se não configurado).
+ */
+function crm_get_perfil_acesso(int $user_id): ?array {
+    $perfil_id = get_field('perfil_acesso_id', 'user_' . $user_id);
+    if (!$perfil_id) return null;
 
+    $post = get_post(intval($perfil_id));
+    if (!$post || $post->post_type !== 'perfil_acesso') return null;
+
+    return [
+        'id'                      => (int) $post->ID,
+        'nome'                    => $post->post_title,
+        'ver_leads_nao_atribuidos'=> (bool) get_field('ver_leads_nao_atribuidos', $post->ID),
+        'pode_atribuir_leads'     => (bool) get_field('pode_atribuir_leads',      $post->ID),
+        'nivel_atribuicao'        => get_field('nivel_atribuicao', $post->ID) ?: 'atendente',
+        'acesso_multiplas_lojas'  => (bool) get_field('acesso_multiplas_lojas',   $post->ID),
+    ];
+}
+
+
+
+/**
+ * Retorna o responsavel_id a ser usado como filtro em queries de stats.
+ * Retorna 0 quando o usuário pode ver todos os leads da loja.
+ */
+function crm_stats_responsavel_filter(): int {
+  if (current_user_can('administrator')) return 0;
+  $uid    = get_current_user_id();
+  $perfil = crm_get_perfil_acesso($uid);
+  if ($perfil) {
+    return !$perfil['ver_leads_nao_atribuidos'] ? $uid : 0;
+  }
+  // fallback legado: atendente com ocultar ativo
+  $is_gerente = (bool) get_field('is_gerente', 'user_' . $uid);
+  $ocultar    = (bool) get_field('ocultar_leads_nao_atribuidos', 'user_' . $uid);
+  return (!$is_gerente && $ocultar) ? $uid : 0;
+}
 
 function crm_login_user(WP_REST_Request $request) {
   $email    = $request->get_param('email');
@@ -75,24 +115,26 @@ function crm_login_user(WP_REST_Request $request) {
     ? array_values(array_filter(array_map('intval', $raw)))
     : ($raw ? [intval($raw)] : []);
 
-  $loja_nome  = get_user_meta($user->ID, 'loja_nome', true);
-  $role       = $user->roles[0] ?? 'subscriber';
-  $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
-  $is_master  = (bool) get_field('is_master',  'user_' . $user->ID);
-  $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
+  $loja_nome     = get_user_meta($user->ID, 'loja_nome', true);
+  $role          = $user->roles[0] ?? 'subscriber';
+  $is_gerente    = (bool) get_field('is_gerente', 'user_' . $user->ID);
+  $is_master     = (bool) get_field('is_master',  'user_' . $user->ID);
+  $avatar_url    = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
+  $perfil_acesso = crm_get_perfil_acesso($user->ID);
 
   return new WP_REST_Response([
     'token' => wp_create_nonce('crm_auth_' . $user->ID),
     'user' => [
-      'id'         => $user->ID,
-      'email'      => $user->user_email,
-      'name'       => $user->display_name,
-      'role'       => $role === 'administrator' ? 'administrator' : 'loja',
-      'loja_ids'   => $loja_ids,
-      'loja_nome'  => $loja_nome ?: null,
-      'is_gerente' => $is_gerente,
-      'is_master'  => $is_master,
-      'avatar_url' => $avatar_url,
+      'id'            => $user->ID,
+      'email'         => $user->user_email,
+      'name'          => $user->display_name,
+      'role'          => $role === 'administrator' ? 'administrator' : 'loja',
+      'loja_ids'      => $loja_ids,
+      'loja_nome'     => $loja_nome ?: null,
+      'is_gerente'    => $is_gerente,
+      'is_master'     => $is_master,
+      'avatar_url'    => $avatar_url,
+      'perfil_acesso' => $perfil_acesso,
     ],
     'expires' => date('c', time() + WEEK_IN_SECONDS),
   ]);
@@ -145,7 +187,8 @@ function mytheme_load_custom_post_types() {
         'lojas.php',
         'depoimentos.php',
         'celebridades.php',
-        'portfolio.php'
+        'portfolio.php',
+        'perfil-acesso.php',
     );
     
     foreach ($cpt_files as $file) {
