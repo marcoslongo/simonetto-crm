@@ -11,6 +11,7 @@ import { LeadsConfigGerente } from '@/components/lojas/leads-config-gerente'
 import { VendasRealizadasConfigComp } from '@/components/lojas/vendas-realizadas-config'
 import { MetasConfigComp } from '@/components/lojas/metas-config'
 import { PosVendaConfigComp } from '@/components/lojas/pos-venda-config'
+import { KanbanCardConfigComp } from '@/components/lojas/kanban-card-config'
 import { AdminConfigTabs } from '@/components/admin/admin-config-tabs'
 import type { LojaIntegrationData } from '@/lib/api-loja'
 
@@ -167,6 +168,7 @@ export function ConfiguracoesTabs({ user, isLoja, primaryLojaId, integration, si
         <TabsContent value="operacao">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <LeadsConfigGerente lojaId={primaryLojaId!} />
+            <KanbanCardConfigComp lojaId={primaryLojaId!} />
             <VendasRealizadasConfigComp lojaId={primaryLojaId!} />
             <MetasConfigComp lojaId={primaryLojaId!} />
             <PosVendaConfigComp lojaId={primaryLojaId!} />

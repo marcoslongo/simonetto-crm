@@ -386,6 +386,13 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
   const [lastUnreadAt, setLastUnreadAt] = useState<Record<string, number>>({})
   const [autoAtribuirResponsavel, setAutoAtribuirResponsavel] = useState(true)
   const [permitirEdicaoAtendente, setPermitirEdicaoAtendente] = useState(false)
+  const [kanbanCardCampos, setKanbanCardCampos] = useState({
+    telefone: true,
+    email: true,
+    cidade: true,
+    mensagem: false,
+    expectativa_investimento: true,
+  })
   const [vendasConfig, setVendasConfig] = useState<VendasRealizadasConfig>(VENDAS_CONFIG_PADRAO)
   const [pendingVendaRealizada, setPendingVendaRealizada] = useState<Lead | null>(null)
   const [vendasCache, setVendasCache] = useState<Record<string, VendaRealizada>>({})
@@ -441,6 +448,9 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
         if (data.success) {
           setAutoAtribuirResponsavel(data.auto_atribuir_responsavel ?? true)
           setPermitirEdicaoAtendente(data.permitir_edicao_lead_atendente ?? false)
+          if (data.kanban_card_campos) {
+            setKanbanCardCampos(prev => ({ ...prev, ...data.kanban_card_campos }))
+          }
         }
       })
       .catch(() => {})
@@ -1455,6 +1465,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                     lead={lead}
                     onLeadClick={handleLeadClick}
                     isSaving={savingLeads.has(String(lead.id))}
+                    cardCampos={kanbanCardCampos}
                   />
                 ))
               )}
@@ -1541,6 +1552,7 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                     isFirst={colunas.indexOf(coluna) === 0}
                     isLast={colunas.indexOf(coluna) === colunas.length - 1}
                     vendasCache={coluna.slug === 'venda_realizada' ? vendasCache : undefined}
+                    cardCampos={kanbanCardCampos}
                   />
                 </div>
               ))}
@@ -1595,9 +1607,10 @@ interface KanbanColumnProps {
   isFirst?: boolean
   isLast?: boolean
   vendasCache?: Record<string, VendaRealizada>
+  cardCampos: KanbanCardCampos
 }
 
-const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast, vendasCache }: KanbanColumnProps) {
+const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast, vendasCache, cardCampos }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.slug,
   })
@@ -1718,6 +1731,7 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
                   isGerente={isGerente}
                   vendaRealizada={vendasCache?.[String(lead.id)]}
+                  cardCampos={cardCampos}
                 />
               ))}
 
@@ -1755,6 +1769,14 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
   )
 })
 
+interface KanbanCardCampos {
+  telefone: boolean
+  email: boolean
+  cidade: boolean
+  mensagem: boolean
+  expectativa_investimento: boolean
+}
+
 interface DraggableLeadRowProps {
   lead: Lead
   onLeadClick?: (lead: Lead) => void
@@ -1762,9 +1784,10 @@ interface DraggableLeadRowProps {
   isSaving?: boolean
   isGerente?: boolean
   vendaRealizada?: VendaRealizada
+  cardCampos: KanbanCardCampos
 }
 
-const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente, vendaRealizada }: DraggableLeadRowProps) {
+const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente, vendaRealizada, cardCampos }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -1907,18 +1930,26 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
                   <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
                 </div>
 
-                {lead.email && (
+                {cardCampos.telefone && lead.telefone && (
+                  <p className="truncate text-xs text-muted-foreground">{lead.telefone}</p>
+                )}
+
+                {cardCampos.email && lead.email && (
                   <p className="truncate text-xs text-muted-foreground">{lead.email}</p>
                 )}
 
-                {lead.cidade && (
+                {cardCampos.cidade && lead.cidade && (
                   <p className="text-xs text-muted-foreground">
                     {lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}
                   </p>
                 )}
 
+                {cardCampos.mensagem && lead.mensagem && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 italic">&ldquo;{lead.mensagem}&rdquo;</p>
+                )}
+
                 <div className="mt-1.5 flex items-center gap-2">
-                  {lead.expectativa_investimento && (
+                  {cardCampos.expectativa_investimento && lead.expectativa_investimento && (
                     <span className="text-xs font-medium text-emerald-600">
                       {lead.expectativa_investimento}
                     </span>
@@ -2114,9 +2145,10 @@ interface MobileLeadCardProps {
   lead: Lead
   onLeadClick: (lead: Lead) => void
   isSaving?: boolean
+  cardCampos: KanbanCardCampos
 }
 
-const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, isSaving }: MobileLeadCardProps) {
+const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, isSaving, cardCampos }: MobileLeadCardProps) {
   const sla = getSLAInfo(lead)
 
   const followupInfo = useMemo(() => {
@@ -2183,8 +2215,17 @@ const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, i
             )}
           </div>
           <p className="text-base font-semibold text-foreground leading-tight">{lead.nome}</p>
-          {lead.telefone && (
+          {cardCampos.telefone && lead.telefone && (
             <p className="text-sm text-muted-foreground mt-0.5">{lead.telefone}</p>
+          )}
+          {cardCampos.email && lead.email && (
+            <p className="text-sm text-muted-foreground">{lead.email}</p>
+          )}
+          {cardCampos.cidade && lead.cidade && (
+            <p className="text-sm text-muted-foreground">{lead.cidade}{lead.estado ? `, ${lead.estado}` : ''}</p>
+          )}
+          {cardCampos.mensagem && lead.mensagem && (
+            <p className="text-xs text-muted-foreground line-clamp-2 italic mt-0.5">&ldquo;{lead.mensagem}&rdquo;</p>
           )}
         </div>
 
@@ -2227,7 +2268,7 @@ const MobileLeadCard = React.memo(function MobileLeadCard({ lead, onLeadClick, i
             {lead.responsavel_nome}
           </span>
         )}
-        {lead.expectativa_investimento && (
+        {cardCampos.expectativa_investimento && lead.expectativa_investimento && (
           <span className="font-medium text-emerald-600">{lead.expectativa_investimento}</span>
         )}
         <span className="ml-auto">{criado}</span>
