@@ -44,8 +44,6 @@ interface ChatPanelProps {
   leadId: string;
   telefone: string;
   lojaId?: number | null;
-  avatarUrl?: string | null;
-  leadNome?: string;
   onBlock?: () => Promise<void>;
 }
 
@@ -65,7 +63,7 @@ function DateSeparator({ date }: { date: Date }) {
   );
 }
 
-export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlock }: ChatPanelProps) {
+export function ChatPanel({ leadId, telefone, lojaId, onBlock }: ChatPanelProps) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -80,7 +78,6 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
   const [isStickerOpen, setIsStickerOpen] = useState(false);
   const [isBlockOpen, setIsBlockOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
-  const [resolvedAvatar, setResolvedAvatar] = useState<string | null>(avatarUrl ?? null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
@@ -139,15 +136,6 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
     return () => clearInterval(interval);
   }, [buscarMensagens]);
 
-  // Busca avatar do WhatsApp via Next.js (que chama Evolution GO diretamente)
-  // só quando não veio do banco ainda
-  useEffect(() => {
-    if (avatarUrl) { setResolvedAvatar(avatarUrl); return; }
-    fetch(`/api/leads/${leadId}/whatsapp-avatar`)
-      .then(r => r.json())
-      .then((d: { avatarUrl: string | null }) => { if (d.avatarUrl) setResolvedAvatar(d.avatarUrl); })
-      .catch(() => {});
-  }, [leadId, avatarUrl]);
 
   const scrollToBottom = (instant = false) => {
     bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
@@ -412,16 +400,9 @@ export function ChatPanel({ leadId, telefone, lojaId, avatarUrl, leadNome, onBlo
       {/* Header estilo WhatsApp */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-[#075e54] dark:bg-[#1f2c34] shrink-0">
         <div className="h-9 w-9 rounded-full shrink-0 overflow-hidden bg-white/20 flex items-center justify-center">
-          {resolvedAvatar ? (
-            <img src={resolvedAvatar} alt={leadNome ?? "Contato"} className="h-full w-full object-cover" />
-          ) : (
-            <FaWhatsapp className="h-[18px] w-[18px] text-white" />
-          )}
+          <FaWhatsapp className="h-[18px] w-[18px] text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-white leading-tight truncate">
-            {leadNome ?? "WhatsApp"}
-          </p>
           <p className="text-[11px] text-white/55 font-mono truncate leading-tight">{telefone}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

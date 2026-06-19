@@ -401,54 +401,6 @@ function mytheme_download_whatsapp_media(array $msg, string $msg_key, string $wa
 }
 
 // -------------------------------------------------------------------------
-// Helper: busca foto de perfil do WhatsApp via Evolution GO
-// Retorna a URL pública da foto ou null se não disponível.
-// -------------------------------------------------------------------------
-
-function mytheme_fetch_whatsapp_avatar(string $evo_url, string $evo_key, string $instance_id, string $phone): ?string
-{
-  if (!$evo_url || !$evo_key || !$instance_id || !$phone) return null;
-
-  $phone_clean = preg_replace('/\D/', '', $phone);
-  if (!str_starts_with($phone_clean, '55')) {
-    $phone_clean = '55' . $phone_clean;
-  }
-
-  // Evolution GO: POST /user/avatar  { instanceId, number, preview }
-  $response = wp_remote_post(trailingslashit($evo_url) . 'user/avatar', [
-    'timeout'   => 8,
-    'sslverify' => false,
-    'headers'   => [
-      'apikey'       => $evo_key,
-      'Content-Type' => 'application/json',
-    ],
-    'body' => wp_json_encode([
-      'instanceId' => $instance_id,
-      'number'     => $phone_clean,
-      'preview'    => false,
-    ]),
-  ]);
-
-  if (is_wp_error($response)) {
-    error_log('[AVATAR] wp_error: ' . $response->get_error_message());
-    return null;
-  }
-
-  $code = wp_remote_retrieve_response_code($response);
-  $raw  = wp_remote_retrieve_body($response);
-  if ($code !== 200) {
-    error_log('[AVATAR] http=' . $code . ' body=' . substr($raw, 0, 200));
-    return null;
-  }
-
-  $body = json_decode($raw, true);
-  return $body['profilePictureUrl']
-      ?? ($body['data']['profilePictureUrl']
-      ?? ($body['avatar']
-      ?? ($body['url'] ?? null)));
-}
-
-// -------------------------------------------------------------------------
 // WEBHOOK — Evolution API (mensagens recebidas e atualizações de status)
 // -------------------------------------------------------------------------
 
@@ -805,30 +757,6 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
       }
       error_log('[AUTO-LEAD] lead criado id=' . $new_lead['lead_id'] . ' phone=' . $phone . ' nome=' . $nome . ' loja_id=' . ($loja_id ?? 'null'));
       $lead_id = $new_lead['lead_id'];
-    }
-  }
-
-  // Atualiza foto de perfil do WhatsApp no lead (é feito a cada mensagem pois URLs expiram)
-  if ($lead_id && $phone) {
-    $evo_url_av   = get_option('evolution_api_url', '');
-    $evo_inst_av  = $instance_name ?: $instance_uuid;
-    // Credenciais: tenta post_meta da loja → user_meta → global option
-    $evo_key_av   = $loja_id ? get_post_meta((int) $loja_id, '_evolution_api_key', true) : '';
-    if (!$evo_key_av) $evo_key_av = get_user_meta($usuario_id, '_evolution_api_key', true);
-    if (!$evo_key_av) $evo_key_av = get_option('evolution_api_key', '');
-
-    if ($evo_url_av && $evo_key_av && $evo_inst_av) {
-      $avatar_url = mytheme_fetch_whatsapp_avatar($evo_url_av, $evo_key_av, $evo_inst_av, $phone);
-      if ($avatar_url) {
-        global $wpdb;
-        $wpdb->update(
-          $wpdb->prefix . 'leads',
-          ['avatar_url' => $avatar_url],
-          ['id'         => (int) $lead_id],
-          ['%s'],
-          ['%d']
-        );
-      }
     }
   }
 

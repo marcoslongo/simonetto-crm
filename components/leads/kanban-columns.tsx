@@ -1,22 +1,6 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-
-// Semáforo: limita fetches de avatar a 3 simultâneos para não sobrecarregar Evolution GO
-const avatarQueue: Array<() => void> = []
-let avatarActive = 0
-const AVATAR_CONCURRENCY = 3
-function acquireAvatarSlot(): Promise<void> {
-  return new Promise(resolve => {
-    if (avatarActive < AVATAR_CONCURRENCY) { avatarActive++; resolve() }
-    else avatarQueue.push(() => { avatarActive++; resolve() })
-  })
-}
-function releaseAvatarSlot() {
-  avatarActive--
-  const next = avatarQueue.shift()
-  if (next) next()
-}
 import {
   DndContext,
   DragEndEvent,
@@ -1792,34 +1776,6 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
   })
 
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>(lead.etiquetas ?? [])
-  const [cardAvatar, setCardAvatar] = useState<string | null>(lead.avatar_url ?? null)
-
-  // Busca avatar lazily quando o card renderiza e não tem foto no banco ainda
-  useEffect(() => {
-    if (cardAvatar || lead.origem !== 'proprio') return
-    let cancelled = false
-    ;(async () => {
-      await acquireAvatarSlot()
-      if (cancelled) { releaseAvatarSlot(); return }
-      try {
-        console.log(`[kanban-avatar] fetching lead=${lead.id}`)
-        const r = await fetch(`/api/leads/${lead.id}/whatsapp-avatar`)
-        const d = await r.json() as { avatarUrl: string | null }
-        console.log(`[kanban-avatar] lead=${lead.id} resultado:`, d)
-        if (!cancelled && d.avatarUrl) {
-          setCardAvatar(d.avatarUrl)
-          onLeadUpdate({ ...lead, avatar_url: d.avatarUrl })
-        }
-      } catch (err) {
-        console.log(`[kanban-avatar] lead=${lead.id} error:`, err)
-      } finally {
-        releaseAvatarSlot()
-      }
-    })()
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lead.id])
-
   const handleEtiquetasUpdate = (updated: Etiqueta[]) => {
     setEtiquetas(updated)
     onLeadUpdate({ ...lead, etiquetas: updated })
@@ -1948,17 +1904,6 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {cardAvatar ? (
-                    <img
-                      src={cardAvatar}
-                      alt={lead.nome}
-                      className="h-7 w-7 rounded-full object-cover shrink-0 border border-border"
-                    />
-                  ) : (
-                    <div className="h-7 w-7 rounded-full shrink-0 bg-[#075e54]/10 flex items-center justify-center text-[11px] font-semibold text-[#075e54]">
-                      {lead.nome.charAt(0).toUpperCase()}
-                    </div>
-                  )}
                   <p className="truncate text-sm font-medium text-foreground">{lead.nome}</p>
                 </div>
 

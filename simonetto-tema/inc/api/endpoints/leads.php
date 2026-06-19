@@ -63,15 +63,6 @@ add_action('rest_api_init', function () {
     ),
   ));
 
-  // GET /api/v1/leads/{id}/whatsapp-creds — credenciais Evolution GO para fetch de avatar (Next.js)
-  register_rest_route('api/v1', '/leads/(?P<id>\d+)/whatsapp-creds', array(
-    array(
-      'methods'             => 'GET',
-      'callback'            => 'mytheme_api_get_lead_whatsapp_creds',
-      'permission_callback' => 'mytheme_api_is_authenticated',
-    ),
-  ));
-
   // POST /api/v1/lead-contato — registrar contato com lead
   register_rest_route('api/v1', '/lead-contato', array(
     'methods' => 'POST',
@@ -527,19 +518,6 @@ function mytheme_api_update_lead($request)
       'mensagem' => 'Lead atualizado com sucesso.',
       'lead' => $result,
     ], 200);
-  }
-
-  // Atualiza avatar_url (chamado pelo Next.js após fetch do Evolution GO)
-  if (array_key_exists('avatar_url', $params)) {
-    global $wpdb;
-    $wpdb->update(
-      $wpdb->prefix . 'leads',
-      ['avatar_url' => sanitize_url((string) $params['avatar_url'])],
-      ['id'         => $id],
-      ['%s'],
-      ['%d']
-    );
-    return new WP_REST_Response(['success' => true], 200);
   }
 
   // Atualiza responsável se vier no body
@@ -2122,74 +2100,3 @@ function mytheme_api_delete_venda_realizada(WP_REST_Request $request): WP_REST_R
   ], 200);
 }
 
-/**
- * GET /api/v1/leads/{id}/whatsapp-creds
- * Retorna as credenciais Evolution GO do lead para o Next.js fazer o fetch de avatar.
- * O Next.js chama o Evolution GO diretamente (WordPress não consegue por restrições de rede).
- */
-function mytheme_api_get_lead_whatsapp_creds(WP_REST_Request $request): WP_REST_Response
-{
-  global $wpdb;
-  $lead_id = (int) $request['id'];
-
-  $lead = $wpdb->get_row($wpdb->prepare(
-    "SELECT loja_id, telefone FROM {$wpdb->prefix}leads WHERE id = %d",
-    $lead_id
-  ), ARRAY_A);
-
-  if (!$lead) {
-    return new WP_REST_Response(['success' => false, 'mensagem' => 'Lead não encontrado.'], 404);
-  }
-
-  $loja_id = (int) $lead['loja_id'];
-  $phone   = preg_replace('/\D/', '', (string) $lead['telefone']);
-  if ($phone && !str_starts_with($phone, '55')) {
-    $phone = '55' . $phone;
-  }
-
-  $evo_url  = get_option('evolution_api_url', '');
-  $evo_key  = $loja_id ? get_post_meta($loja_id, '_evolution_api_key', true) : '';
-  $instance = $loja_id ? get_post_meta($loja_id, '_evolution_instance', true) : '';
-
-  // Fallback: busca nos usuários associados à loja (credenciais costumam ficar em user_meta)
-  if ((!$evo_key || !$instance) && $loja_id) {
-    $user_ids = $wpdb->get_col($wpdb->prepare(
-      "SELECT DISTINCT um.user_id FROM {$wpdb->usermeta} um
-       WHERE um.meta_key = 'loja_id'
-         AND (um.meta_value = %s OR um.meta_value LIKE %s OR um.meta_value LIKE %s)
-       LIMIT 10",
-      (string) $loja_id,
-      '%"' . intval($loja_id) . '"%',
-      '%:' . intval($loja_id) . ';%'
-    ));
-    foreach ($user_ids as $uid) {
-      $uk = get_user_meta((int) $uid, '_evolution_api_key', true);
-      $ui = get_user_meta((int) $uid, '_evolution_instance', true);
-      if ($uk && $ui) {
-        $evo_key  = $uk;
-        $instance = $ui;
-        break;
-      }
-    }
-  }
-
-  // Fallback global
-  if (!$evo_key)  $evo_key  = get_option('evolution_api_key', '');
-  if (!$instance) $instance = get_option('evolution_instance', '');
-
-  if (!$evo_url || !$evo_key || !$instance || !$phone) {
-    return new WP_REST_Response([
-      'success'  => false,
-      'mensagem' => 'Credenciais incompletas.',
-      'debug'    => compact('evo_url', 'evo_key', 'instance', 'phone', 'loja_id'),
-    ], 422);
-  }
-
-  return new WP_REST_Response([
-    'success'  => true,
-    'evo_url'  => $evo_url,
-    'evo_key'  => $evo_key,
-    'instance' => $instance,
-    'phone'    => $phone,
-  ], 200);
-}

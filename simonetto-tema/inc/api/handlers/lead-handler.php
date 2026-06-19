@@ -861,7 +861,6 @@ class Lead_Handler
       $lead['responsavel_avatar_url'] = null;
     }
 
-    $lead['avatar_url']                 = $lead['avatar_url'] ?? null;
     $lead['proximo_followup_em']        = $lead['proximo_followup_em'] ?? null;
     $lead['proximo_followup_descricao'] = $lead['proximo_followup_descricao'] ?? null;
 

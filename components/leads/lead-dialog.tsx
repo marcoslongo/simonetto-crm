@@ -1174,8 +1174,6 @@ export function LeadDetailsModal({
                   leadId={lead.id}
                   telefone={lead.telefone}
                   lojaId={lead.loja_id ? Number(lead.loja_id) : null}
-                  avatarUrl={lead.avatar_url}
-                  leadNome={lead.nome}
                   onBlock={async () => {
                     const [blRes, delRes] = await Promise.all([
                       fetch('/api/usuarios/me/whatsapp-blocklist', {
