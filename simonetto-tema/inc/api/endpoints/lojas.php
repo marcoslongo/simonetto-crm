@@ -1297,8 +1297,26 @@ function mytheme_api_debug_whatsapp_avatar(WP_REST_Request $request): WP_REST_Re
   $user_id  = (int) ($request->get_param('user_id') ?? get_current_user_id());
   $phone    = sanitize_text_field($request->get_param('phone') ?? '');
   $evo_url  = get_option('evolution_api_url', '');
-  $evo_key  = get_user_meta($user_id, '_evolution_api_key', true);
-  $evo_inst = get_user_meta($user_id, '_evolution_instance', true);
+
+  // Descobre a loja do usuário
+  $meta_loja = get_user_meta($user_id, 'loja_id', true);
+  $loja_id_deb = 0;
+  if (is_array($meta_loja) && !empty($meta_loja)) {
+    $first = $meta_loja[0];
+    $loja_id_deb = is_object($first) ? intval($first->ID) : intval($first);
+  } elseif (!empty($meta_loja)) {
+    $loja_id_deb = is_object($meta_loja) ? intval($meta_loja->ID) : intval($meta_loja);
+  }
+
+  // Busca credenciais nas 3 fontes em ordem de prioridade
+  $evo_key_post   = $loja_id_deb ? get_post_meta($loja_id_deb, '_evolution_api_key', true) : '';
+  $evo_key_user   = get_user_meta($user_id, '_evolution_api_key', true);
+  $evo_key_global = get_option('evolution_api_key', '');
+  $evo_key  = $evo_key_post ?: ($evo_key_user ?: $evo_key_global);
+
+  $evo_inst_post = $loja_id_deb ? get_post_meta($loja_id_deb, '_evolution_instance', true) : '';
+  $evo_inst_user = get_user_meta($user_id, '_evolution_instance', true);
+  $evo_inst = $evo_inst_post ?: $evo_inst_user;
 
   $phone_clean = preg_replace('/\D/', '', $phone);
   if ($phone_clean && !str_starts_with($phone_clean, '55')) {

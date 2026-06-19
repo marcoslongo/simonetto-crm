@@ -810,11 +810,15 @@ function mytheme_api_evolution_webhook(WP_REST_Request $request): WP_REST_Respon
 
   // Atualiza foto de perfil do WhatsApp no lead (é feito a cada mensagem pois URLs expiram)
   if ($lead_id && $phone) {
-    $evo_url_global  = get_option('evolution_api_url', '');
-    $evo_key_global  = get_user_meta($usuario_id, '_evolution_api_key', true);
-    $evo_inst_global = $instance_name ?: $instance_uuid;
-    if ($evo_url_global && $evo_key_global && $evo_inst_global) {
-      $avatar_url = mytheme_fetch_whatsapp_avatar($evo_url_global, $evo_key_global, $evo_inst_global, $phone);
+    $evo_url_av   = get_option('evolution_api_url', '');
+    $evo_inst_av  = $instance_name ?: $instance_uuid;
+    // Credenciais: tenta post_meta da loja → user_meta → global option
+    $evo_key_av   = $loja_id ? get_post_meta((int) $loja_id, '_evolution_api_key', true) : '';
+    if (!$evo_key_av) $evo_key_av = get_user_meta($usuario_id, '_evolution_api_key', true);
+    if (!$evo_key_av) $evo_key_av = get_option('evolution_api_key', '');
+
+    if ($evo_url_av && $evo_key_av && $evo_inst_av) {
+      $avatar_url = mytheme_fetch_whatsapp_avatar($evo_url_av, $evo_key_av, $evo_inst_av, $phone);
       if ($avatar_url) {
         global $wpdb;
         $wpdb->update(
