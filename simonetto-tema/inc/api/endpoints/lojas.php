@@ -313,7 +313,7 @@ function mytheme_api_lead_transferir_loja(WP_REST_Request $request): WP_REST_Res
     $is_supervisor   = false;
 
     if ($perfil) {
-      $is_supervisor = $perfil['nivel_atribuicao'] === 'supervisor';
+      $is_supervisor = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
     } else {
       $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);
       $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
@@ -495,7 +495,7 @@ function mytheme_api_get_loja_leads($request)
       if (!$perfil['ver_leads_nao_atribuidos']) {
         $responsavel_id     = $current_user_id;
         // Gerente pelo perfil: vê seus leads + inbox da loja (sem responsável)
-        $include_unassigned = in_array($perfil['nivel_atribuicao'], ['gerente', 'supervisor'], true);
+        $include_unassigned = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_GERENTE, true);
       }
     } else {
       // Fallback legado

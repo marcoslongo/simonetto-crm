@@ -45,7 +45,7 @@ export interface PerfilAcesso {
   nome: string;
   ver_leads_nao_atribuidos: boolean;
   pode_atribuir_leads: boolean;
-  nivel_atribuicao: 'supervisor' | 'gerente' | 'atendente';
+  nivel_atribuicao: 'master' | 'supervisor' | 'industria' | 'gerente' | 'atendente';
   acesso_multiplas_lojas: boolean;
 }
 

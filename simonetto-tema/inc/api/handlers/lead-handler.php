@@ -798,7 +798,7 @@ class Lead_Handler
       if ($perfil_id) {
         $nivel_efetivo = get_field('nivel_atribuicao', intval($perfil_id)) ?: $nivel_efetivo;
       }
-      $is_responsavel_gerente = in_array($nivel_efetivo, ['gerente', 'supervisor'], true);
+      $is_responsavel_gerente = in_array($nivel_efetivo, CRM_NIVEIS_GERENTE, true);
 
       $update_data   = ['responsavel_id' => intval($responsavel_id), 'data_atualizacao' => current_time('mysql')];
       $update_format = ['%d', '%s'];

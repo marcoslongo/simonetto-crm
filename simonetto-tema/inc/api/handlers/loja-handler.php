@@ -199,8 +199,8 @@ class Loja_Handler
         $nivel_efetivo = get_field('nivel_atribuicao', intval($perfil_id)) ?: $nivel_efetivo;
       }
 
-      // Supervisores gerenciam a rede toda — não aparecem na lista de uma loja específica
-      if ($nivel_efetivo === 'supervisor') continue;
+      // Supervisores/master/industria gerenciam a rede toda — não aparecem por loja
+      if (in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true)) continue;
 
       // Loja primária do usuário (primeira da lista)
       $raw_loja       = get_field('loja_id', 'user_' . $user->ID);

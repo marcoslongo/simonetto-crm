@@ -75,6 +75,11 @@ function crm_get_perfil_acesso(int $user_id): ?array {
 
 
 
+// Níveis que têm acesso de supervisor (veem múltiplas lojas, atribuem para gerentes)
+define('CRM_NIVEIS_SUPERVISOR', ['master', 'supervisor', 'industria']);
+// Níveis que têm acesso de gerente ou superior
+define('CRM_NIVEIS_GERENTE', ['master', 'supervisor', 'industria', 'gerente']);
+
 /**
  * Retorna o responsavel_id a ser usado como filtro em queries de stats.
  * Retorna 0 quando o usuário pode ver todos os leads da loja.
