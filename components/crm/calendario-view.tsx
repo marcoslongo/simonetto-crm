@@ -117,6 +117,53 @@ function EventChip({
   )
 }
 
+// ─── DayEventsModal ──────────────────────────────────────────────────────────
+
+function DayEventsModal({
+  open,
+  onOpenChange,
+  day,
+  events,
+  onEventClick,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  day: Date | null
+  events: CalendarioEvent[]
+  onEventClick: (event: CalendarioEvent) => void
+}) {
+  if (!day) return null
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-90">
+        <DialogHeader>
+          <DialogTitle>
+            {format(day, "dd 'de' MMMM", { locale: ptBR }).replace(/^\w/, (c) =>
+              c.toUpperCase()
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {events.length} compromisso{events.length !== 1 ? "s" : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 py-1 max-h-80 overflow-y-auto">
+          {events.map((event) => (
+            <EventChip
+              key={event.id}
+              event={event}
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenChange(false)
+                onEventClick(event)
+              }}
+            />
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── DayCell ─────────────────────────────────────────────────────────────────
 
 function DayCell({
@@ -137,6 +184,7 @@ function DayCell({
   onEventClick: (event: CalendarioEvent) => void
 }) {
   const today = isToday(day)
+  const [overflowOpen, setOverflowOpen] = useState(false)
   const MAX_VISIBLE = 3
   const visible = events.slice(0, MAX_VISIBLE)
   const overflow = events.length - MAX_VISIBLE
@@ -176,11 +224,25 @@ function DayCell({
           />
         ))}
         {overflow > 0 && (
-          <p className="text-[10px] text-muted-foreground px-1.5">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setOverflowOpen(true)
+            }}
+            className="text-[10px] text-[#16255c] font-semibold px-1.5 hover:underline"
+          >
             +{overflow} mais
-          </p>
+          </button>
         )}
       </div>
+
+      <DayEventsModal
+        open={overflowOpen}
+        onOpenChange={setOverflowOpen}
+        day={day}
+        events={events}
+        onEventClick={onEventClick}
+      />
     </div>
   )
 }
