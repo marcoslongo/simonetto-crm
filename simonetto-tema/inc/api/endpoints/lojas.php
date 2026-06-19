@@ -193,7 +193,7 @@ add_action('rest_api_init', function () {
     [
       'methods'             => 'GET',
       'callback'            => 'mytheme_api_debug_whatsapp_avatar',
-      'permission_callback' => 'mytheme_api_is_authenticated',
+      'permission_callback' => fn() => current_user_can('read'),
     ],
   ]);
 
