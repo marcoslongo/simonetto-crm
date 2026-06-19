@@ -1780,16 +1780,19 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
 
   // Busca avatar lazily quando o card renderiza e não tem foto no banco ainda
   useEffect(() => {
+    console.log(`[kanban-avatar] lead=${lead.id} origem=${lead.origem} cardAvatar=${cardAvatar}`)
     if (cardAvatar || lead.origem !== 'proprio') return
+    console.log(`[kanban-avatar] fetching avatar for lead=${lead.id}`)
     fetch(`/api/leads/${lead.id}/whatsapp-avatar`)
       .then(r => r.json())
       .then((d: { avatarUrl: string | null }) => {
+        console.log(`[kanban-avatar] lead=${lead.id} resultado:`, d)
         if (d.avatarUrl) {
           setCardAvatar(d.avatarUrl)
           onLeadUpdate({ ...lead, avatar_url: d.avatarUrl })
         }
       })
-      .catch(() => {})
+      .catch((err) => console.log(`[kanban-avatar] lead=${lead.id} error:`, err))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id])
 

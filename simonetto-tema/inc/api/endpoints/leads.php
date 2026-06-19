@@ -2149,11 +2149,40 @@ function mytheme_api_get_lead_whatsapp_creds(WP_REST_Request $request): WP_REST_
 
   $evo_url  = get_option('evolution_api_url', '');
   $evo_key  = $loja_id ? get_post_meta($loja_id, '_evolution_api_key', true) : '';
-  if (!$evo_key) $evo_key = get_option('evolution_api_key', '');
   $instance = $loja_id ? get_post_meta($loja_id, '_evolution_instance', true) : '';
 
+  // Fallback: busca nos usuários associados à loja (credenciais costumam ficar em user_meta)
+  if ((!$evo_key || !$instance) && $loja_id) {
+    $user_ids = $wpdb->get_col($wpdb->prepare(
+      "SELECT DISTINCT um.user_id FROM {$wpdb->usermeta} um
+       WHERE um.meta_key = 'loja_id'
+         AND (um.meta_value = %s OR um.meta_value LIKE %s OR um.meta_value LIKE %s)
+       LIMIT 10",
+      (string) $loja_id,
+      '%"' . intval($loja_id) . '"%',
+      '%:' . intval($loja_id) . ';%'
+    ));
+    foreach ($user_ids as $uid) {
+      $uk = get_user_meta((int) $uid, '_evolution_api_key', true);
+      $ui = get_user_meta((int) $uid, '_evolution_instance', true);
+      if ($uk && $ui) {
+        $evo_key  = $uk;
+        $instance = $ui;
+        break;
+      }
+    }
+  }
+
+  // Fallback global
+  if (!$evo_key)  $evo_key  = get_option('evolution_api_key', '');
+  if (!$instance) $instance = get_option('evolution_instance', '');
+
   if (!$evo_url || !$evo_key || !$instance || !$phone) {
-    return new WP_REST_Response(['success' => false, 'mensagem' => 'Credenciais incompletas.'], 422);
+    return new WP_REST_Response([
+      'success'  => false,
+      'mensagem' => 'Credenciais incompletas.',
+      'debug'    => compact('evo_url', 'evo_key', 'instance', 'phone', 'loja_id'),
+    ], 422);
   }
 
   return new WP_REST_Response([

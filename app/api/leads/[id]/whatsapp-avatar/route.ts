@@ -28,7 +28,12 @@ export async function GET(
     cache: 'no-store',
   })
 
-  if (!credsRes.ok) return NextResponse.json({ avatarUrl: null })
+  console.log(`[whatsapp-avatar] lead=${leadId} creds status=${credsRes.status}`)
+  if (!credsRes.ok) {
+    const body = await credsRes.text()
+    console.log(`[whatsapp-avatar] creds error body:`, body)
+    return NextResponse.json({ avatarUrl: null })
+  }
 
   const creds = await credsRes.json() as {
     success: boolean
@@ -36,14 +41,19 @@ export async function GET(
     evo_key: string
     instance: string
     phone: string
+    debug?: unknown
   }
+
+  console.log(`[whatsapp-avatar] creds:`, { success: creds.success, instance: creds.instance, phone: creds.phone, debug: creds.debug })
 
   if (!creds.success) return NextResponse.json({ avatarUrl: null })
 
   // 2. Chama Evolution GO diretamente do Next.js (Node.js)
   let avatarUrl: string | null = null
   try {
-    const avatarRes = await fetch(`${creds.evo_url.replace(/\/$/, '')}/user/avatar`, {
+    const evoUrl = `${creds.evo_url.replace(/\/$/, '')}/user/avatar`
+    console.log(`[whatsapp-avatar] calling Evolution GO: ${evoUrl}`)
+    const avatarRes = await fetch(evoUrl, {
       method: 'POST',
       headers: {
         apikey: creds.evo_key,
@@ -57,15 +67,18 @@ export async function GET(
       signal: AbortSignal.timeout(10000),
     })
 
+    const rawBody = await avatarRes.text()
+    console.log(`[whatsapp-avatar] Evolution GO status=${avatarRes.status} body=`, rawBody)
+
     if (avatarRes.ok) {
-      const data = await avatarRes.json() as Record<string, unknown>
+      const data = JSON.parse(rawBody) as Record<string, unknown>
       avatarUrl = (data.profilePictureUrl as string)
         ?? (data.avatar as string)
         ?? (data.url as string)
         ?? null
     }
-  } catch {
-    // timeout ou erro de rede — retorna null sem quebrar
+  } catch (err) {
+    console.log(`[whatsapp-avatar] Evolution GO error:`, err)
   }
 
   // 3. Salva no WordPress se encontrou
