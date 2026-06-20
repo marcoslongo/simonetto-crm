@@ -180,25 +180,27 @@ class Loja_Handler
   public static function get_usuarios($loja_id)
   {
     $loja_id_int = intval($loja_id);
-    // Busca por loja_ids (int serializado: a:n:{i:0;i:ID;}) OU loja_id (ACF string: "ID")
-    $users = get_users([
-      'meta_query' => [
-        'relation' => 'OR',
-        [
-          'key'     => 'loja_ids',
-          'value'   => 'i:' . $loja_id_int . ';',
-          'compare' => 'LIKE',
-        ],
-        [
-          'key'     => 'loja_id',
-          'value'   => '"' . $loja_id_int . '"',
-          'compare' => 'LIKE',
-        ],
-      ],
-    ]);
+
+    // Carrega todos os usuários e filtra por PHP — evita depender do formato de serialização do ACF
+    $all_users = get_users(['number' => -1]);
 
     $resultado = [];
-    foreach ($users as $user) {
+    foreach ($all_users as $user) {
+      // Verifica se o usuário pertence à loja (testa loja_ids e loja_id)
+      $loja_ids_raw = get_user_meta($user->ID, 'loja_ids', true);
+      $loja_id_raw  = get_user_meta($user->ID, 'loja_id',  true);
+
+      $user_loja_ids = [];
+      if (is_array($loja_ids_raw)) {
+        $user_loja_ids = array_map('intval', $loja_ids_raw);
+      } elseif (is_array($loja_id_raw)) {
+        $user_loja_ids = array_map('intval', $loja_id_raw);
+      } elseif ($loja_id_raw) {
+        $user_loja_ids = [intval($loja_id_raw)];
+      }
+
+      if (!in_array($loja_id_int, $user_loja_ids, true)) continue;
+
       $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
       $is_gerente = (bool) get_user_meta($user->ID, 'is_gerente', true);
 
@@ -212,9 +214,6 @@ class Loja_Handler
       // Supervisores/master/industria gerenciam a rede toda — não aparecem por loja
       if (in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true)) continue;
 
-      // Loja primária do usuário — usa loja_ids salvo direto (sem depender do ACF)
-      $raw_loja      = get_user_meta($user->ID, 'loja_ids', true);
-      $user_loja_ids = is_array($raw_loja) ? array_map('intval', $raw_loja) : [];
       $loja_primaria = $user_loja_ids[0] ?? null;
 
       $resultado[] = [
