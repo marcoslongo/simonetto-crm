@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireGerente } from '@/lib/auth'
+import { requireGerente, isSupervisor } from '@/lib/auth'
 import { getLeadsTrackingDeviceServer, getLeadsTrackingHorarioServer } from '@/lib/server-leads-service'
 import { ChartDeviceBreakdown } from '@/components/dashboard/chart-device-breakdown'
 import { ChartHorarioLeads } from '@/components/dashboard/chart-horario-leads'
@@ -77,11 +77,11 @@ function InsightItem({
 
 // ─── Executive summary server component ─────────────────────────────────────
 
-async function ExecutiveSummary({ lojaIds }: { lojaIds?: number[] }) {
+async function ExecutiveSummary({ lojaIds, responsavelId }: { lojaIds?: number[], responsavelId?: number }) {
   const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
   const [horarioData, deviceData] = await Promise.all([
-    getLeadsTrackingHorarioServer(undefined, undefined, ids),
-    getLeadsTrackingDeviceServer(undefined, undefined, ids),
+    getLeadsTrackingHorarioServer(undefined, undefined, ids, responsavelId),
+    getLeadsTrackingDeviceServer(undefined, undefined, ids, responsavelId),
   ])
 
   const hi = computeHorarioInsights(horarioData)
@@ -243,15 +243,15 @@ function SectionHeader({ title, description }: { title: string; description: str
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-async function HorarioChart({ lojaIds }: { lojaIds?: number[] }) {
+async function HorarioChart({ lojaIds, responsavelId }: { lojaIds?: number[], responsavelId?: number }) {
   const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
-  const data = await getLeadsTrackingHorarioServer(undefined, undefined, ids)
+  const data = await getLeadsTrackingHorarioServer(undefined, undefined, ids, responsavelId)
   return <ChartHorarioLeads data={data} />
 }
 
-async function DeviceChart({ lojaIds }: { lojaIds?: number[] }) {
+async function DeviceChart({ lojaIds, responsavelId }: { lojaIds?: number[], responsavelId?: number }) {
   const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
-  const data = await getLeadsTrackingDeviceServer(undefined, undefined, ids)
+  const data = await getLeadsTrackingDeviceServer(undefined, undefined, ids, responsavelId)
   return <ChartDeviceBreakdown data={data} />
 }
 
@@ -267,8 +267,12 @@ function SummarySkeleton() {
 }
 
 export default async function ComportamentoPage() {
-  const user    = await requireGerente()
-  const lojaIds = user.role === 'loja' && user.loja_ids.length > 0 ? user.loja_ids : undefined
+  const user  = await requireGerente()
+  const sup   = isSupervisor(user)
+
+  // Todos filtram pelas lojas vinculadas; apenas não-supervisores filtram pelo próprio responsavel_id
+  const lojaIds       = user.loja_ids.length > 0 ? user.loja_ids : undefined
+  const responsavelId = !sup ? user.id : undefined
 
   return (
     <div className="space-y-8">
@@ -286,7 +290,7 @@ export default async function ComportamentoPage() {
           description="Padrões detectados, insights automáticos e recomendações de ação"
         />
         <Suspense fallback={<SummarySkeleton />}>
-          <ExecutiveSummary lojaIds={lojaIds} />
+          <ExecutiveSummary lojaIds={lojaIds} responsavelId={responsavelId} />
         </Suspense>
       </section>
 
@@ -297,7 +301,7 @@ export default async function ComportamentoPage() {
           description="Volume de captação por hora do dia — identifique picos e janelas de baixo volume"
         />
         <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-          <HorarioChart lojaIds={lojaIds} />
+          <HorarioChart lojaIds={lojaIds} responsavelId={responsavelId} />
         </Suspense>
       </section>
 
@@ -308,7 +312,7 @@ export default async function ComportamentoPage() {
           description="De onde seus leads preenchem o formulário — mobile, desktop ou tablet"
         />
         <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <DeviceChart lojaIds={lojaIds} />
+          <DeviceChart lojaIds={lojaIds} responsavelId={responsavelId} />
         </Suspense>
       </section>
     </div>

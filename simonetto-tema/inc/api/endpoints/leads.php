@@ -1421,10 +1421,11 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from     = sanitize_text_field($request->get_param('from')     ?? '');
-  $to       = sanitize_text_field($request->get_param('to')       ?? '');
-  $loja_id  = intval($request->get_param('loja_id'));
-  $loja_ids = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
+  $from           = sanitize_text_field($request->get_param('from')           ?? '');
+  $to             = sanitize_text_field($request->get_param('to')             ?? '');
+  $loja_id        = intval($request->get_param('loja_id'));
+  $loja_ids       = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
+  $responsavel_id = intval($request->get_param('responsavel_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1443,6 +1444,11 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   } elseif ($loja_id) {
     $where_clauses[] = "l.loja_id = %d";
     $prepare_values[] = $loja_id;
+  }
+
+  if ($responsavel_id) {
+    $where_clauses[] = "l.responsavel_id = %d";
+    $prepare_values[] = $responsavel_id;
   }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
@@ -1505,10 +1511,11 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from     = sanitize_text_field($request->get_param('from')     ?? '');
-  $to       = sanitize_text_field($request->get_param('to')       ?? '');
-  $loja_id  = intval($request->get_param('loja_id'));
-  $loja_ids = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
+  $from           = sanitize_text_field($request->get_param('from')           ?? '');
+  $to             = sanitize_text_field($request->get_param('to')             ?? '');
+  $loja_id        = intval($request->get_param('loja_id'));
+  $loja_ids       = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
+  $responsavel_id = intval($request->get_param('responsavel_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1527,6 +1534,11 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   } elseif ($loja_id) {
     $where_clauses[] = "l.loja_id = %d";
     $prepare_values[] = $loja_id;
+  }
+
+  if ($responsavel_id) {
+    $where_clauses[] = "l.responsavel_id = %d";
+    $prepare_values[] = $responsavel_id;
   }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';

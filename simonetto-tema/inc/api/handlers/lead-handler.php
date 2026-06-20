@@ -706,6 +706,20 @@ class Lead_Handler
       return new WP_Error('db_error', 'Erro ao atualizar lead.', ['status' => 500]);
     }
 
+    // Registra evento no histórico
+    if ($loja_id && $loja_id !== (int) $lead_row['loja_id']) {
+      $loja_anterior_nome = $lead_row['loja_id'] ? (get_the_title((int) $lead_row['loja_id']) ?: 'Loja #' . $lead_row['loja_id']) : '—';
+      $loja_nova_nome     = get_the_title($loja_id) ?: 'Loja #' . $loja_id;
+      $quem               = wp_get_current_user();
+      $wpdb->insert($wpdb->prefix . 'leads_actions', [
+        'lead_id'      => $id,
+        'tipo_contato' => 'Alteração de Loja',
+        'usuario_id'   => (int) $quem->ID,
+        'observacao'   => "De \"{$loja_anterior_nome}\" para \"{$loja_nova_nome}\".",
+        'criado_em'    => current_time('mysql'),
+      ]);
+    }
+
     return self::get_by_id($id);
   }
 
@@ -777,12 +791,19 @@ class Lead_Handler
     $table_leads = $wpdb->prefix . 'leads';
 
     $lead_row = $wpdb->get_row($wpdb->prepare(
-      "SELECT loja_id FROM {$table_leads} WHERE id = %d",
+      "SELECT loja_id, responsavel_id FROM {$table_leads} WHERE id = %d",
       $id
     ));
 
     if (!$lead_row) {
       return new WP_Error('lead_not_found', 'Lead não encontrado.', ['status' => 404]);
+    }
+
+    // Captura nome do responsável anterior para o histórico
+    $resp_anterior_nome = '— sem responsável —';
+    if ($lead_row->responsavel_id) {
+      $resp_ant = get_userdata((int) $lead_row->responsavel_id);
+      $resp_anterior_nome = $resp_ant ? ($resp_ant->display_name ?: $resp_ant->user_login) : 'ID ' . $lead_row->responsavel_id;
     }
 
     if ($responsavel_id) {
@@ -862,6 +883,22 @@ class Lead_Handler
       return new WP_Error('db_error', 'Erro ao atualizar responsável.', ['status' => 500]);
     }
 
+    // Registra evento no histórico
+    $quem_atual = wp_get_current_user();
+    if ($responsavel_id) {
+      $resp_novo_nome = isset($responsavel) ? ($responsavel->display_name ?: $responsavel->user_login) : 'ID ' . $responsavel_id;
+      $obs = "De \"{$resp_anterior_nome}\" para \"{$resp_novo_nome}\".";
+    } else {
+      $obs = "Responsável \"{$resp_anterior_nome}\" removido.";
+    }
+    $wpdb->insert($wpdb->prefix . 'leads_actions', [
+      'lead_id'      => $id,
+      'tipo_contato' => 'Alteração de Responsável',
+      'usuario_id'   => (int) $quem_atual->ID,
+      'observacao'   => $obs,
+      'criado_em'    => current_time('mysql'),
+    ]);
+
     return self::get_by_id($id);
   }
 
@@ -889,6 +926,9 @@ class Lead_Handler
       return new WP_Error('invalid_loja', 'Loja de destino inválida.', ['status' => 400]);
     }
 
+    // Captura nome da loja anterior para o histórico
+    $loja_anterior_nome = $lead->loja_id ? (get_the_title($lead->loja_id) ?: 'Loja #' . $lead->loja_id) : '—';
+
     // Valida responsável, se fornecido
     if ($responsavel_id) {
       $responsavel = get_userdata($responsavel_id);
@@ -912,6 +952,22 @@ class Lead_Handler
     if ($resultado === false) {
       return new WP_Error('db_error', 'Erro ao transferir lead.', ['status' => 500]);
     }
+
+    // Registra evento no histórico
+    $loja_nova_nome = get_the_title($nova_loja_id) ?: 'Loja #' . $nova_loja_id;
+    $quem           = wp_get_current_user();
+    $obs            = "De \"{$loja_anterior_nome}\" para \"{$loja_nova_nome}\".";
+    if ($responsavel_id) {
+      $resp_nome = isset($responsavel) ? ($responsavel->display_name ?: $responsavel->user_login) : 'ID ' . $responsavel_id;
+      $obs      .= " Responsável: {$resp_nome}.";
+    }
+    $wpdb->insert($wpdb->prefix . 'leads_actions', [
+      'lead_id'      => $lead_id,
+      'tipo_contato' => 'Transferência de Loja',
+      'usuario_id'   => (int) $quem->ID,
+      'observacao'   => $obs,
+      'criado_em'    => current_time('mysql'),
+    ]);
 
     return self::get_by_id($lead_id);
   }
