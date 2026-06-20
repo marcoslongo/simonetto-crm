@@ -1838,12 +1838,8 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
         const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`)
         const data = await res.json()
         if (res.ok) {
-          const lista: UsuarioRaw[] = data.usuarios ?? []
-          // Gerente vê apenas atendentes
-          setUsuarios(isGerente
-            ? lista.filter(u => u.nivel_atribuicao === 'atendente' || (!u.nivel_atribuicao && !u.is_gerente))
-            : lista
-          )
+          // Backend já exclui supervisores; mostra todos os demais (gerentes e atendentes)
+          setUsuarios(data.usuarios ?? [])
         }
       }
     } catch {
