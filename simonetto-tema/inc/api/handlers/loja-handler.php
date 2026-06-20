@@ -269,11 +269,14 @@ class Loja_Handler
   /**
    * Leads dos últimos 30 dias (agrupados por dia)
    */
-  public static function get_leads_30_days($loja_id, bool $exclude_proprio = false)
+  public static function get_leads_30_days($loja_id, bool $exclude_proprio = false, int $responsavel_id = 0)
   {
     global $wpdb;
-    $table_leads = $wpdb->prefix . 'leads';
+    $table_leads    = $wpdb->prefix . 'leads';
     $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+    $resp_filter    = $responsavel_id > 0
+      ? $wpdb->prepare(" AND responsavel_id = %d", $responsavel_id)
+      : '';
 
     $results = $wpdb->get_results($wpdb->prepare("
       SELECT
@@ -281,7 +284,7 @@ class Loja_Handler
         COUNT(*) as total
       FROM {$table_leads}
       WHERE loja_id = %d
-        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY){$proprio_filter}
+        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 30 DAY){$proprio_filter}{$resp_filter}
       GROUP BY DATE(data_criacao)
       ORDER BY date ASC
     ", $loja_id));
@@ -383,11 +386,14 @@ class Loja_Handler
   /**
    * Leads dos últimos 12 meses (agrupados por mês)
    */
-  public static function get_leads_12_months($loja_id, bool $exclude_proprio = false)
+  public static function get_leads_12_months($loja_id, bool $exclude_proprio = false, int $responsavel_id = 0)
   {
     global $wpdb;
-    $table_leads = $wpdb->prefix . 'leads';
+    $table_leads    = $wpdb->prefix . 'leads';
     $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+    $resp_filter    = $responsavel_id > 0
+      ? $wpdb->prepare(" AND responsavel_id = %d", $responsavel_id)
+      : '';
 
     $results = $wpdb->get_results($wpdb->prepare("
       SELECT
@@ -395,7 +401,7 @@ class Loja_Handler
         COUNT(*) as total
       FROM {$table_leads}
       WHERE loja_id = %d
-        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH){$proprio_filter}
+        AND data_criacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH){$proprio_filter}{$resp_filter}
       GROUP BY DATE_FORMAT(data_criacao, '%%Y-%%m')
       ORDER BY date ASC
     ", $loja_id));

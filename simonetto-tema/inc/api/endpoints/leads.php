@@ -1419,9 +1419,10 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from    = sanitize_text_field($request->get_param('from')    ?? '');
-  $to      = sanitize_text_field($request->get_param('to')      ?? '');
-  $loja_id = intval($request->get_param('loja_id'));
+  $from     = sanitize_text_field($request->get_param('from')     ?? '');
+  $to       = sanitize_text_field($request->get_param('to')       ?? '');
+  $loja_id  = intval($request->get_param('loja_id'));
+  $loja_ids = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1430,9 +1431,17 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
     $where_clauses[] = "l.origem != 'proprio'";
   }
 
-  if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
-  if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
-  if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  if (!empty($loja_ids)) {
+    $placeholders    = implode(',', array_fill(0, count($loja_ids), '%d'));
+    $where_clauses[] = "l.loja_id IN ({$placeholders})";
+    foreach ($loja_ids as $lid) { $prepare_values[] = $lid; }
+  } elseif ($loja_id) {
+    $where_clauses[] = "l.loja_id = %d";
+    $prepare_values[] = $loja_id;
+  }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
@@ -1494,9 +1503,10 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   $table_leads    = $wpdb->prefix . 'leads';
   $table_tracking = $wpdb->prefix . 'lead_tracking';
 
-  $from    = sanitize_text_field($request->get_param('from')    ?? '');
-  $to      = sanitize_text_field($request->get_param('to')      ?? '');
-  $loja_id = intval($request->get_param('loja_id'));
+  $from     = sanitize_text_field($request->get_param('from')     ?? '');
+  $to       = sanitize_text_field($request->get_param('to')       ?? '');
+  $loja_id  = intval($request->get_param('loja_id'));
+  $loja_ids = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1505,9 +1515,17 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
     $where_clauses[] = "l.origem != 'proprio'";
   }
 
-  if ($from)    { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
-  if ($to)      { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
-  if ($loja_id) { $where_clauses[] = "l.loja_id = %d";       $prepare_values[] = $loja_id; }
+  if ($from) { $where_clauses[] = "l.data_criacao >= %s"; $prepare_values[] = $from . ' 00:00:00'; }
+  if ($to)   { $where_clauses[] = "l.data_criacao <= %s"; $prepare_values[] = $to   . ' 23:59:59'; }
+
+  if (!empty($loja_ids)) {
+    $placeholders    = implode(',', array_fill(0, count($loja_ids), '%d'));
+    $where_clauses[] = "l.loja_id IN ({$placeholders})";
+    foreach ($loja_ids as $lid) { $prepare_values[] = $lid; }
+  } elseif ($loja_id) {
+    $where_clauses[] = "l.loja_id = %d";
+    $prepare_values[] = $loja_id;
+  }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
@@ -1800,6 +1818,12 @@ function mytheme_api_leads_vnr_stats(WP_REST_Request $request)
 
   if (current_user_can('administrator') && !crm_current_user_is_master()) {
     $where_clauses[] = "l.origem != 'proprio'";
+  }
+
+  $resp_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  if ($resp_id > 0) {
+    $where_clauses[]  = "l.responsavel_id = %d";
+    $prepare_values[] = $resp_id;
   }
 
   $where_sql = !empty($where_clauses)

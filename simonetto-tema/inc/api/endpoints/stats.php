@@ -206,9 +206,10 @@ function mytheme_api_stats_conversao_por_loja($request)
   if ($raw) {
     $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
   }
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::conversao_por_loja($loja_ids, $from, $to, $exclude_proprio);
+  $from           = sanitize_text_field($request->get_param('from') ?? '');
+  $to             = sanitize_text_field($request->get_param('to')   ?? '');
+  $responsavel_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Stats_Handler::conversao_por_loja($loja_ids, $from, $to, $exclude_proprio, $responsavel_id);
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }
 
@@ -220,9 +221,10 @@ function mytheme_api_stats_funil_por_atendente($request)
   if ($raw) {
     $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
   }
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::funil_por_atendente($loja_ids, $from, $to, $exclude_proprio);
+  $from           = sanitize_text_field($request->get_param('from') ?? '');
+  $to             = sanitize_text_field($request->get_param('to')   ?? '');
+  $responsavel_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Stats_Handler::funil_por_atendente($loja_ids, $from, $to, $exclude_proprio, $responsavel_id);
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }
 
@@ -234,9 +236,10 @@ function mytheme_api_stats_tempo_por_etapa($request)
   if ($raw) {
     $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
   }
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::tempo_por_etapa($loja_ids, $from, $to, $exclude_proprio);
+  $from           = sanitize_text_field($request->get_param('from') ?? '');
+  $to             = sanitize_text_field($request->get_param('to')   ?? '');
+  $responsavel_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Stats_Handler::tempo_por_etapa($loja_ids, $from, $to, $exclude_proprio, $responsavel_id);
   return new WP_REST_Response(['success' => true, 'data' => $data], 200);
 }
 
@@ -290,8 +293,9 @@ function mytheme_api_stats_conversao_por_etiqueta(WP_REST_Request $request): WP_
   if ($raw) {
     $loja_ids = array_values(array_filter(array_map('intval', explode(',', $raw))));
   }
-  $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to   = sanitize_text_field($request->get_param('to')   ?? '');
-  $data = Stats_Handler::conversao_por_etiqueta($loja_ids, $from, $to, $exclude_proprio);
+  $from           = sanitize_text_field($request->get_param('from') ?? '');
+  $to             = sanitize_text_field($request->get_param('to')   ?? '');
+  $responsavel_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Stats_Handler::conversao_por_etiqueta($loja_ids, $from, $to, $exclude_proprio, $responsavel_id);
   return new WP_REST_Response(['success' => true, 'total' => count($data), 'data' => $data], 200);
 }

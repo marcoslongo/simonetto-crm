@@ -542,7 +542,9 @@ function mytheme_api_get_loja_leads_30_days($request)
   }
 
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
-  $data = Loja_Handler::get_leads_30_days($loja_id, $exclude_proprio);
+  // Supervisor: sem filtro de responsável. Demais perfis: respeita ver_leads_nao_atribuidos
+  $responsavel_id  = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Loja_Handler::get_leads_30_days($loja_id, $exclude_proprio, $responsavel_id);
 
   return new WP_REST_Response([
     'success' => true,
@@ -567,7 +569,9 @@ function mytheme_api_get_loja_leads_12_months($request)
   }
 
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
-  $data = Loja_Handler::get_leads_12_months($loja_id, $exclude_proprio);
+  // Supervisor: sem filtro de responsável. Demais perfis: respeita ver_leads_nao_atribuidos
+  $responsavel_id  = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $data = Loja_Handler::get_leads_12_months($loja_id, $exclude_proprio, $responsavel_id);
 
   return new WP_REST_Response([
     'success' => true,
@@ -704,8 +708,8 @@ function mytheme_api_get_loja_status_funil($request)
   $table   = $wpdb->prefix . 'leads';
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
   $proprio_filter  = $exclude_proprio ? " AND origem != 'proprio'" : '';
-  $resp_id         = crm_stats_responsavel_filter();
-  $resp_filter     = $resp_id > 0 ? " AND responsavel_id = {$resp_id}" : '';
+  $resp_id         = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $resp_filter     = $resp_id > 0 ? $wpdb->prepare(" AND responsavel_id = %d", $resp_id) : '';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(

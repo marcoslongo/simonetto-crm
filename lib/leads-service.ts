@@ -652,23 +652,31 @@ export interface UtmMediumItem {
 }
 
 
-export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string, lojaId?: number): Promise<DeviceItem[]> {
+export async function getLeadsTrackingDevice(from?: string, to?: string, token?: string, lojaIds?: number | number[]): Promise<DeviceItem[]> {
   let endpoint = 'leads-tracking-device'
   const params: string[] = []
-  if (from)   params.push(`from=${encodeURIComponent(from)}`)
-  if (to)     params.push(`to=${encodeURIComponent(to)}`)
-  if (lojaId) params.push(`loja_id=${lojaId}`)
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (Array.isArray(lojaIds) && lojaIds.length > 0) {
+    params.push(`loja_ids=${lojaIds.join(',')}`)
+  } else if (typeof lojaIds === 'number' && lojaIds) {
+    params.push(`loja_id=${lojaIds}`)
+  }
   if (params.length) endpoint += `?${params.join('&')}`
   const json = await fetchAPI(endpoint, 'Erro ao buscar device breakdown', token)
   return json.data || []
 }
 
-export async function getLeadsTrackingHorario(from?: string, to?: string, token?: string, lojaId?: number): Promise<HorarioItem[]> {
+export async function getLeadsTrackingHorario(from?: string, to?: string, token?: string, lojaIds?: number | number[]): Promise<HorarioItem[]> {
   let endpoint = 'leads-tracking-horario'
   const params: string[] = []
-  if (from)   params.push(`from=${encodeURIComponent(from)}`)
-  if (to)     params.push(`to=${encodeURIComponent(to)}`)
-  if (lojaId) params.push(`loja_id=${lojaId}`)
+  if (from) params.push(`from=${encodeURIComponent(from)}`)
+  if (to)   params.push(`to=${encodeURIComponent(to)}`)
+  if (Array.isArray(lojaIds) && lojaIds.length > 0) {
+    params.push(`loja_ids=${lojaIds.join(',')}`)
+  } else if (typeof lojaIds === 'number' && lojaIds) {
+    params.push(`loja_id=${lojaIds}`)
+  }
   if (params.length) endpoint += `?${params.join('&')}`
   const json = await fetchAPI(endpoint, 'Erro ao buscar horário de leads', token)
   return json.data || []

@@ -77,10 +77,11 @@ function InsightItem({
 
 // ─── Executive summary server component ─────────────────────────────────────
 
-async function ExecutiveSummary({ lojaId }: { lojaId?: number }) {
+async function ExecutiveSummary({ lojaIds }: { lojaIds?: number[] }) {
+  const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
   const [horarioData, deviceData] = await Promise.all([
-    getLeadsTrackingHorarioServer(undefined, undefined, lojaId),
-    getLeadsTrackingDeviceServer(undefined, undefined, lojaId),
+    getLeadsTrackingHorarioServer(undefined, undefined, ids),
+    getLeadsTrackingDeviceServer(undefined, undefined, ids),
   ])
 
   const hi = computeHorarioInsights(horarioData)
@@ -242,13 +243,15 @@ function SectionHeader({ title, description }: { title: string; description: str
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-async function HorarioChart({ lojaId }: { lojaId?: number }) {
-  const data = await getLeadsTrackingHorarioServer(undefined, undefined, lojaId)
+async function HorarioChart({ lojaIds }: { lojaIds?: number[] }) {
+  const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
+  const data = await getLeadsTrackingHorarioServer(undefined, undefined, ids)
   return <ChartHorarioLeads data={data} />
 }
 
-async function DeviceChart({ lojaId }: { lojaId?: number }) {
-  const data = await getLeadsTrackingDeviceServer(undefined, undefined, lojaId)
+async function DeviceChart({ lojaIds }: { lojaIds?: number[] }) {
+  const ids = lojaIds && lojaIds.length > 0 ? lojaIds : undefined
+  const data = await getLeadsTrackingDeviceServer(undefined, undefined, ids)
   return <ChartDeviceBreakdown data={data} />
 }
 
@@ -264,9 +267,8 @@ function SummarySkeleton() {
 }
 
 export default async function ComportamentoPage() {
-  const user   = await requireGerente()
-  const isLoja = user.role === 'loja'
-  const lojaId = isLoja ? (user.loja_ids[0] ?? undefined) : undefined
+  const user    = await requireGerente()
+  const lojaIds = user.role === 'loja' && user.loja_ids.length > 0 ? user.loja_ids : undefined
 
   return (
     <div className="space-y-8">
@@ -284,7 +286,7 @@ export default async function ComportamentoPage() {
           description="Padrões detectados, insights automáticos e recomendações de ação"
         />
         <Suspense fallback={<SummarySkeleton />}>
-          <ExecutiveSummary lojaId={lojaId} />
+          <ExecutiveSummary lojaIds={lojaIds} />
         </Suspense>
       </section>
 
@@ -295,7 +297,7 @@ export default async function ComportamentoPage() {
           description="Volume de captação por hora do dia — identifique picos e janelas de baixo volume"
         />
         <Suspense fallback={<ChartCardSkeleton height="h-80" />}>
-          <HorarioChart lojaId={lojaId} />
+          <HorarioChart lojaIds={lojaIds} />
         </Suspense>
       </section>
 
@@ -306,7 +308,7 @@ export default async function ComportamentoPage() {
           description="De onde seus leads preenchem o formulário — mobile, desktop ou tablet"
         />
         <Suspense fallback={<ChartCardSkeleton height="h-72" />}>
-          <DeviceChart lojaId={lojaId} />
+          <DeviceChart lojaIds={lojaIds} />
         </Suspense>
       </section>
     </div>

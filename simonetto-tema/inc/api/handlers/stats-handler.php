@@ -248,7 +248,7 @@ class Stats_Handler
   /**
    * Taxa de conversão por loja
    */
-  public static function conversao_por_loja(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
+  public static function conversao_por_loja(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false, int $responsavel_id = 0): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
@@ -265,6 +265,7 @@ class Stats_Handler
     }
     if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
     if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
+    if ($responsavel_id > 0) $where .= $wpdb->prepare(" AND l.responsavel_id = %d", $responsavel_id);
 
     $sql = "
       SELECT
@@ -317,7 +318,7 @@ class Stats_Handler
   /**
    * Funil por atendente
    */
-  public static function funil_por_atendente(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
+  public static function funil_por_atendente(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false, int $responsavel_id = 0): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
@@ -334,6 +335,7 @@ class Stats_Handler
     }
     if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
     if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
+    if ($responsavel_id > 0) $where .= $wpdb->prepare(" AND l.responsavel_id = %d", $responsavel_id);
 
     $sql = "
       SELECT
@@ -379,14 +381,15 @@ class Stats_Handler
   /**
    * Tempo médio por etapa (usa data_atualizacao como proxy de quando o status foi alterado)
    */
-  public static function tempo_por_etapa(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
+  public static function tempo_por_etapa(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false, int $responsavel_id = 0): array
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
 
-    $loja_filter   = '';
-    $date_filter   = '';
+    $loja_filter    = '';
+    $date_filter    = '';
     $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+    $resp_filter    = $responsavel_id > 0 ? $wpdb->prepare(" AND responsavel_id = %d", $responsavel_id) : '';
     if (!empty($loja_ids)) {
       $loja_ids = array_values(array_map('intval', $loja_ids));
       $placeholders = implode(',', array_fill(0, count($loja_ids), '%d'));
@@ -406,6 +409,7 @@ class Stats_Handler
       {$loja_filter}
       {$date_filter}
       {$proprio_filter}
+      {$resp_filter}
       GROUP BY status
     ";
 
@@ -420,6 +424,7 @@ class Stats_Handler
       {$loja_filter}
       {$date_filter}
       {$proprio_filter}
+      {$resp_filter}
       GROUP BY status
     ";
 
@@ -760,7 +765,7 @@ class Stats_Handler
   /**
    * Conversão por etiqueta: taxa de fechamento agrupada por tag do lead.
    */
-  public static function conversao_por_etiqueta(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false): array
+  public static function conversao_por_etiqueta(array $loja_ids = [], string $from = '', string $to = '', bool $exclude_proprio = false, int $responsavel_id = 0): array
   {
     global $wpdb;
     $t_leads    = $wpdb->prefix . 'leads';
@@ -778,6 +783,7 @@ class Stats_Handler
     }
     if ($from) $where .= $wpdb->prepare(" AND l.data_criacao >= %s", $from . ' 00:00:00');
     if ($to)   $where .= $wpdb->prepare(" AND l.data_criacao <= %s", $to   . ' 23:59:59');
+    if ($responsavel_id > 0) $where .= $wpdb->prepare(" AND l.responsavel_id = %d", $responsavel_id);
 
     $sql = "
       SELECT
