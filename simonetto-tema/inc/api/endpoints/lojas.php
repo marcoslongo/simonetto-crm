@@ -493,10 +493,11 @@ function mytheme_api_get_loja_leads($request)
 
     if ($perfil) {
       if (!$perfil['ver_leads_nao_atribuidos']) {
+        // Usuário só vê leads diretamente atribuídos a ele
         $responsavel_id     = $current_user_id;
-        // Gerente pelo perfil: vê seus leads + inbox da loja (sem responsável)
-        $include_unassigned = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_GERENTE, true);
+        $include_unassigned = false;
       }
+      // ver_leads_nao_atribuidos = true → sem filtro, vê todos os leads da loja
     } else {
       // Fallback legado
       $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);

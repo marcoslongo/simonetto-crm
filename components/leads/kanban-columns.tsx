@@ -1730,6 +1730,8 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
                   onLeadUpdate={onLeadUpdate}
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
                   isGerente={isGerente}
+                  isSupervisor={isSupervisor}
+                  lojas={lojas}
                   vendaRealizada={vendasCache?.[String(lead.id)]}
                   cardCampos={cardCampos}
                 />
@@ -1783,11 +1785,13 @@ interface DraggableLeadRowProps {
   onLeadUpdate: (updated: Lead) => void
   isSaving?: boolean
   isGerente?: boolean
+  isSupervisor?: boolean
+  lojas?: Array<{ id: number; nome: string }>
   vendaRealizada?: VendaRealizada
   cardCampos: KanbanCardCampos
 }
 
-const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente, vendaRealizada, cardCampos }: DraggableLeadRowProps) {
+const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClick, onLeadUpdate, isSaving = false, isGerente, isSupervisor, lojas = [], vendaRealizada, cardCampos }: DraggableLeadRowProps) {
   const {
     attributes,
     listeners,
@@ -1805,23 +1809,43 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
   }
 
   const [popoverOpen, setPopoverOpen] = useState(false)
-  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; avatar_url?: string | null }[]>([])
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string; avatar_url?: string | null; nivel_atribuicao?: string; is_gerente?: boolean; loja_primaria_id?: number }[]>([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const handlePopoverOpen = async (open: boolean) => {
     setPopoverOpen(open)
-    if (open && lead.loja_id && usuarios.length === 0) {
-      setLoadingUsuarios(true)
-      try {
+    if (!open || usuarios.length > 0) return
+    setLoadingUsuarios(true)
+    try {
+      type UsuarioRaw = { id: number; nome: string; avatar_url?: string | null; nivel_atribuicao?: string; is_gerente?: boolean; loja_primaria_id?: number }
+
+      if (isSupervisor && lojas.length > 0) {
+        // Supervisor: busca gerentes de todas as lojas em paralelo
+        const respostas = await Promise.all(lojas.map(l => fetch(`/api/lojas/${l.id}/usuarios`).then(r => r.json())))
+        const todos = respostas.flatMap((d: { usuarios?: UsuarioRaw[] }) => d.usuarios ?? [])
+        const seen = new Set<number>()
+        const unicos: UsuarioRaw[] = []
+        todos.forEach(u => { if (!seen.has(u.id)) { seen.add(u.id); unicos.push(u) } })
+        // Exibe apenas gerentes (não atendentes, não supervisores)
+        setUsuarios(unicos.filter(u => u.nivel_atribuicao === 'gerente' || (!u.nivel_atribuicao && u.is_gerente)))
+      } else if (lead.loja_id) {
+        // Gerente de loja: busca atendentes da loja do lead
         const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`)
         const data = await res.json()
-        if (res.ok) setUsuarios(data.usuarios || [])
-      } catch {
-        toast.error('Erro ao carregar usuários')
-      } finally {
-        setLoadingUsuarios(false)
+        if (res.ok) {
+          const lista: UsuarioRaw[] = data.usuarios ?? []
+          // Gerente vê apenas atendentes
+          setUsuarios(isGerente
+            ? lista.filter(u => u.nivel_atribuicao === 'atendente' || (!u.nivel_atribuicao && !u.is_gerente))
+            : lista
+          )
+        }
       }
+    } catch {
+      toast.error('Erro ao carregar usuários')
+    } finally {
+      setLoadingUsuarios(false)
     }
   }
 
@@ -1834,9 +1858,18 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
         body: JSON.stringify({ responsavel_id: userId }),
       })
       if (!res.ok) { toast.error('Erro ao atualizar atendente'); return }
-      const nome = userId ? (usuarios.find(u => u.id === userId)?.nome ?? '') : null
-      onLeadUpdate({ ...lead, responsavel_id: userId, responsavel_nome: nome })
+      const selecionado = userId ? usuarios.find(u => u.id === userId) : null
+      const nome = selecionado?.nome ?? null
+      // Se o responsável é gerente, o backend já troca a loja — atualiza o display
+      let novaLoja: Partial<Pick<Lead, 'loja_id' | 'loja_nome'>> = {}
+      if (selecionado && (selecionado.nivel_atribuicao === 'gerente' || (!selecionado.nivel_atribuicao && selecionado.is_gerente)) && selecionado.loja_primaria_id) {
+        const lojaDestino = lojas.find(l => l.id === selecionado.loja_primaria_id)
+        if (lojaDestino) novaLoja = { loja_id: lojaDestino.id, loja_nome: lojaDestino.nome }
+      }
+      onLeadUpdate({ ...lead, responsavel_id: userId, responsavel_nome: nome, ...novaLoja })
       setPopoverOpen(false)
+      // Reseta cache de usuários para próxima abertura carregar da loja correta
+      setUsuarios([])
     } catch {
       toast.error('Erro ao atualizar atendente')
     } finally {
