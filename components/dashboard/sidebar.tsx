@@ -53,9 +53,21 @@ interface DashboardSidebarProps {
   posVendaAtivo?: boolean
 }
 
+const NIVEIS_GERENTE    = ['master', 'supervisor', 'industria', 'gerente'] as const
+const NIVEIS_SUPERVISOR = ['master', 'supervisor', 'industria']             as const
+
 function buildNavigation(user: UserType, metasAtivo: boolean, posVendaAtivo: boolean) {
   const isAdmin = user.role === 'administrator'
-  const isGerente = isAdmin || user.is_gerente === true
+  const isGerente = isAdmin || (
+    user.perfil_acesso
+      ? (NIVEIS_GERENTE as readonly string[]).includes(user.perfil_acesso.nivel_atribuicao) || user.is_gerente === true
+      : user.is_gerente === true
+  )
+  const isSupervisor = isAdmin || (
+    user.perfil_acesso
+      ? (NIVEIS_SUPERVISOR as readonly string[]).includes(user.perfil_acesso.nivel_atribuicao)
+      : user.is_gerente === true && user.loja_ids.length > 1
+  )
 
   if (isAdmin) {
     return [
@@ -103,7 +115,7 @@ function buildNavigation(user: UserType, metasAtivo: boolean, posVendaAtivo: boo
       group: 'Visão Geral',
       items: [
         { name: 'Resumo', href: '/crm', icon: LayoutDashboard },
-        ...(isGerente && user.loja_ids.length > 1
+        ...(isSupervisor && (user.loja_ids.length > 1 || user.perfil_acesso?.escopo_lojas === 'todas')
           ? [{ name: 'Unidades', href: '/crm/unidades', icon: Building2 }]
           : []),
       ],

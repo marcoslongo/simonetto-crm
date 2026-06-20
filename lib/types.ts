@@ -47,6 +47,7 @@ export interface PerfilAcesso {
   pode_atribuir_leads: boolean;
   nivel_atribuicao: 'master' | 'supervisor' | 'industria' | 'gerente' | 'atendente';
   acesso_multiplas_lojas: boolean;
+  escopo_lojas: 'proprias' | 'todas';
 }
 
 export interface User {
