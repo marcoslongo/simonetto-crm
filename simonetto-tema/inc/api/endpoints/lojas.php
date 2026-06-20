@@ -707,10 +707,9 @@ function mytheme_user_can_access_loja(int $loja_id): bool
     return true;
   }
 
-  $raw      = get_field('loja_id', 'user_' . $current_user->ID);
-  $loja_ids = is_array($raw)
-    ? array_map('intval', $raw)
-    : ($raw ? [intval($raw)] : []);
+  // Usa loja_ids (salvo diretamente por update_user_meta) para não depender do ACF
+  $raw      = get_user_meta($current_user->ID, 'loja_ids', true);
+  $loja_ids = is_array($raw) ? array_map('intval', $raw) : [];
 
   return in_array($loja_id, $loja_ids, true);
 }
@@ -1107,9 +1106,13 @@ function mytheme_api_admin_save_user_lojas_config(WP_REST_Request $request): WP_
   $is_gerente       = !empty($body['is_gerente']);
   $perfil_acesso_id = isset($body['perfil_acesso_id']) ? intval($body['perfil_acesso_id']) : null;
 
-  // Salva via ACF — fonte do JWT e da query get_usuarios()
-  update_field('loja_id',   $loja_ids,            'user_' . $target_user_id);
-  update_field('is_gerente', $is_gerente ? 1 : 0, 'user_' . $target_user_id);
+  // Salva via update_user_meta (fonte principal) + update_field ACF (compat)
+  update_user_meta($target_user_id, 'loja_ids',        $loja_ids);
+  update_user_meta($target_user_id, 'is_gerente',      $is_gerente ? 1 : 0);
+  update_user_meta($target_user_id, 'perfil_acesso_id', $perfil_acesso_id ?: '');
+
+  update_field('loja_id',    $loja_ids,            'user_' . $target_user_id);
+  update_field('is_gerente', $is_gerente ? 1 : 0,  'user_' . $target_user_id);
 
   if ($perfil_acesso_id) {
     $perfil_post = get_post($perfil_acesso_id);
@@ -1117,12 +1120,8 @@ function mytheme_api_admin_save_user_lojas_config(WP_REST_Request $request): WP_
       update_field('perfil_acesso_id', $perfil_acesso_id, 'user_' . $target_user_id);
     }
   } else {
-    // null = sem perfil (limpa o campo)
     update_field('perfil_acesso_id', '', 'user_' . $target_user_id);
   }
-
-  // Sincroniza usermeta direto — fonte do endpoint GET /admin/usuarios
-  update_user_meta($target_user_id, 'loja_ids', $loja_ids);
 
   return new WP_REST_Response(['success' => true, 'mensagem' => 'Configuração de lojas salva.'], 200);
 }

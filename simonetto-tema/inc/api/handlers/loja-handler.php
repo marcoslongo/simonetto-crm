@@ -179,12 +179,22 @@ class Loja_Handler
    */
   public static function get_usuarios($loja_id)
   {
+    $loja_id_int = intval($loja_id);
+    // Busca por loja_ids (int serializado: a:n:{i:0;i:ID;}) OU loja_id (ACF string: "ID")
     $users = get_users([
-      'meta_query' => [[
-        'key'     => 'loja_id',
-        'value'   => '"' . intval($loja_id) . '"',
-        'compare' => 'LIKE',
-      ]],
+      'meta_query' => [
+        'relation' => 'OR',
+        [
+          'key'     => 'loja_ids',
+          'value'   => 'i:' . $loja_id_int . ';',
+          'compare' => 'LIKE',
+        ],
+        [
+          'key'     => 'loja_id',
+          'value'   => '"' . $loja_id_int . '"',
+          'compare' => 'LIKE',
+        ],
+      ],
     ]);
 
     $resultado = [];
@@ -202,12 +212,10 @@ class Loja_Handler
       // Supervisores/master/industria gerenciam a rede toda — não aparecem por loja
       if (in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true)) continue;
 
-      // Loja primária do usuário (primeira da lista)
-      $raw_loja       = get_field('loja_id', 'user_' . $user->ID);
-      $user_loja_ids  = is_array($raw_loja)
-        ? array_values(array_filter(array_map('intval', $raw_loja)))
-        : ($raw_loja ? [intval($raw_loja)] : []);
-      $loja_primaria  = $user_loja_ids[0] ?? null;
+      // Loja primária do usuário — usa loja_ids salvo direto (sem depender do ACF)
+      $raw_loja      = get_user_meta($user->ID, 'loja_ids', true);
+      $user_loja_ids = is_array($raw_loja) ? array_map('intval', $raw_loja) : [];
+      $loja_primaria = $user_loja_ids[0] ?? null;
 
       $resultado[] = [
         'id'               => (int) $user->ID,
