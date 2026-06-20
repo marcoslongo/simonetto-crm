@@ -106,6 +106,17 @@ function crm_user_has_escopo_global(int $user_id = 0): bool {
 }
 
 /**
+ * Normaliza um valor de loja para array de inteiros, aceitando WP_Post objects, scalars ou arrays.
+ */
+function crm_normalize_loja_ids($raw): array {
+    if (empty($raw) && $raw !== 0) return [];
+    $arr = is_array($raw) ? $raw : [$raw];
+    return array_values(array_filter(array_map(function ($v) {
+        return is_object($v) ? intval($v->ID ?? 0) : intval($v);
+    }, $arr)));
+}
+
+/**
  * Retorna os IDs das lojas acessíveis ao usuário:
  * - null  → sem restrição de loja (admin ou escopo_lojas='todas')
  * - int[] → lista explícita de lojas autorizadas
@@ -114,10 +125,20 @@ function crm_get_user_loja_ids_acessiveis(int $user_id = 0): ?array {
     if (!$user_id) $user_id = get_current_user_id();
     if (crm_user_has_escopo_global($user_id)) return null;
 
-    $raw = get_user_meta($user_id, 'loja_ids', true);
-    if (is_array($raw) && !empty($raw)) {
-        return array_values(array_filter(array_map('intval', $raw)));
+    // 1. loja_ids — salvo pela API admin do CRM via update_user_meta
+    $ids = crm_normalize_loja_ids(get_user_meta($user_id, 'loja_ids', true));
+    if (!empty($ids)) return $ids;
+
+    // 2. loja_id — meta key nativa do campo ACF
+    $ids = crm_normalize_loja_ids(get_user_meta($user_id, 'loja_id', true));
+    if (!empty($ids)) return $ids;
+
+    // 3. get_field — mesmo método usado no JWT (fonte mais confiável)
+    if (function_exists('get_field')) {
+        $ids = crm_normalize_loja_ids(get_field('loja_id', 'user_' . $user_id));
+        if (!empty($ids)) return $ids;
     }
+
     return [];
 }
 
@@ -258,6 +279,28 @@ add_action('init', 'mytheme_load_custom_post_types', 0);
 // ===============================
 // Carregar API
 require_once get_template_directory() . '/inc/api/init.php';
+
+// Carregar campos ACF locais (perfil_acesso CPT + user_form)
+add_action('acf/init', function () {
+    $acf_file = get_template_directory() . '/inc/acf/fields.php';
+    if (file_exists($acf_file)) {
+        require_once $acf_file;
+    }
+});
+
+// Sincroniza loja_id (campo ACF user_form) → loja_ids (meta usada pela API de permissões)
+// Garante consistência independente de como o usuário foi configurado (WP Admin ou CRM Admin)
+add_action('acf/save_post', function ($post_id) {
+    if (!is_string($post_id) || strpos($post_id, 'user_') !== 0) return;
+    $user_id = (int) substr($post_id, 5);
+    if (!$user_id) return;
+
+    $raw      = get_field('loja_id', 'user_' . $user_id);
+    $loja_ids = is_array($raw)
+        ? array_values(array_filter(array_map('intval', $raw)))
+        : ($raw ? [intval($raw)] : []);
+    update_user_meta($user_id, 'loja_ids', $loja_ids);
+}, 20);
 
 // ===============================
 // Migração: adicionar coluna origem à wp_leads

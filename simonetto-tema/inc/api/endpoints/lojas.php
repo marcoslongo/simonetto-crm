@@ -808,6 +808,19 @@ function mytheme_api_get_loja_service_stats($request)
   ], 200);
 }
 
+
+/**
+ * Normaliza um valor de loja (int, string, WP_Post ou array de qualquer desses) para array de inteiros.
+ */
+function mytheme_normalize_loja_ids($raw): array
+{
+  if (empty($raw) && $raw !== 0) return [];
+  $arr = is_array($raw) ? $raw : [$raw];
+  return array_values(array_filter(array_map(function ($v) {
+    return is_object($v) ? intval($v->ID ?? 0) : intval($v);
+  }, $arr)));
+}
+
 /**
  * Verifica se o usuário atual tem acesso à loja informada.
  * Supervisores com escopo_lojas='todas' têm acesso a qualquer loja.
@@ -825,11 +838,23 @@ function mytheme_user_can_access_loja(int $loja_id): bool
     return true;
   }
 
-  // Usa loja_ids (salvo diretamente por update_user_meta) para não depender do ACF
-  $raw      = get_user_meta($current_user->ID, 'loja_ids', true);
-  $loja_ids = is_array($raw) ? array_map('intval', $raw) : [];
+  $uid = $current_user->ID;
 
-  return in_array($loja_id, $loja_ids, true);
+  // 1. loja_ids — salvo pela API admin do CRM via update_user_meta
+  $ids = mytheme_normalize_loja_ids(get_user_meta($uid, 'loja_ids', true));
+  if (!empty($ids)) return in_array($loja_id, $ids, true);
+
+  // 2. loja_id — meta key nativa do campo ACF (salvo via WP Admin ou update_field)
+  $ids = mytheme_normalize_loja_ids(get_user_meta($uid, 'loja_id', true));
+  if (!empty($ids)) return in_array($loja_id, $ids, true);
+
+  // 3. get_field — mesmo método usado no JWT (fonte mais confiável)
+  if (function_exists('get_field')) {
+    $ids = mytheme_normalize_loja_ids(get_field('loja_id', 'user_' . $uid));
+    if (!empty($ids)) return in_array($loja_id, $ids, true);
+  }
+
+  return false;
 }
 
 /**
