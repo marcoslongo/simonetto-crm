@@ -1547,6 +1547,8 @@ export function KanbanColumns({ leads: initialLeads, initialTotal, onLeadClick, 
                     isLoadingAll={loadingAll}
                     savingLeads={savingLeads}
                     isGerente={isGerente}
+                    isSupervisor={isSupervisor}
+                    lojas={lojas}
                     onDeleteColuna={deleteColuna}
                     onMoveColuna={moveColuna}
                     isFirst={colunas.indexOf(coluna) === 0}
@@ -1602,6 +1604,8 @@ interface KanbanColumnProps {
   isLoadingAll?: boolean
   savingLeads?: Set<string>
   isGerente?: boolean
+  isSupervisor?: boolean
+  lojas?: Array<{ id: number; nome: string }>
   onDeleteColuna?: (coluna: KanbanColuna) => void
   onMoveColuna?: (coluna: KanbanColuna, direction: 'left' | 'right') => void
   isFirst?: boolean
@@ -1610,7 +1614,7 @@ interface KanbanColumnProps {
   cardCampos: KanbanCardCampos
 }
 
-const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, onDeleteColuna, onMoveColuna, isFirst, isLast, vendasCache, cardCampos }: KanbanColumnProps) {
+const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, onLeadClick, onLeadUpdate, visibleCount, onLoadMore, isLoadingMore, hasMoreGlobal, isLoadingAll, savingLeads, isGerente, isSupervisor, lojas = [], onDeleteColuna, onMoveColuna, isFirst, isLast, vendasCache, cardCampos }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: coluna.slug,
   })
@@ -1731,7 +1735,7 @@ const KanbanColumn = React.memo(function KanbanColumn({ coluna, items, styles, o
                   isSaving={savingLeads?.has(String(lead.id)) ?? false}
                   isGerente={isGerente}
                   isSupervisor={isSupervisor}
-                  lojas={lojas}
+                  lojas={lojas as Array<{ id: number; nome: string }>}
                   vendaRealizada={vendasCache?.[String(lead.id)]}
                   cardCampos={cardCampos}
                 />
