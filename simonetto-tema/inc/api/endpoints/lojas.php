@@ -277,6 +277,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_gerente',
   ]);
 
+  // GET /api/v1/leads/central — visão cross-loja para supervisores com escopo global
+  register_rest_route('api/v1', '/leads/central', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_central',
+    'permission_callback' => 'mytheme_api_is_central_or_admin',
+  ]);
+
   // GET/POST /api/v1/lojas/{id}/vendas-config — configuração do módulo de vendas realizadas
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/vendas-config', [
     [
@@ -293,45 +300,147 @@ add_action('rest_api_init', function () {
 });
 
 /**
+ * Permission callback: administrador OU qualquer supervisor (nivel_atribuicao in CRM_NIVEIS_SUPERVISOR).
+ * O escopo das lojas visíveis é controlado dentro do callback — não na permissão.
+ */
+function mytheme_api_is_central_or_admin()
+{
+  if (!is_user_logged_in()) {
+    return new WP_Error('unauthorized', 'Você precisa estar autenticado.', ['status' => 401]);
+  }
+
+  if (crm_user_is_supervisor()) {
+    return true;
+  }
+
+  return new WP_Error('forbidden', 'Acesso negado. Apenas supervisores podem acessar a central.', ['status' => 403]);
+}
+
+/**
+ * GET /api/v1/leads/central
+ *
+ * Visão cross-loja para supervisores. O escopo de lojas visíveis é determinado pelo perfil:
+ *   - escopo_lojas='todas' (ou admin): sem filtro de loja → vê todas as lojas do sistema
+ *   - escopo_lojas='proprias': filtrado pelo loja_ids do usuário
+ *
+ * Query params:
+ *   loja_id        — restringe a uma única loja dentro do escopo autorizado (opcional)
+ *   status         — filtra por status
+ *   search         — busca textual
+ *   responsavel_id — filtra por responsável
+ *   from / to      — filtro de data (yyyy-MM-dd)
+ *   page / per_page
+ */
+function mytheme_api_leads_central(WP_REST_Request $request): WP_REST_Response
+{
+  $current_user_id = get_current_user_id();
+
+  // Determina o escopo de lojas do usuário
+  $loja_ids_acessiveis = crm_get_user_loja_ids_acessiveis($current_user_id);
+  // null = sem restrição (admin ou escopo global), [] = nenhuma loja associada
+
+  // Supervisor com escopo 'proprias' sem nenhuma loja configurada: retorna vazio imediatamente
+  if ($loja_ids_acessiveis !== null && empty($loja_ids_acessiveis)) {
+    return new WP_REST_Response([
+      'success' => true, 'leads' => [], 'total' => 0,
+      'page' => 1, 'per_page' => 50, 'total_pages' => 0,
+    ], 200);
+  }
+
+  // Filtro opcional por loja específica dentro do escopo
+  $loja_id_filtro = intval($request->get_param('loja_id') ?? 0);
+
+  if ($loja_id_filtro) {
+    // Valida que a loja solicitada está dentro do escopo do usuário
+    if ($loja_ids_acessiveis !== null && !in_array($loja_id_filtro, $loja_ids_acessiveis, true)) {
+      return new WP_REST_Response(['success' => false, 'mensagem' => 'Você não tem acesso a esta loja.'], 403);
+    }
+    $loja_id_param  = $loja_id_filtro;
+    $loja_ids_param = [];
+  } else {
+    // null = admin/global (sem filtro de loja) → passa [] ao handler (= sem cláusula IN)
+    // array com lojas  = supervisor com escopo restrito → aplica IN
+    $loja_id_param  = 0;
+    $loja_ids_param = $loja_ids_acessiveis ?? [];
+  }
+
+  $result = Lead_Handler::list([
+    'page'               => $request->get_param('page')     ?: 1,
+    'per_page'           => $request->get_param('per_page') ?: 50,
+    'search'             => $request->get_param('search'),
+    'from'               => $request->get_param('from'),
+    'to'                 => $request->get_param('to'),
+    'status'             => $request->get_param('status') ?? '',
+    'responsavel_id'     => intval($request->get_param('responsavel_id') ?? 0),
+    'loja_id'            => $loja_id_param,
+    'loja_ids'           => $loja_ids_param,
+    'include_unassigned' => false,
+    'exclude_proprio'    => false,
+  ]);
+
+  return new WP_REST_Response([
+    'success'     => true,
+    'leads'       => $result['leads'],
+    'total'       => $result['total'],
+    'page'        => $result['page'],
+    'per_page'    => $result['per_page'],
+    'total_pages' => $result['total_pages'],
+  ], 200);
+}
+
+/**
  * POST /api/v1/leads/{lead_id}/transferir
  * Supervisor move um lead para outra loja. Responsável é zerado automaticamente.
+ *
+ * Supervisores com escopo_lojas='todas' podem transferir para qualquer loja.
+ * Supervisores com escopo_lojas='proprias' só podem transferir para lojas da sua lista.
  */
 function mytheme_api_lead_transferir_loja(WP_REST_Request $request): WP_REST_Response
 {
   $lead_id      = (int) $request['lead_id'];
   $body         = $request->get_json_params() ?: [];
   $nova_loja_id = isset($body['loja_id']) ? (int) $body['loja_id'] : 0;
+  $responsavel_id = isset($body['responsavel_id']) ? (int) $body['responsavel_id'] : null;
 
   if (!$nova_loja_id) {
     return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id é obrigatório.'], 400);
   }
 
-  // Apenas supervisores (is_gerente + múltiplas lojas) ou admins podem transferir
   if (!current_user_can('administrator')) {
     $current_user_id = get_current_user_id();
-    $perfil          = crm_get_perfil_acesso($current_user_id);
-    $is_supervisor   = false;
 
-    if ($perfil) {
-      $is_supervisor = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
+    // Supervisor com escopo global: pode transferir para qualquer loja
+    if (crm_user_has_escopo_global($current_user_id)) {
+      // sem restrição de loja destino — apenas valida que a loja existe (feito abaixo)
     } else {
-      $is_gerente    = (bool) get_user_meta($current_user_id, 'is_gerente', true);
-      $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
-      $loja_ids      = is_array($raw_loja) ? array_map('intval', $raw_loja) : ($raw_loja ? [intval($raw_loja)] : []);
-      $is_supervisor = $is_gerente && count($loja_ids) > 1;
+      // Supervisor com escopo restrito às suas lojas
+      $perfil        = crm_get_perfil_acesso($current_user_id);
+      $is_supervisor = false;
 
-      // Valida que a loja destino pertence ao supervisor
-      if ($is_supervisor && !in_array($nova_loja_id, $loja_ids, true)) {
+      if ($perfil) {
+        $is_supervisor = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
+      } else {
+        // Fallback legado: is_gerente + múltiplas lojas
+        $is_gerente    = (bool) get_user_meta($current_user_id, 'is_gerente', true);
+        $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
+        $loja_ids      = is_array($raw_loja) ? array_map('intval', $raw_loja) : ($raw_loja ? [intval($raw_loja)] : []);
+        $is_supervisor = $is_gerente && count($loja_ids) > 1;
+      }
+
+      if (!$is_supervisor) {
+        return new WP_REST_Response(['success' => false, 'mensagem' => 'Apenas supervisores podem transferir leads entre lojas.'], 403);
+      }
+
+      // Valida que a loja destino está na lista do supervisor
+      $raw_loja_user = get_user_meta($current_user_id, 'loja_ids', true);
+      $loja_ids_user = is_array($raw_loja_user) ? array_map('intval', $raw_loja_user) : [];
+      if (!in_array($nova_loja_id, $loja_ids_user, true)) {
         return new WP_REST_Response(['success' => false, 'mensagem' => 'Você não tem acesso a esta loja.'], 403);
       }
     }
-
-    if (!$is_supervisor) {
-      return new WP_REST_Response(['success' => false, 'mensagem' => 'Apenas supervisores podem transferir leads entre lojas.'], 403);
-    }
   }
 
-  $result = Lead_Handler::transfer_loja($lead_id, $nova_loja_id);
+  $result = Lead_Handler::transfer_loja($lead_id, $nova_loja_id, $responsavel_id);
 
   if (is_wp_error($result)) {
     return new WP_REST_Response(['success' => false, 'mensagem' => $result->get_error_message()], $result->get_error_data('status') ?? 500);
@@ -697,13 +806,18 @@ function mytheme_api_get_loja_service_stats($request)
 
 /**
  * Verifica se o usuário atual tem acesso à loja informada.
- * Suporta loja_id armazenado como valor único ou array serializado (multi-loja).
+ * Supervisores com escopo_lojas='todas' têm acesso a qualquer loja.
  */
 function mytheme_user_can_access_loja(int $loja_id): bool
 {
   $current_user = wp_get_current_user();
 
   if (in_array('administrator', (array) $current_user->roles, true)) {
+    return true;
+  }
+
+  // Supervisor com escopo global acessa qualquer loja
+  if (crm_user_has_escopo_global($current_user->ID)) {
     return true;
   }
 

@@ -71,7 +71,54 @@ function crm_get_perfil_acesso(int $user_id): ?array {
         'pode_atribuir_leads'     => (bool) get_post_meta($perfil_id, 'pode_atribuir_leads',      true),
         'nivel_atribuicao'        => get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: 'atendente',
         'acesso_multiplas_lojas'  => (bool) get_post_meta($perfil_id, 'acesso_multiplas_lojas',   true),
+        // 'proprias' = vê apenas lojas em loja_ids | 'todas' = visão global sem vínculo de loja
+        'escopo_lojas'            => get_post_meta($perfil_id, 'escopo_lojas', true) ?: 'proprias',
     ];
+}
+
+/**
+ * Retorna true se o usuário é supervisor ou superior (pode acessar a central cross-loja).
+ * Não implica acesso irrestrito — a lista de lojas ainda é controlada por loja_ids.
+ */
+function crm_user_is_supervisor(int $user_id = 0): bool {
+    if (!$user_id) $user_id = get_current_user_id();
+    if (current_user_can('administrator')) return true;
+
+    $perfil = crm_get_perfil_acesso($user_id);
+    if (!$perfil) return false;
+
+    return in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
+}
+
+/**
+ * Retorna true apenas quando o escopo é verdadeiramente global (todas as lojas do sistema).
+ * Reservado para admins WordPress ou supervisores com escopo_lojas='todas' explicitamente.
+ */
+function crm_user_has_escopo_global(int $user_id = 0): bool {
+    if (!$user_id) $user_id = get_current_user_id();
+    if (current_user_can('administrator')) return true;
+
+    $perfil = crm_get_perfil_acesso($user_id);
+    if (!$perfil) return false;
+
+    return $perfil['escopo_lojas'] === 'todas'
+        && in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
+}
+
+/**
+ * Retorna os IDs das lojas acessíveis ao usuário:
+ * - null  → sem restrição de loja (admin ou escopo_lojas='todas')
+ * - int[] → lista explícita de lojas autorizadas
+ */
+function crm_get_user_loja_ids_acessiveis(int $user_id = 0): ?array {
+    if (!$user_id) $user_id = get_current_user_id();
+    if (crm_user_has_escopo_global($user_id)) return null;
+
+    $raw = get_user_meta($user_id, 'loja_ids', true);
+    if (is_array($raw) && !empty($raw)) {
+        return array_values(array_filter(array_map('intval', $raw)));
+    }
+    return [];
 }
 
 

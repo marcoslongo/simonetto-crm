@@ -387,6 +387,9 @@ class Lead_Handler
     $offset         = ($page - 1) * $per_page;
     $email          = $args['email'] ?? '';
     $loja_id        = $args['loja_id'] ?? 0;
+    $loja_ids_array = isset($args['loja_ids']) && is_array($args['loja_ids'])
+                        ? array_values(array_filter(array_map('intval', $args['loja_ids'])))
+                        : [];
     $search         = $args['search'] ?? '';
     $from           = $args['from'] ?? '';
     $to             = $args['to'] ?? '';
@@ -402,7 +405,14 @@ class Lead_Handler
       $prepare_values[] = '%' . $wpdb->esc_like($email) . '%';
     }
 
-    if ($loja_id) {
+    // loja_ids (array) tem precedência sobre loja_id (escalar)
+    if (!empty($loja_ids_array)) {
+      $placeholders    = implode(',', array_fill(0, count($loja_ids_array), '%d'));
+      $where_clauses[] = "l.loja_id IN ({$placeholders})";
+      foreach ($loja_ids_array as $lid) {
+        $prepare_values[] = $lid;
+      }
+    } elseif ($loja_id) {
       $where_clauses[]  = "l.loja_id = %d";
       $prepare_values[] = intval($loja_id);
     }
@@ -781,20 +791,22 @@ class Lead_Handler
         return new WP_Error('invalid_user', 'Usuário não encontrado.', ['status' => 400]);
       }
 
-      $is_admin = in_array('administrator', (array) $responsavel->roles, true);
-      if (!$is_admin && $lead_row->loja_id) {
-        $raw      = get_field('loja_id', 'user_' . $responsavel->ID);
-        $user_loja_ids = is_array($raw)
-          ? array_map('intval', $raw)
-          : ($raw ? [intval($raw)] : []);
+      $is_admin           = in_array('administrator', (array) $responsavel->roles, true);
+      $caller_is_super    = current_user_can('administrator') || crm_user_is_supervisor();
+
+      // Supervisores podem atribuir cross-loja (o lead será movido para a loja do novo responsável).
+      // Atendentes e gerentes comuns só podem atribuir dentro da mesma loja.
+      if (!$is_admin && !$caller_is_super && $lead_row->loja_id) {
+        $raw_check     = get_user_meta($responsavel->ID, 'loja_ids', true);
+        $user_loja_ids = is_array($raw_check) ? array_map('intval', $raw_check) : [];
         if (!in_array(intval($lead_row->loja_id), $user_loja_ids, true)) {
           return new WP_Error('invalid_assignment', 'Usuário não pertence à loja do lead.', ['status' => 400]);
         }
       }
 
-      // Se o responsável é gerente, move o lead para a loja dele automaticamente
+      // Determina nível do novo responsável para decidir se move o lead de loja
       $perfil_id     = (int) get_user_meta($responsavel->ID, 'perfil_acesso_id', true);
-      $nivel_efetivo = (bool) get_user_meta($responsavel->ID, 'is_gerente', true) ? 'gerente' : 'atendente';
+      $nivel_efetivo = get_user_meta($responsavel->ID, 'is_gerente', true) ? 'gerente' : 'atendente';
       if ($perfil_id) {
         $nivel_efetivo = get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: $nivel_efetivo;
       }
@@ -803,14 +815,16 @@ class Lead_Handler
       $update_data   = ['responsavel_id' => intval($responsavel_id), 'data_atualizacao' => current_time('mysql')];
       $update_format = ['%d', '%s'];
 
+      // Se o novo responsável é gerente ou supervisor, move o lead para a primeira loja dele.
+      // Atendentes: o lead permanece na loja atual.
       if ($is_responsavel_gerente) {
-        $raw_loja     = get_field('loja_id', 'user_' . $responsavel->ID);
-        $resp_lojas   = is_array($raw_loja)
-          ? array_values(array_filter(array_map('intval', $raw_loja)))
-          : ($raw_loja ? [intval($raw_loja)] : []);
+        $raw_loja_resp = get_user_meta($responsavel->ID, 'loja_ids', true);
+        $resp_lojas    = is_array($raw_loja_resp)
+          ? array_values(array_filter(array_map('intval', $raw_loja_resp)))
+          : ($raw_loja_resp ? [intval($raw_loja_resp)] : []);
         if (!empty($resp_lojas)) {
-          $update_data['loja_id']   = $resp_lojas[0];
-          $update_format[]          = '%d';
+          $update_data['loja_id'] = $resp_lojas[0];
+          $update_format[]        = '%d';
         }
       }
 
@@ -853,9 +867,10 @@ class Lead_Handler
 
   /**
    * Transferir lead para outra loja.
-   * Limpa o responsável para que o gerente da loja destino possa redistribuir.
+   * Se $responsavel_id for informado, atribui o lead ao novo responsável;
+   * caso contrário limpa o responsável para redistribuição pelo gerente destino.
    */
-  public static function transfer_loja(int $lead_id, int $nova_loja_id): array|WP_Error
+  public static function transfer_loja(int $lead_id, int $nova_loja_id, ?int $responsavel_id = null): array|WP_Error
   {
     global $wpdb;
     $table_leads = $wpdb->prefix . 'leads';
@@ -874,15 +889,23 @@ class Lead_Handler
       return new WP_Error('invalid_loja', 'Loja de destino inválida.', ['status' => 400]);
     }
 
+    // Valida responsável, se fornecido
+    if ($responsavel_id) {
+      $responsavel = get_userdata($responsavel_id);
+      if (!$responsavel) {
+        return new WP_Error('invalid_responsavel', 'Responsável não encontrado.', ['status' => 400]);
+      }
+    }
+
     $resultado = $wpdb->update(
       $table_leads,
       [
-        'loja_id'         => $nova_loja_id,
-        'responsavel_id'  => null,
+        'loja_id'          => $nova_loja_id,
+        'responsavel_id'   => $responsavel_id ?: null,
         'data_atualizacao' => current_time('mysql'),
       ],
       ['id' => $lead_id],
-      ['%d', null, '%s'],
+      ['%d', $responsavel_id ? '%d' : null, '%s'],
       ['%d']
     );
 
