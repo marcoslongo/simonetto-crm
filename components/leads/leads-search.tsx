@@ -37,8 +37,8 @@ export function LeadsSearch() {
   }
 
   return (
-    <form onSubmit={handleSearch} className="w-1/3 relative flex items-center gap-2">
-      <div className="relative flex-1">
+    <form onSubmit={handleSearch} className="flex items-center gap-2 w-full">
+      <div className="relative flex-1 min-w-0">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
@@ -59,7 +59,7 @@ export function LeadsSearch() {
           </Button>
         )}
       </div>
-      <Button type="submit" size="lg" className='h-11 px-6 bg-[#16255c] cursor-pointer hover:bg-[#16255c] hover:opacity-90'>
+      <Button type="submit" size="lg" className="shrink-0 h-11 px-4 sm:px-6 bg-[#16255c] cursor-pointer hover:bg-[#16255c] hover:opacity-90">
         <Search className="h-4 w-4 sm:mr-2" />
         <span className="hidden sm:inline">Buscar</span>
       </Button>
