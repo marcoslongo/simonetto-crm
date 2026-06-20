@@ -901,8 +901,8 @@ export function LeadDetailsModal({
                     </span>
                   </div>
 
-                  {/* Loja de Origem — editável para admin */}
-                  <div className="rounded-xl border border-border bg-card p-5">
+                  {/* Loja de Origem — editável para admin; supervisor vê "Loja do lead" abaixo */}
+                  {!isSupervisor && <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -971,7 +971,7 @@ export function LeadDetailsModal({
                         {currentLojaNome || "—"}
                       </p>
                     )}
-                  </div>
+                  </div>}
 
                   {/* Atendente */}
                   <div className="rounded-xl border border-border bg-card p-5">
