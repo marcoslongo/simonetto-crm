@@ -279,21 +279,23 @@ function mytheme_api_is_master()
 function mytheme_api_is_gerente()
 {
   if (!is_user_logged_in()) {
-    return new WP_Error(
-      'unauthorized',
-      'Você precisa estar autenticado.',
-      ['status' => 401]
-    );
+    return new WP_Error('unauthorized', 'Você precisa estar autenticado.', ['status' => 401]);
   }
-
-  $user_id = get_current_user_id();
 
   if (current_user_can('administrator')) {
     return true;
   }
 
-  $is_gerente = (bool) get_user_meta($user_id, 'is_gerente', true);
-  if ($is_gerente) {
+  $user_id = get_current_user_id();
+
+  // Verifica pelo perfil_acesso (sistema novo)
+  $perfil = crm_get_perfil_acesso($user_id);
+  if ($perfil && in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_GERENTE, true)) {
+    return true;
+  }
+
+  // Fallback legado: campo is_gerente
+  if ((bool) get_user_meta($user_id, 'is_gerente', true)) {
     return true;
   }
 
