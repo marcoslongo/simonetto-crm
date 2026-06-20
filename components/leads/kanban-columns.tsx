@@ -1832,7 +1832,7 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
         const unicos: UsuarioRaw[] = []
         todos.forEach(u => { if (!seen.has(u.id)) { seen.add(u.id); unicos.push(u) } })
         // Exibe apenas gerentes (não atendentes, não supervisores)
-        setUsuarios(unicos.filter(u => u.nivel_atribuicao === 'gerente' || (!u.nivel_atribuicao && u.is_gerente)))
+        setUsuarios(unicos.filter(u => u.nivel_atribuicao === 'gerente' || u.is_gerente === true))
       } else if (lead.loja_id) {
         // Gerente de loja: busca atendentes da loja do lead
         const res = await fetch(`/api/lojas/${lead.loja_id}/usuarios`)
@@ -1866,7 +1866,7 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
       const nome = selecionado?.nome ?? null
       // Se o responsável é gerente, o backend já troca a loja — atualiza o display
       let novaLoja: Partial<Pick<Lead, 'loja_id' | 'loja_nome'>> = {}
-      if (selecionado && (selecionado.nivel_atribuicao === 'gerente' || (!selecionado.nivel_atribuicao && selecionado.is_gerente)) && selecionado.loja_primaria_id) {
+      if (selecionado && (selecionado.nivel_atribuicao === 'gerente' || selecionado.is_gerente === true) && selecionado.loja_primaria_id) {
         const lojaDestino = lojas.find(l => l.id === selecionado.loja_primaria_id)
         if (lojaDestino) novaLoja = { loja_id: lojaDestino.id, loja_nome: lojaDestino.nome }
       }

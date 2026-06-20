@@ -1,4 +1,4 @@
-import { requireAuth, isSupervisor } from '@/lib/auth'
+import { requireAuth, isSupervisor, isGerente as checkIsGerente } from '@/lib/auth'
 import { KanbanColumns } from '@/components/leads/kanban-columns'
 import { getMultiLojaLeads } from '@/lib/api-loja'
 import { getLojas } from '@/lib/api'
@@ -65,7 +65,7 @@ export default async function CrmAtendimentoPage({ searchParams }: PageProps) {
         lojaIds={lojaIds}
         lojas={lojas}
         currentUser={{ id: user.id, nome: user.name }}
-        isGerente={user.is_gerente}
+        isGerente={checkIsGerente(user)}
         isSupervisor={isSupervisor(user)}
       />
     </div>
