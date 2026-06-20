@@ -190,13 +190,13 @@ class Loja_Handler
     $resultado = [];
     foreach ($users as $user) {
       $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
-      $is_gerente = (bool) get_field('is_gerente', 'user_' . $user->ID);
+      $is_gerente = (bool) get_user_meta($user->ID, 'is_gerente', true);
 
       // Derivar nível efetivo do perfil de acesso (se configurado)
-      $perfil_id     = get_field('perfil_acesso_id', 'user_' . $user->ID);
+      $perfil_id     = (int) get_user_meta($user->ID, 'perfil_acesso_id', true);
       $nivel_efetivo = $is_gerente ? 'gerente' : 'atendente';
       if ($perfil_id) {
-        $nivel_efetivo = get_field('nivel_atribuicao', intval($perfil_id)) ?: $nivel_efetivo;
+        $nivel_efetivo = get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: $nivel_efetivo;
       }
 
       // Supervisores/master/industria gerenciam a rede toda — não aparecem por loja

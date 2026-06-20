@@ -315,7 +315,7 @@ function mytheme_api_lead_transferir_loja(WP_REST_Request $request): WP_REST_Res
     if ($perfil) {
       $is_supervisor = in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_SUPERVISOR, true);
     } else {
-      $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);
+      $is_gerente    = (bool) get_user_meta($current_user_id, 'is_gerente', true);
       $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
       $loja_ids      = is_array($raw_loja) ? array_map('intval', $raw_loja) : ($raw_loja ? [intval($raw_loja)] : []);
       $is_supervisor = $is_gerente && count($loja_ids) > 1;
@@ -500,7 +500,7 @@ function mytheme_api_get_loja_leads($request)
       // ver_leads_nao_atribuidos = true → sem filtro, vê todos os leads da loja
     } else {
       // Fallback legado
-      $is_gerente    = (bool) get_field('is_gerente', 'user_' . $current_user_id);
+      $is_gerente    = (bool) get_user_meta($current_user_id, 'is_gerente', true);
       $raw_loja      = get_field('loja_id', 'user_' . $current_user_id);
       $user_loja_ids = is_array($raw_loja)
         ? array_map('intval', $raw_loja)
@@ -949,13 +949,14 @@ function mytheme_api_list_perfis_acesso(): WP_REST_Response
   ]);
 
   $perfis = array_map(function ($post) {
+    $pid = (int) $post->ID;
     return [
-      'id'                       => (int) $post->ID,
+      'id'                       => $pid,
       'nome'                     => $post->post_title,
-      'ver_leads_nao_atribuidos' => (bool) get_field('ver_leads_nao_atribuidos', $post->ID),
-      'pode_atribuir_leads'      => (bool) get_field('pode_atribuir_leads',      $post->ID),
-      'nivel_atribuicao'         => get_field('nivel_atribuicao', $post->ID) ?: 'atendente',
-      'acesso_multiplas_lojas'   => (bool) get_field('acesso_multiplas_lojas',   $post->ID),
+      'ver_leads_nao_atribuidos' => (bool) get_post_meta($pid, 'ver_leads_nao_atribuidos', true),
+      'pode_atribuir_leads'      => (bool) get_post_meta($pid, 'pode_atribuir_leads',      true),
+      'nivel_atribuicao'         => get_post_meta($pid, 'nivel_atribuicao', true) ?: 'atendente',
+      'acesso_multiplas_lojas'   => (bool) get_post_meta($pid, 'acesso_multiplas_lojas',   true),
     ];
   }, $posts);
 
@@ -991,8 +992,8 @@ function mytheme_api_admin_list_usuarios(WP_REST_Request $request): WP_REST_Resp
       $loja_ids = [intval($loja_ids_raw)];
     }
 
-    $is_gerente        = (bool) get_field('is_gerente', 'user_' . $user->ID);
-    $perfil_acesso_id  = (int) get_field('perfil_acesso_id', 'user_' . $user->ID) ?: null;
+    $is_gerente        = (bool) get_user_meta($user->ID, 'is_gerente', true);
+    $perfil_acesso_id  = (int) get_user_meta($user->ID, 'perfil_acesso_id', true) ?: null;
 
     $resultado[] = [
       'id'               => (int) $user->ID,

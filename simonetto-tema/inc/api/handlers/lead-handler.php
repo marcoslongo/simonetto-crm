@@ -793,10 +793,10 @@ class Lead_Handler
       }
 
       // Se o responsável é gerente, move o lead para a loja dele automaticamente
-      $perfil_id     = get_field('perfil_acesso_id', 'user_' . $responsavel->ID);
-      $nivel_efetivo = (bool) get_field('is_gerente', 'user_' . $responsavel->ID) ? 'gerente' : 'atendente';
+      $perfil_id     = (int) get_user_meta($responsavel->ID, 'perfil_acesso_id', true);
+      $nivel_efetivo = (bool) get_user_meta($responsavel->ID, 'is_gerente', true) ? 'gerente' : 'atendente';
       if ($perfil_id) {
-        $nivel_efetivo = get_field('nivel_atribuicao', intval($perfil_id)) ?: $nivel_efetivo;
+        $nivel_efetivo = get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: $nivel_efetivo;
       }
       $is_responsavel_gerente = in_array($nivel_efetivo, CRM_NIVEIS_GERENTE, true);
 

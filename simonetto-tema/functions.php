@@ -34,8 +34,8 @@ function add_loja_role_userid_to_jwt($data, $user) {
         : ($raw ? [intval($raw)] : []);
 
     $roles      = $user->roles;
-    $is_gerente = (bool) get_field('is_gerente', 'user_' . $user_id);
-    $is_master  = (bool) get_field('is_master',  'user_' . $user_id);
+    $is_gerente = (bool) get_user_meta($user_id, 'is_gerente', true);
+    $is_master  = (bool) get_user_meta($user_id, 'is_master', true);
     $avatar_url = get_user_meta($user_id, '_crm_avatar_url', true) ?: null;
 
     $perfil_acesso = crm_get_perfil_acesso($user_id);
@@ -57,19 +57,20 @@ function add_loja_role_userid_to_jwt($data, $user) {
  * Retorna as configurações do perfil de acesso do usuário (ou null se não configurado).
  */
 function crm_get_perfil_acesso(int $user_id): ?array {
-    $perfil_id = get_field('perfil_acesso_id', 'user_' . $user_id);
+    // Lê direto do user meta — não depende do ACF carregar o field group
+    $perfil_id = (int) get_user_meta($user_id, 'perfil_acesso_id', true);
     if (!$perfil_id) return null;
 
-    $post = get_post(intval($perfil_id));
+    $post = get_post($perfil_id);
     if (!$post || $post->post_type !== 'perfil_acesso') return null;
 
     return [
         'id'                      => (int) $post->ID,
         'nome'                    => $post->post_title,
-        'ver_leads_nao_atribuidos'=> (bool) get_field('ver_leads_nao_atribuidos', $post->ID),
-        'pode_atribuir_leads'     => (bool) get_field('pode_atribuir_leads',      $post->ID),
-        'nivel_atribuicao'        => get_field('nivel_atribuicao', $post->ID) ?: 'atendente',
-        'acesso_multiplas_lojas'  => (bool) get_field('acesso_multiplas_lojas',   $post->ID),
+        'ver_leads_nao_atribuidos'=> (bool) get_post_meta($perfil_id, 'ver_leads_nao_atribuidos', true),
+        'pode_atribuir_leads'     => (bool) get_post_meta($perfil_id, 'pode_atribuir_leads',      true),
+        'nivel_atribuicao'        => get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: 'atendente',
+        'acesso_multiplas_lojas'  => (bool) get_post_meta($perfil_id, 'acesso_multiplas_lojas',   true),
     ];
 }
 
@@ -92,8 +93,8 @@ function crm_stats_responsavel_filter(): int {
     return !$perfil['ver_leads_nao_atribuidos'] ? $uid : 0;
   }
   // fallback legado: atendente com ocultar ativo
-  $is_gerente = (bool) get_field('is_gerente', 'user_' . $uid);
-  $ocultar    = (bool) get_field('ocultar_leads_nao_atribuidos', 'user_' . $uid);
+  $is_gerente = (bool) get_user_meta($uid, 'is_gerente', true);
+  $ocultar    = (bool) get_user_meta($uid, 'ocultar_leads_nao_atribuidos', true);
   return (!$is_gerente && $ocultar) ? $uid : 0;
 }
 
@@ -122,8 +123,8 @@ function crm_login_user(WP_REST_Request $request) {
 
   $loja_nome     = get_user_meta($user->ID, 'loja_nome', true);
   $role          = $user->roles[0] ?? 'subscriber';
-  $is_gerente    = (bool) get_field('is_gerente', 'user_' . $user->ID);
-  $is_master     = (bool) get_field('is_master',  'user_' . $user->ID);
+  $is_gerente    = (bool) get_user_meta($user->ID, 'is_gerente', true);
+  $is_master     = (bool) get_user_meta($user->ID, 'is_master', true);
   $avatar_url    = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
   $perfil_acesso = crm_get_perfil_acesso($user->ID);
 

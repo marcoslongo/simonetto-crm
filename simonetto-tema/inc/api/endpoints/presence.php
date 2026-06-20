@@ -63,13 +63,13 @@ function crm_presence_list_online(): WP_REST_Response
   foreach ($users as $user) {
     $last_active = (int) get_user_meta($user->ID, CRM_PRESENCE_META, true);
     $is_admin    = in_array('administrator', (array) $user->roles, true);
-    $is_master   = $is_admin && (bool) get_field('is_master', 'user_' . $user->ID);
+    $is_master   = $is_admin && (bool) get_user_meta($user->ID, 'is_master', true);
 
     // Determina role legível
     $role = 'loja';
     if ($is_admin) {
       $role = $is_master ? 'master' : 'admin';
-    } elseif (get_field('is_gerente', 'user_' . $user->ID)) {
+    } elseif (get_user_meta($user->ID, 'is_gerente', true)) {
       $role = 'gerente';
     }
 

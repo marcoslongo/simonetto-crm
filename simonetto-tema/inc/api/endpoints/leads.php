@@ -250,7 +250,7 @@ function crm_current_user_is_master(): bool
 {
   if (!is_user_logged_in()) return false;
   if (!current_user_can('administrator')) return false;
-  return (bool) get_field('is_master', 'user_' . get_current_user_id());
+  return (bool) get_user_meta(get_current_user_id(), 'is_master', true);
 }
 
 /**
@@ -292,7 +292,7 @@ function mytheme_api_is_gerente()
     return true;
   }
 
-  $is_gerente = (bool) get_field('is_gerente', 'user_' . $user_id);
+  $is_gerente = (bool) get_user_meta($user_id, 'is_gerente', true);
   if ($is_gerente) {
     return true;
   }
