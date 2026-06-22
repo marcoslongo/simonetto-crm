@@ -873,7 +873,8 @@ function mytheme_api_get_loja_usuarios(WP_REST_Request $request): WP_REST_Respon
     return new WP_REST_Response(['success' => false, 'mensagem' => 'Sem permissão.'], 403);
   }
 
-  $usuarios = Loja_Handler::get_usuarios($loja_id);
+  $include_supervisores = current_user_can('administrator') || crm_user_is_supervisor();
+  $usuarios = Loja_Handler::get_usuarios($loja_id, $include_supervisores);
 
   return new WP_REST_Response([
     'success'  => true,

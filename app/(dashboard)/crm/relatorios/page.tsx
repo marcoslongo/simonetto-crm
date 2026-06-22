@@ -1,4 +1,4 @@
-import { requireGerente } from '@/lib/auth'
+import { requireGerente, podeAtribuirLeads } from '@/lib/auth'
 import { CrmContent } from '@/components/relatorios/crm-content'
 import { redirect } from 'next/navigation'
 
@@ -13,7 +13,8 @@ export default async function CrmRelatoriosPage() {
     redirect('/crm')
   }
 
-  const lojaId = user.loja_ids[0]
+  const lojaId     = user.loja_ids[0]
+  const canAssign  = podeAtribuirLeads(user)
 
   return (
     <div className="space-y-6">
@@ -23,7 +24,12 @@ export default async function CrmRelatoriosPage() {
           Gere e exporte relatórios da sua unidade: {user.loja_nome || user.name}
         </p>
       </div>
-      <CrmContent lojaId={lojaId} lojaNome={user.loja_nome} />
+      <CrmContent
+        lojaId={lojaId}
+        lojaNome={user.loja_nome}
+        showProprio={canAssign}
+        responsavelId={canAssign ? undefined : user.id}
+      />
     </div>
   )
 }

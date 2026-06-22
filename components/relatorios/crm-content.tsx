@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 
+type Origem = '' | 'industria' | 'proprio'
+
 const PERIOD_PRESETS = [
   { id: "ultima-semana", label: "Última Semana", days: 7 },
   { id: "ultimo-mes",    label: "Último Mês",    days: 30 },
@@ -30,7 +32,7 @@ function leadsToCSV(leads: any[]): string {
     'ID', 'Nome', 'Email', 'Telefone', 'Cidade', 'Estado',
     'Interesse', 'Expectativa de Investimento', 'Região da Loja',
     'Mensagem', 'Loja', 'Cidade da Loja', 'Estado da Loja',
-    'Atendido', 'Data de Cadastro',
+    'Origem', 'Atendido', 'Data de Cadastro',
   ];
 
   const escape = (val: any) => {
@@ -40,11 +42,14 @@ function leadsToCSV(leads: any[]): string {
       ? `"${str}"` : str;
   };
 
+  const origemLabel = (o: string) =>
+    o === 'industria' ? 'Indústria' : o === 'proprio' ? 'Próprio' : o ?? ''
+
   const rows = leads.map(lead => [
     lead.id, lead.nome, lead.email, lead.telefone, lead.cidade, lead.estado,
     lead.interesse, lead.expectativa_investimento, lead.loja_regiao, lead.mensagem,
     lead.loja_nome, lead.loja_cidade, lead.loja_estado,
-    lead.atendido ? 'Sim' : 'Não', lead.data_criacao,
+    origemLabel(lead.origem), lead.atendido ? 'Sim' : 'Não', lead.data_criacao,
   ].map(escape).join(','));
 
   return [headers.join(','), ...rows].join('\n');
@@ -65,22 +70,26 @@ type FilterMode = 'preset' | 'custom';
 interface CrmContentProps {
   lojaId: number;
   lojaNome?: string;
+  showProprio?: boolean;
+  responsavelId?: number;
 }
 
-export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
+export function CrmContent({ lojaId, lojaNome, showProprio = true, responsavelId }: CrmContentProps) {
   const [filterMode, setFilterMode]   = useState<FilterMode>('preset');
   const [activePreset, setActivePreset] = useState("ultimo-mes");
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to,   setTo]   = useState<Date | undefined>(undefined);
+  const [origem, setOrigem] = useState<Origem>('');
   const [isExporting, setIsExporting] = useState(false);
 
   const isCustomReady = filterMode === 'custom' && !!from && !!to;
   const canExport     = filterMode === 'preset' || isCustomReady;
-  const isFiltered    = !!from || !!to;
+  const isFiltered    = !!from || !!to || !!origem;
 
   function handleLimpar() {
     setFrom(undefined);
     setTo(undefined);
+    setOrigem('');
   }
 
   function getPeriodLabel(): string {
@@ -105,7 +114,7 @@ export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
     setIsExporting(true);
 
     try {
-      const leads = await fetchLojaLeadsForExport(lojaId);
+      const leads = await fetchLojaLeadsForExport(lojaId, responsavelId);
 
       let fromDate: Date;
       let toDate: Date;
@@ -118,9 +127,11 @@ export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
         toDate   = new Date(to!);   toDate.setHours(23, 59, 59, 999);
       }
 
-      const filtered = leads.filter((lead: { data_criacao: string }) => {
+      const filtered = leads.filter((lead: any) => {
         const d = new Date(lead.data_criacao);
-        return d >= fromDate && d <= toDate;
+        const inDate   = d >= fromDate && d <= toDate;
+        const inOrigem = !origem || lead.origem === origem;
+        return inDate && inOrigem;
       });
 
       const storeName = lojaNome ? lojaNome.toLowerCase().replace(/\s+/g, '-') : `loja-${lojaId}`;
@@ -220,18 +231,42 @@ export function CrmContent({ lojaId, lojaNome }: CrmContentProps) {
                 />
               </PopoverContent>
             </Popover>
+          </div>
+        )}
 
-            {isFiltered && (
-              <Button
-                variant="destructive"
-                onClick={handleLimpar}
-                disabled={isExporting}
-                className="flex gap-2 items-center text-white"
+        {/* Origem */}
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origem</p>
+          <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+            {([
+              ['', 'Todas'],
+              ['industria', 'Indústria'],
+              ...(showProprio ? [['proprio', 'Próprio']] : []),
+            ] as [Origem, string][]).map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setOrigem(v)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  origem === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                <Eraser className="h-4 w-4" />
-                Limpar
-              </Button>
-            )}
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isFiltered && (
+          <div className="mt-3">
+            <Button
+              variant="destructive"
+              onClick={handleLimpar}
+              disabled={isExporting}
+              className="flex gap-2 items-center text-white"
+            >
+              <Eraser className="h-4 w-4" />
+              Limpar filtros
+            </Button>
           </div>
         )}
       </div>

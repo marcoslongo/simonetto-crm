@@ -827,23 +827,22 @@ class Lead_Handler
       }
 
       // Determina nível do novo responsável para decidir se move o lead de loja
-      $perfil_id     = (int) get_user_meta($responsavel->ID, 'perfil_acesso_id', true);
-      $nivel_efetivo = get_user_meta($responsavel->ID, 'is_gerente', true) ? 'gerente' : 'atendente';
+      $perfil_id              = (int) get_user_meta($responsavel->ID, 'perfil_acesso_id', true);
+      $nivel_efetivo          = get_user_meta($responsavel->ID, 'is_gerente', true) ? 'gerente' : 'atendente';
       if ($perfil_id) {
         $nivel_efetivo = get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: $nivel_efetivo;
       }
-      $is_responsavel_gerente = in_array($nivel_efetivo, CRM_NIVEIS_GERENTE, true);
+      $is_responsavel_gerente    = in_array($nivel_efetivo, CRM_NIVEIS_GERENTE,    true);
+      $is_responsavel_supervisor = in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true);
 
       $update_data   = ['responsavel_id' => intval($responsavel_id), 'data_atualizacao' => current_time('mysql')];
       $update_format = ['%d', '%s'];
 
-      // Se o novo responsável é gerente ou supervisor, move o lead para a primeira loja dele.
+      // Gerentes (não-supervisores) movem o lead para a primeira loja deles.
+      // Supervisores têm escopo global — o lead mantém a loja de origem.
       // Atendentes: o lead permanece na loja atual.
-      if ($is_responsavel_gerente) {
-        $raw_loja_resp = get_user_meta($responsavel->ID, 'loja_ids', true);
-        $resp_lojas    = is_array($raw_loja_resp)
-          ? array_values(array_filter(array_map('intval', $raw_loja_resp)))
-          : ($raw_loja_resp ? [intval($raw_loja_resp)] : []);
+      if ($is_responsavel_gerente && !$is_responsavel_supervisor) {
+        $resp_lojas = crm_get_user_loja_ids_acessiveis($responsavel->ID) ?? [];
         if (!empty($resp_lojas)) {
           $update_data['loja_id'] = $resp_lojas[0];
           $update_format[]        = '%d';

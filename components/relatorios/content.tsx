@@ -353,24 +353,26 @@ export function Content({ lojas, showProprio = true }: ContentProps) {
             <LojaSelect lojas={lojas} value={lojaId} onChange={setLojaId} />
           </div>
 
-          {showProprio && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origem</p>
-              <div className="flex gap-1 p-1 bg-muted rounded-lg">
-                {([['', 'Todas'], ['industria', 'Indústria'], ['proprio', 'Próprio']] as [Origem, string][]).map(([v, label]) => (
-                  <button
-                    key={v}
-                    onClick={() => setOrigem(v)}
-                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      origem === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Origem</p>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {([
+                ['', 'Todas'],
+                ['industria', 'Indústria'],
+                ...(showProprio ? [['proprio', 'Próprio']] : []),
+              ] as [Origem, string][]).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setOrigem(v)}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    origem === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Status */}

@@ -22,8 +22,8 @@ export async function fetchAllLeadsForExport(filters?: ExportFilters) {
   )
 }
 
-export async function fetchLojaLeadsForExport(lojaId: number) {
-  const { leads } = await getLojaLeads(lojaId, 1, 10000)
+export async function fetchLojaLeadsForExport(lojaId: number, responsavelId?: number) {
+  const { leads } = await getLojaLeads(lojaId, 1, 10000, undefined, undefined, undefined, undefined, responsavelId)
   return leads
 }
 

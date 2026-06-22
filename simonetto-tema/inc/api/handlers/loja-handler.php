@@ -175,9 +175,11 @@ class Loja_Handler
   }
 
   /**
-   * Retorna usuários vinculados a uma loja (via ACF loja_id no user meta)
+   * Retorna usuários vinculados a uma loja (via ACF loja_id no user meta).
+   * Quando $include_supervisores = true (chamador é supervisor), inclui
+   * supervisores/master/industria sem restrição de loja.
    */
-  public static function get_usuarios($loja_id)
+  public static function get_usuarios($loja_id, bool $include_supervisores = false)
   {
     $loja_id_int = intval($loja_id);
 
@@ -186,30 +188,6 @@ class Loja_Handler
 
     $resultado = [];
     foreach ($all_users as $user) {
-      // Verifica se o usuário pertence à loja (testa loja_ids e loja_id)
-      $loja_ids_raw = get_user_meta($user->ID, 'loja_ids', true);
-      $loja_id_raw  = get_user_meta($user->ID, 'loja_id',  true);
-
-      // Normaliza qualquer formato (int, string, WP_Post object) para array de inteiros
-      $norm = function($v) { return is_object($v) ? intval($v->ID ?? 0) : intval($v); };
-
-      $user_loja_ids = [];
-      if (is_array($loja_ids_raw) && !empty($loja_ids_raw)) {
-        $user_loja_ids = array_map($norm, $loja_ids_raw);
-      } elseif (is_array($loja_id_raw) && !empty($loja_id_raw)) {
-        $user_loja_ids = array_map($norm, $loja_id_raw);
-      } elseif ($loja_id_raw) {
-        $user_loja_ids = [$norm($loja_id_raw)];
-      } elseif (function_exists('get_field')) {
-        $gf = get_field('loja_id', 'user_' . $user->ID);
-        if (!empty($gf)) {
-          $arr = is_array($gf) ? $gf : [$gf];
-          $user_loja_ids = array_values(array_filter(array_map($norm, $arr)));
-        }
-      }
-
-      if (!in_array($loja_id_int, $user_loja_ids, true)) continue;
-
       $avatar_url = get_user_meta($user->ID, '_crm_avatar_url', true) ?: null;
       $is_gerente = (bool) get_user_meta($user->ID, 'is_gerente', true);
 
@@ -220,10 +198,38 @@ class Loja_Handler
         $nivel_efetivo = get_post_meta($perfil_id, 'nivel_atribuicao', true) ?: $nivel_efetivo;
       }
 
-      // Supervisores/master/industria gerenciam a rede toda — não aparecem por loja
-      if (in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true)) continue;
+      $is_supervisor_user = in_array($nivel_efetivo, CRM_NIVEIS_SUPERVISOR, true);
 
-      $loja_primaria = $user_loja_ids[0] ?? null;
+      if ($is_supervisor_user) {
+        // Supervisores têm escopo global — só aparecem para outros supervisores
+        if (!$include_supervisores) continue;
+        $loja_primaria = null;
+      } else {
+        // Verifica se o usuário pertence à loja (testa loja_ids e loja_id)
+        $loja_ids_raw = get_user_meta($user->ID, 'loja_ids', true);
+        $loja_id_raw  = get_user_meta($user->ID, 'loja_id',  true);
+
+        $norm = function($v) { return is_object($v) ? intval($v->ID ?? 0) : intval($v); };
+
+        $user_loja_ids = [];
+        if (is_array($loja_ids_raw) && !empty($loja_ids_raw)) {
+          $user_loja_ids = array_map($norm, $loja_ids_raw);
+        } elseif (is_array($loja_id_raw) && !empty($loja_id_raw)) {
+          $user_loja_ids = array_map($norm, $loja_id_raw);
+        } elseif ($loja_id_raw) {
+          $user_loja_ids = [$norm($loja_id_raw)];
+        } elseif (function_exists('get_field')) {
+          $gf = get_field('loja_id', 'user_' . $user->ID);
+          if (!empty($gf)) {
+            $arr = is_array($gf) ? $gf : [$gf];
+            $user_loja_ids = array_values(array_filter(array_map($norm, $arr)));
+          }
+        }
+
+        if (!in_array($loja_id_int, $user_loja_ids, true)) continue;
+
+        $loja_primaria = $user_loja_ids[0] ?? null;
+      }
 
       $resultado[] = [
         'id'               => (int) $user->ID,
