@@ -818,9 +818,10 @@ class Lead_Handler
       // Supervisores podem atribuir cross-loja (o lead será movido para a loja do novo responsável).
       // Atendentes e gerentes comuns só podem atribuir dentro da mesma loja.
       if (!$is_admin && !$caller_is_super && $lead_row->loja_id) {
-        $raw_check     = get_user_meta($responsavel->ID, 'loja_ids', true);
-        $user_loja_ids = is_array($raw_check) ? array_map('intval', $raw_check) : [];
-        if (!in_array(intval($lead_row->loja_id), $user_loja_ids, true)) {
+        // Usa crm_get_user_loja_ids_acessiveis para cobrir o fallback loja_ids → loja_id (ACF).
+        $user_loja_ids = crm_get_user_loja_ids_acessiveis($responsavel->ID);
+        // null = acesso global (sem restrição de loja)
+        if (is_array($user_loja_ids) && !in_array(intval($lead_row->loja_id), $user_loja_ids, true)) {
           return new WP_Error('invalid_assignment', 'Usuário não pertence à loja do lead.', ['status' => 400]);
         }
       }
