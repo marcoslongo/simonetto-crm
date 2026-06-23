@@ -87,11 +87,19 @@ add_action('rest_api_init', function () {
 
 function mytheme_pv_current_user(): array
 {
-  $user = wp_get_current_user();
+  $user    = wp_get_current_user();
+  $user_id = (int) $user->ID;
+  $is_admin = in_array('administrator', (array) $user->roles, true);
+
+  $perfil     = crm_get_perfil_acesso($user_id);
+  $is_gerente = $is_admin
+    || ($perfil && in_array($perfil['nivel_atribuicao'], CRM_NIVEIS_GERENTE, true))
+    || (bool) get_user_meta($user_id, 'is_gerente', true);
+
   return [
-    'id'         => (int) $user->ID,
+    'id'         => $user_id,
     'nome'       => $user->display_name,
-    'is_gerente' => in_array('administrator', (array) $user->roles, true) || (bool) get_user_meta($user->ID, 'is_gerente', true),
+    'is_gerente' => $is_gerente,
   ];
 }
 

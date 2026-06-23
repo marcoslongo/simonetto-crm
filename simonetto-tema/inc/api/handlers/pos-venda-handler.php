@@ -182,7 +182,8 @@ class Pos_Venda_Handler
 
     $missing = $wpdb->get_results(
       $wpdb->prepare(
-        "SELECT l.id AS lead_id, l.loja_id
+        "SELECT l.id AS lead_id, l.loja_id, l.responsavel_id,
+                (SELECT display_name FROM {$wpdb->users} WHERE ID = l.responsavel_id) AS responsavel_nome
          FROM {$t_lead} l
          LEFT JOIN {$t_pv} pv ON pv.lead_id = l.id
          WHERE l.status = 'venda_realizada'
@@ -194,7 +195,12 @@ class Pos_Venda_Handler
     );
 
     foreach ($missing as $row) {
-      self::create((int) $row['lead_id'], (int) $row['loja_id'], 0, 'Sistema');
+      self::create(
+        (int) $row['lead_id'],
+        (int) $row['loja_id'],
+        (int) ($row['responsavel_id'] ?? 0),
+        $row['responsavel_nome'] ?? 'Sistema'
+      );
     }
   }
 
