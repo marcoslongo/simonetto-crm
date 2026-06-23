@@ -648,7 +648,7 @@ class Lead_Handler
       return new WP_Error('db_error', 'Erro ao atualizar lead.', ['status' => 500]);
     }
 
-    return self::get($id);
+    return self::get_by_id($id);
   }
 
   /**
