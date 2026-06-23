@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireGerente, isSupervisor } from '@/lib/auth'
+import { requireGerente, isSupervisor, podeAtribuirLeads } from '@/lib/auth'
 import {
   getMultiLojaLeads30Days,
   getMultiLojaLeads12Months,
@@ -61,14 +61,14 @@ async function FunilChart({ lojaIds }: { lojaIds: number[] }) {
   return <ChartFunilKanban counts={counts} colunas={colunas} />
 }
 
-async function Leads30DaysChart({ lojaIds, from, to }: { lojaIds: number[]; from?: string; to?: string }) {
+async function Leads30DaysChart({ lojaIds, from, to, showProprio }: { lojaIds: number[]; from?: string; to?: string; showProprio?: boolean }) {
   const data = await getMultiLojaLeads30Days(lojaIds)
-  return <ChartLeads30Days data={data} lojaIds={lojaIds} />
+  return <ChartLeads30Days data={data} lojaIds={lojaIds} showProprio={showProprio} />
 }
 
-async function Leads12MonthsChart({ lojaIds }: { lojaIds: number[] }) {
+async function Leads12MonthsChart({ lojaIds, showProprio }: { lojaIds: number[]; showProprio?: boolean }) {
   const data = await getMultiLojaLeads12Months(lojaIds)
-  return <ChartLeads12Months data={data} lojaId={lojaIds[0]} />
+  return <ChartLeads12Months data={data} lojaId={lojaIds[0]} showProprio={showProprio} />
 }
 
 async function VnrChart({ lojaIds }: { lojaIds: number[] }) {
@@ -218,11 +218,12 @@ async function EscopoBanner({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DesempenhoPage({ searchParams }: DesempenhoPageProps) {
-  const user    = await requireGerente()
+  const user      = await requireGerente()
   const { from, to } = await searchParams
-  const isLoja  = user.role === 'loja'
-  const lojaIds = isLoja ? user.loja_ids : []
-  const isSupv  = isSupervisor(user)
+  const isLoja    = user.role === 'loja'
+  const lojaIds   = isLoja ? user.loja_ids : []
+  const isSupv    = isSupervisor(user)
+  const canAssign = podeAtribuirLeads(user)
   const isFiltered = !!(from && to)
 
   return (
@@ -267,11 +268,11 @@ export default async function DesempenhoPage({ searchParams }: DesempenhoPagePro
             <FunilChart lojaIds={lojaIds} />
           </Suspense>
           <Suspense key={`leads30-${from}-${to}`} fallback={<ChartSkeleton />}>
-            <Leads30DaysChart lojaIds={lojaIds} from={from} to={to} />
+            <Leads30DaysChart lojaIds={lojaIds} from={from} to={to} showProprio={canAssign} />
           </Suspense>
         </div>
         <Suspense key={`leads12-${from}-${to}`} fallback={<ChartSkeleton height="h-64" />}>
-          <Leads12MonthsChart lojaIds={lojaIds} />
+          <Leads12MonthsChart lojaIds={lojaIds} showProprio={canAssign} />
         </Suspense>
       </section>
 

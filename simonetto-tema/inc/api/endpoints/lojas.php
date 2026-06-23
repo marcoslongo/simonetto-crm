@@ -542,9 +542,9 @@ function mytheme_api_get_loja_leads_30_days($request)
   }
 
   $exclude_proprio = current_user_can('administrator') && !crm_current_user_is_master();
-  // Supervisor: sem filtro de responsável. Demais perfis: respeita ver_leads_nao_atribuidos
   $responsavel_id  = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
-  $data = Loja_Handler::get_leads_30_days($loja_id, $exclude_proprio, $responsavel_id);
+  $origem_filter   = sanitize_text_field($request->get_param('origem') ?? '');
+  $data = Loja_Handler::get_leads_30_days($loja_id, $exclude_proprio, $responsavel_id, $origem_filter);
 
   return new WP_REST_Response([
     'success' => true,
@@ -605,12 +605,11 @@ function mytheme_api_get_loja_leads($request)
     $perfil          = crm_get_perfil_acesso($current_user_id);
 
     if ($perfil) {
-      if (!$perfil['ver_leads_nao_atribuidos']) {
-        // Usuário só vê leads diretamente atribuídos a ele
+      // Restringe aos próprios leads se não pode ver não-atribuídos OU não pode atribuir
+      if (!$perfil['ver_leads_nao_atribuidos'] || !$perfil['pode_atribuir_leads']) {
         $responsavel_id     = $current_user_id;
         $include_unassigned = false;
       }
-      // ver_leads_nao_atribuidos = true → sem filtro, vê todos os leads da loja
     } else {
       // Fallback legado
       $is_gerente    = (bool) get_user_meta($current_user_id, 'is_gerente', true);

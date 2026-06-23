@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, TrendingUp, Eraser, Search, Store, LocateFixed } from "lucide-react"
-import { CartesianGrid, Line, Area, AreaChart, XAxis, YAxis } from "recharts"
+import { CalendarIcon, TrendingUp, Eraser, Search, Store, LocateFixed, Building2 } from "lucide-react"
+import { CartesianGrid, Area, AreaChart, XAxis, YAxis } from "recharts"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -23,9 +23,9 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card"
 import {
   ChartContainer,
@@ -34,6 +34,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
+type Origem = 'todos' | 'industria' | 'proprio'
 
 interface LeadChart {
   date: string
@@ -47,213 +48,271 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-function normalizeLeads(data: any[], from: string, to: string) {
+function normalizeLeads(data: any[], from: string, to: string): LeadChart[] {
   if (!Array.isArray(data)) return []
-
-  const map = new Map(data.map((i) => [i.data, parseInt(i.total) || 0]))
-  const result = []
+  const map = new Map(data.map((i) => [i.data as string, parseInt(i.total) || 0]))
 
   const [sy, sm, sd] = from.split("-").map(Number)
   const [ey, em, ed] = to.split("-").map(Number)
   let d = new Date(Date.UTC(sy, sm - 1, sd))
   const end = new Date(Date.UTC(ey, em - 1, ed))
+  const result: LeadChart[] = []
 
   while (d <= end) {
-    const dateStr = d.toISOString().split("T")[0]
-    result.push({ date: dateStr, total: map.get(dateStr) || 0 })
+    const dateStr = d.toISOString().substring(0, 10)
+    result.push({ date: dateStr, total: map.get(dateStr) ?? 0 })
     d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))
   }
-
   return result
 }
 
 export function ChartLeads30Days({
   data: initialData,
   lojaIds,
+  showProprio = true,
 }: {
   data: LeadChart[]
   lojaIds?: (string | number)[]
+  showProprio?: boolean
 }) {
-  const [data, setData] = useState(initialData)
-  const [from, setFrom] = useState<Date | undefined>()
-  const [to, setTo] = useState<Date | undefined>()
+  const [data, setData]       = useState(initialData)
+  const [from, setFrom]       = useState<Date | undefined>()
+  const [to, setTo]           = useState<Date | undefined>()
+  const [origem, setOrigem]   = useState<Origem>('todos')
   const [loading, setLoading] = useState(false)
 
-  const [openDialog, setOpenDialog] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [openDialog, setOpenDialog]       = useState(false)
+  const [selectedDate, setSelectedDate]   = useState<string | null>(null)
   const [loadingDialog, setLoadingDialog] = useState(false)
-  const [leadsDay, setLeadsDay] = useState<any[]>([])
+  const [leadsDay, setLeadsDay]           = useState<any[]>([])
 
   const isFiltered = !!from || !!to
 
-  async function handleBuscar() {
-    if (!from || !to) return
-
+  async function fetchData(fromStr?: string, toStr?: string, origemVal?: string) {
     setLoading(true)
-
     try {
-      const fromStr = format(from, "yyyy-MM-dd")
-      const toStr = format(to, "yyyy-MM-dd")
-      const qs = new URLSearchParams({ from: fromStr, to: toStr })
+      const qs = new URLSearchParams()
+      if (fromStr) qs.set('from', fromStr)
+      if (toStr)   qs.set('to', toStr)
       if (lojaIds?.length) qs.set('loja_ids', lojaIds.join(','))
-      const res = await fetch(`/api/kanban/leads-by-day?${qs}`)
-      const json = await res.json()
+      if (origemVal && origemVal !== 'todos') qs.set('origem', origemVal)
 
-      const normalized = normalizeLeads(json.data ?? [], fromStr, toStr)
+      const json = await fetch(`/api/kanban/leads-by-day?${qs}`).then(r => r.json())
+
+      const normalized = fromStr && toStr
+        ? normalizeLeads(json.data ?? [], fromStr, toStr)
+        : (json.data ?? []).map((i: any) => ({ date: i.data as string, total: parseInt(i.total) || 0 }))
       setData(normalized)
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleBuscar() {
+    if (!from || !to) return
+    await fetchData(format(from, "yyyy-MM-dd"), format(to, "yyyy-MM-dd"), origem)
+  }
+
+  async function handleOrigemChange(val: Origem) {
+    setOrigem(val)
+    if (from && to) {
+      await fetchData(format(from, "yyyy-MM-dd"), format(to, "yyyy-MM-dd"), val)
+    } else if (val === 'todos') {
+      setData(initialData)
+    } else {
+      const today = new Date()
+      const ago30 = new Date(); ago30.setDate(ago30.getDate() - 29)
+      await fetchData(format(ago30, "yyyy-MM-dd"), format(today, "yyyy-MM-dd"), val)
     }
   }
 
   function handleLimpar() {
     setFrom(undefined)
     setTo(undefined)
+    setOrigem('todos')
     setData(initialData)
   }
 
   async function handleChartClick(e: any) {
-    if (e && e.activePayload && e.activePayload.length > 0) {
-      const clickedDate = e.activePayload[0].payload.date
-      setSelectedDate(clickedDate)
-      setOpenDialog(true)
-      setLoadingDialog(true)
-      setLeadsDay([])
-
-      try {
-        const qs = new URLSearchParams({ from: clickedDate, to: clickedDate, per_page: '200' })
-        if (lojaIds?.length) qs.set('loja_ids', lojaIds.join(','))
-        const res = await fetch(`/api/kanban/leads?${qs}`)
-        const json = await res.json()
-        if (json.success) {
-          setLeadsDay(json.leads ?? [])
-        }
-      } catch (error) {
-        console.error("Erro ao buscar leads do dia", error)
-      } finally {
-        setLoadingDialog(false)
-      }
+    if (!e?.activePayload?.length) return
+    const clickedDate = e.activePayload[0].payload.date as string
+    setSelectedDate(clickedDate)
+    setOpenDialog(true)
+    setLoadingDialog(true)
+    setLeadsDay([])
+    try {
+      const qs = new URLSearchParams({ from: clickedDate, to: clickedDate, per_page: '200' })
+      if (lojaIds?.length) qs.set('loja_ids', lojaIds.join(','))
+      const json = await fetch(`/api/kanban/leads?${qs}`).then(r => r.json())
+      if (json.success) setLeadsDay(json.leads ?? [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingDialog(false)
     }
   }
 
   const totalLeads = data.reduce((s, i) => s + i.total, 0)
-  const avgLeads = data.length ? Math.round(totalLeads / data.length) : 0
-  const maxLeads = data.length ? Math.max(...data.map(i => i.total)) : 0
+  const avgLeads   = data.length ? Math.round(totalLeads / data.length) : 0
+  const maxLeads   = data.length ? Math.max(...data.map(i => i.total)) : 0
+
+  const origemLabel: Record<Origem, string> = {
+    todos:    'Todos os leads',
+    industria: 'Leads de Indústria',
+    proprio:  'Leads Próprios',
+  }
 
   return (
     <>
       <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100">
-        <CardHeader>
-          <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+        <CardHeader className="pb-3">
+          {/* ── Linha 1: título + stats ── */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-2xl font-bold text-[#16255c]">
+              <CardTitle className="text-xl font-bold text-[#16255c]">
                 Leads por período
               </CardTitle>
-              <CardDescription>
-                {loading ? "Buscando dados..." : "Captação diária"}
+              <CardDescription className="mt-0.5">
+                {loading ? "Buscando dados…" : origemLabel[origem]}
               </CardDescription>
             </div>
 
+            <div className="flex items-center gap-5 shrink-0">
+              <div className="text-center">
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Total</p>
+                <p className="text-2xl font-bold text-[#16255c] leading-none">{totalLeads}</p>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <div className="text-center">
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Média/dia</p>
+                <p className="text-2xl font-bold text-[#16255c] leading-none">{avgLeads}</p>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <div className="text-center">
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Pico</p>
+                <p className="text-2xl font-bold text-[#16255c] leading-none">{maxLeads}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Linha 2: filtros ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2 border-t border-slate-200/70">
+            {/* Date pickers + botões de ação */}
             <div className="flex flex-wrap items-center gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-40 justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {from
-                      ? format(from, "dd/MM/yyyy", { locale: ptBR })
-                      : "Data inicial"}
+                  <Button variant="outline" size="sm" className="h-8 w-36 justify-start text-xs bg-white">
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                    {from ? format(from, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={from}
-                    onSelect={setFrom}
-                    locale={ptBR}
-                  />
+                  <Calendar mode="single" selected={from} onSelect={setFrom} locale={ptBR} />
                 </PopoverContent>
               </Popover>
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-40 justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {to
-                      ? format(to, "dd/MM/yyyy", { locale: ptBR })
-                      : "Data final"}
+                  <Button variant="outline" size="sm" className="h-8 w-36 justify-start text-xs bg-white">
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                    {to ? format(to, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={to}
-                    onSelect={setTo}
-                    locale={ptBR}
-                  />
+                  <Calendar mode="single" selected={to} onSelect={setTo} locale={ptBR} />
                 </PopoverContent>
               </Popover>
 
               <Button
+                size="sm"
                 onClick={handleBuscar}
                 disabled={loading || !from || !to}
-                className="hover:text-white flex gap-2 items-center text-white cursor-pointer bg-[#16255c] hover:bg-[#0f1a45]"
+                className="h-8 px-3 text-xs text-white bg-[#16255c] hover:bg-[#0f1a45]"
               >
-                <Search className="h-4 w-4" />
-                {loading ? "Buscando..." : "Buscar"}
+                <Search className="mr-1.5 h-3.5 w-3.5" />
+                {loading ? "Buscando…" : "Buscar"}
               </Button>
 
               {isFiltered && (
                 <Button
-                  variant="destructive"
+                  size="sm"
+                  variant="outline"
                   onClick={handleLimpar}
-                  className="hover:text-white flex gap-2 items-center text-white cursor-pointer"
+                  className="h-8 px-3 text-xs border-red-200 text-red-600 hover:bg-red-50"
                 >
-                  <Eraser className="h-4 w-4" />
+                  <Eraser className="mr-1.5 h-3.5 w-3.5" />
                   Limpar
                 </Button>
               )}
             </div>
 
-            <div className="flex gap-4">
-              <div className="text-right">
-                <p className="text-xs text-slate-500">Média</p>
-                <p className="text-xl font-bold text-[#16255c]">{avgLeads}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-500">Pico</p>
-                <p className="text-xl font-bold text-[#16255c]">{maxLeads}</p>
-              </div>
+            {/* Origem toggle */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5 ml-auto">
+              {(
+                [
+                  ['todos', 'Todos', null],
+                  ['industria', 'Indústria', <Building2 key="i" className="h-3.5 w-3.5" />],
+                  ...(showProprio ? [['proprio', 'Próprio', <Store key="p" className="h-3.5 w-3.5" />]] : []),
+                ] as [Origem, string, React.ReactNode][]
+              ).map(([val, label, icon]) => (
+                <button
+                  key={val}
+                  onClick={() => handleOrigemChange(val)}
+                  className={[
+                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                    origem === val
+                      ? 'bg-[#16255c] text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
+                  ].join(' ')}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         </CardHeader>
 
-        <CardContent>
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-87.5 w-full cursor-pointer"
-          >
-            <AreaChart data={data} onClick={handleChartClick}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <CardContent className="pt-0">
+          <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full cursor-pointer">
+            <AreaChart data={data} onClick={handleChartClick} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gradLeads" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#16255c" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#16255c" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
 
               <XAxis
                 dataKey="date"
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                tickLine={false}
+                axisLine={false}
                 tickFormatter={(v) =>
-                  new Date(v).toLocaleDateString("pt-BR", {
+                  new Date(v + 'T12:00:00').toLocaleDateString("pt-BR", {
                     day: "2-digit",
                     month: "short",
                   })
                 }
               />
 
-              <YAxis />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
 
               <ChartTooltip
                 content={
                   <ChartTooltipContent
                     labelFormatter={(value) =>
-                      new Date(value).toLocaleDateString("pt-BR", {
+                      new Date(value + 'T12:00:00').toLocaleDateString("pt-BR", {
+                        weekday: "short",
                         day: "2-digit",
                         month: "long",
                         year: "numeric",
@@ -267,23 +326,24 @@ export function ChartLeads30Days({
                 type="monotone"
                 dataKey="total"
                 stroke="#16255c"
-                fill="#16255c33"
-                strokeWidth={3}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#16255c"
-                strokeWidth={2}
+                fill="url(#gradLeads)"
+                strokeWidth={2.5}
                 dot={false}
+                activeDot={{ r: 4, fill: '#16255c', strokeWidth: 0 }}
               />
             </AreaChart>
           </ChartContainer>
 
-          <div className="mt-6 flex items-center gap-2 text-sm bg-[#16255c]/5 p-3 rounded-lg">
-            <TrendingUp className="h-4 w-4 text-[#16255c]" />
-            Total de <strong>{totalLeads}</strong> leads no período
+          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 bg-[#16255c]/5 px-3 py-2 rounded-lg">
+            <TrendingUp className="h-3.5 w-3.5 text-[#16255c]" />
+            <span>
+              <strong className="text-[#16255c]">{totalLeads}</strong> leads no período
+              {origem !== 'todos' && (
+                <span className="ml-1 text-slate-400">
+                  · filtrando por <strong>{origemLabel[origem].toLowerCase()}</strong>
+                </span>
+              )}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -294,7 +354,12 @@ export function ChartLeads30Days({
             <DialogTitle>
               Leads do dia{" "}
               {selectedDate &&
-                new Date(selectedDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                new Date(selectedDate + "T12:00:00").toLocaleDateString("pt-BR", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
             </DialogTitle>
             <DialogDescription id="dialog-leads-desc">
               Lista de leads capturados neste dia
@@ -302,29 +367,22 @@ export function ChartLeads30Days({
           </DialogHeader>
 
           {loadingDialog ? (
-            <p className="text-center py-8">Carregando leads...</p>
+            <p className="text-center py-8 text-slate-500">Carregando leads…</p>
           ) : leadsDay.length === 0 ? (
-            <p className="text-center py-8">Nenhum lead nesse dia</p>
+            <p className="text-center py-8 text-slate-400">Nenhum lead nesse dia</p>
           ) : (
             <div className="max-h-[60vh] overflow-auto space-y-2 pr-2">
               {leadsDay.map((lead, i) => (
-                <div
-                  key={i}
-                  className="border rounded-lg p-3 bg-slate-50 space-y-1"
-                >
-                  <p className="font-semibold text-[#16255c]">
-                    {lead.nome}
-                  </p>
-
+                <div key={i} className="border rounded-lg p-3 bg-slate-50 space-y-1">
+                  <p className="font-semibold text-[#16255c]">{lead.nome}</p>
                   {lead.loja_regiao && (
                     <p className="text-xs text-slate-600 flex gap-1.5 items-center">
-                      <Store size={14} /> Loja: <strong>{lead.loja_regiao}</strong>
+                      <Store size={13} /> {lead.loja_regiao}
                     </p>
                   )}
-
                   {lead.cidade && (
                     <p className="text-xs text-slate-600 flex gap-1.5 items-center">
-                      <LocateFixed size={14} /> Cidade: <strong>{lead.cidade}</strong>
+                      <LocateFixed size={13} /> {lead.cidade}
                     </p>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession, isMaster } from '@/lib/auth'
+import { getSession, isMaster, podeAtribuirLeads, canAccessLoja } from '@/lib/auth'
 import { getLeadsLast12MonthsServer } from '@/lib/server-leads-service'
 
 export async function GET(request: NextRequest) {
@@ -10,8 +10,14 @@ export async function GET(request: NextRequest) {
   const origem = searchParams.get('origem') as 'industria' | 'proprio' | null
   const lojaId = searchParams.get('loja_id') ?? undefined
 
-  if (origem === 'proprio' && !isMaster(session.user)) {
-    return NextResponse.json({ success: false }, { status: 403 })
+  if (origem === 'proprio') {
+    // Masters veem tudo; lojistas com podeAtribuirLeads veem próprios da sua loja
+    const podeVerProprio =
+      isMaster(session.user) ||
+      (podeAtribuirLeads(session.user) && !!lojaId && canAccessLoja(session.user, Number(lojaId)))
+    if (!podeVerProprio) {
+      return NextResponse.json({ success: false }, { status: 403 })
+    }
   }
 
   try {

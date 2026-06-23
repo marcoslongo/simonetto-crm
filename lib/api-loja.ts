@@ -41,9 +41,11 @@ export async function getLojaStats(lojaId: string | number): Promise<LojaStats> 
 /**
  * Buscar leads dos últimos 30 dias
  */
-export async function getLojaLeads30Days(lojaId: string | number): Promise<LeadsByDay[]> {
-  const response = await fetch(`${API_BASE_URL}/lojas/${lojaId}/leads-30-days`, {
-    next: { revalidate: 300 },
+export async function getLojaLeads30Days(lojaId: string | number, origem?: string): Promise<LeadsByDay[]> {
+  let url = `${API_BASE_URL}/lojas/${lojaId}/leads-30-days`
+  if (origem) url += `?origem=${encodeURIComponent(origem)}`
+  const response = await fetch(url, {
+    cache: 'no-store',
     headers: await getAuthHeaders(),
   })
 
@@ -184,6 +186,7 @@ export async function getLojaLeads(
   search?: string,
   status?: string,
   responsavelId?: number,
+  origem?: string,
 ): Promise<{ leads: Lead[]; total: number }> {
   let url = `${API_BASE_URL}/lojas/${lojaId}/leads?page=${page}&per_page=${perPage}`
   if (from)          url += `&from=${encodeURIComponent(from)}`
@@ -191,6 +194,7 @@ export async function getLojaLeads(
   if (search)        url += `&search=${encodeURIComponent(search)}`
   if (status)        url += `&status=${encodeURIComponent(status)}`
   if (responsavelId) url += `&responsavel_id=${responsavelId}`
+  if (origem)        url += `&origem=${encodeURIComponent(origem)}`
   const response = await fetch(
     url,
     {

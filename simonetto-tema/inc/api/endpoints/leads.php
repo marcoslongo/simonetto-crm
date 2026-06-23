@@ -1425,7 +1425,6 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
   $to             = sanitize_text_field($request->get_param('to')             ?? '');
   $loja_id        = intval($request->get_param('loja_id'));
   $loja_ids       = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
-  $responsavel_id = intval($request->get_param('responsavel_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1446,9 +1445,10 @@ function mytheme_api_leads_tracking_device(WP_REST_Request $request)
     $prepare_values[] = $loja_id;
   }
 
-  if ($responsavel_id) {
-    $where_clauses[] = "l.responsavel_id = %d";
-    $prepare_values[] = $responsavel_id;
+  $resp_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  if ($resp_id > 0) {
+    $where_clauses[]  = "l.responsavel_id = %d";
+    $prepare_values[] = $resp_id;
   }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
@@ -1515,7 +1515,6 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
   $to             = sanitize_text_field($request->get_param('to')             ?? '');
   $loja_id        = intval($request->get_param('loja_id'));
   $loja_ids       = array_filter(array_map('intval', explode(',', $request->get_param('loja_ids') ?? '')));
-  $responsavel_id = intval($request->get_param('responsavel_id'));
 
   $where_clauses  = [];
   $prepare_values = [];
@@ -1536,9 +1535,10 @@ function mytheme_api_leads_tracking_horario(WP_REST_Request $request)
     $prepare_values[] = $loja_id;
   }
 
-  if ($responsavel_id) {
-    $where_clauses[] = "l.responsavel_id = %d";
-    $prepare_values[] = $responsavel_id;
+  $resp_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  if ($resp_id > 0) {
+    $where_clauses[]  = "l.responsavel_id = %d";
+    $prepare_values[] = $resp_id;
   }
 
   $where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';

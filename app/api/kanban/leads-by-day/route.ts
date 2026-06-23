@@ -13,8 +13,9 @@ export async function GET(req: Request) {
     .map(s => s.trim())
     .filter(Boolean)
     .map(Number)
-  const from = searchParams.get('from') ?? undefined
-  const to = searchParams.get('to') ?? undefined
+  const from   = searchParams.get('from')   ?? undefined
+  const to     = searchParams.get('to')     ?? undefined
+  const origem = searchParams.get('origem') ?? undefined
 
   if (!lojaIds.length) {
     return NextResponse.json({ success: true, data: [] })
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
         let page = 1
         let fetched = 0
         while (true) {
-          const { leads, total } = await getLojaLeads(id, page, 200, from, to).catch(() => ({ leads: [] as Lead[], total: 0 }))
+          const { leads, total } = await getLojaLeads(id, page, 200, from, to, undefined, undefined, undefined, origem).catch(() => ({ leads: [] as Lead[], total: 0 }))
           for (const lead of leads) {
             if (!seenIds.has(lead.id)) {
               seenIds.add(lead.id)
@@ -45,7 +46,8 @@ export async function GET(req: Request) {
 
     const byDay = new Map<string, number>()
     for (const lead of allLeads) {
-      const day = lead.data_criacao?.split('T')[0]
+      // data_criacao pode ser "2026-05-24 18:15:21" (MySQL) ou ISO — pega só YYYY-MM-DD
+      const day = lead.data_criacao?.substring(0, 10)
       if (day) byDay.set(day, (byDay.get(day) ?? 0) + 1)
     }
 

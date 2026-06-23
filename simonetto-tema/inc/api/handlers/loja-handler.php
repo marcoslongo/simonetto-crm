@@ -284,11 +284,18 @@ class Loja_Handler
   /**
    * Leads dos últimos 30 dias (agrupados por dia)
    */
-  public static function get_leads_30_days($loja_id, bool $exclude_proprio = false, int $responsavel_id = 0)
+  public static function get_leads_30_days($loja_id, bool $exclude_proprio = false, int $responsavel_id = 0, string $origem_filter = '')
   {
     global $wpdb;
     $table_leads    = $wpdb->prefix . 'leads';
-    $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+
+    // Filtro de origem: específico tem prioridade sobre exclude_proprio
+    if ($origem_filter && in_array($origem_filter, ['industria', 'proprio'], true)) {
+      $proprio_filter = $wpdb->prepare(" AND origem = %s", $origem_filter);
+    } else {
+      $proprio_filter = $exclude_proprio ? " AND origem != 'proprio'" : '';
+    }
+
     $resp_filter    = $responsavel_id > 0
       ? $wpdb->prepare(" AND responsavel_id = %d", $responsavel_id)
       : '';

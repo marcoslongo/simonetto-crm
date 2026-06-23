@@ -152,13 +152,15 @@ define('CRM_NIVEIS_GERENTE', ['master', 'supervisor', 'industria', 'gerente']);
 /**
  * Retorna o responsavel_id a ser usado como filtro em queries de stats.
  * Retorna 0 quando o usuário pode ver todos os leads da loja.
+ * Restringe ao próprio usuário se: não pode ver não-atribuídos OU não pode atribuir leads.
  */
 function crm_stats_responsavel_filter(): int {
   if (current_user_can('administrator')) return 0;
   $uid    = get_current_user_id();
   $perfil = crm_get_perfil_acesso($uid);
   if ($perfil) {
-    return !$perfil['ver_leads_nao_atribuidos'] ? $uid : 0;
+    $restringir = !$perfil['ver_leads_nao_atribuidos'] || !$perfil['pode_atribuir_leads'];
+    return $restringir ? $uid : 0;
   }
   // fallback legado: atendente com ocultar ativo
   $is_gerente = (bool) get_user_meta($uid, 'is_gerente', true);
