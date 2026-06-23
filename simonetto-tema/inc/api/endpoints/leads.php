@@ -880,41 +880,52 @@ function mytheme_api_leads_por_origem(WP_REST_Request $request)
 
 /**
  * GET /api/v1/leads/stats
- * Query params: from (yyyy-MM-dd), to (yyyy-MM-dd), loja_id (opcional)
+ * Query params: from (yyyy-MM-dd), to (yyyy-MM-dd), loja_id (único ou vírgula-separado), origem
  */
 function mytheme_api_leads_stats(WP_REST_Request $request)
 {
   global $wpdb;
 
   $from = sanitize_text_field($request->get_param('from') ?? '');
-  $to = sanitize_text_field($request->get_param('to') ?? '');
-  $loja_id = intval($request->get_param('loja_id'));
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  // Suporta loja_id único ou múltiplos separados por vírgula ("123,456")
+  $loja_id_raw = sanitize_text_field($request->get_param('loja_id') ?? '');
+  $loja_ids    = array_filter(array_map('intval', explode(',', $loja_id_raw)));
+
   $origem = sanitize_text_field($request->get_param('origem') ?? '');
-  $allowed_origem = ['industria', 'proprio'];
-  if (!in_array($origem, $allowed_origem, true)) {
+  if (!in_array($origem, ['industria', 'proprio'], true)) {
     $origem = '';
   }
 
   if (!$from || !$to) {
     return new WP_REST_Response([
-      'success' => false,
+      'success'  => false,
       'mensagem' => 'Parâmetros from e to são obrigatórios.',
     ], 400);
   }
 
   $table = $wpdb->prefix . 'leads';
 
-  $where_clauses = ["data_criacao >= %s", "data_criacao <= %s"];
+  $where_clauses  = ["data_criacao >= %s", "data_criacao <= %s"];
   $prepare_values = [$from . ' 00:00:00', $to . ' 23:59:59'];
 
-  if ($loja_id) {
-    $where_clauses[] = "loja_id = %d";
-    $prepare_values[] = $loja_id;
+  if (!empty($loja_ids)) {
+    $placeholders    = implode(',', array_fill(0, count($loja_ids), '%d'));
+    $where_clauses[] = "loja_id IN ($placeholders)";
+    $prepare_values  = array_merge($prepare_values, array_values($loja_ids));
   }
 
   if ($origem) {
     $where_clauses[] = "origem = %s";
     $prepare_values[] = $origem;
+  }
+
+  // Gerentes atribuíveis veem apenas os leads atribuídos a eles
+  $resp_filter = crm_stats_responsavel_filter();
+  if ($resp_filter) {
+    $where_clauses[]  = "responsavel_id = %d";
+    $prepare_values[] = $resp_filter;
   }
 
   $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
