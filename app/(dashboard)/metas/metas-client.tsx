@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Target, Plus, Pencil, Trash2, Trophy, TrendingUp, Users,
   Calendar, AlertTriangle, CheckCircle2, BarChart3,
-  ChevronDown, Loader2, // Loader2 kept for saving state in form
+  ChevronDown, Loader2, DollarSign,
 } from 'lucide-react'
+import { ComissoesTab } from '@/components/metas/comissoes-tab'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -464,10 +465,11 @@ function RankingCard({ ranking }: { ranking: MetasDashboardData['ranking'] }) {
 interface MetasClientProps {
   lojaId: string
   isGerente: boolean
+  isSupervisor: boolean
   userId: number
 }
 
-export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
+export function MetasClient({ lojaId, isGerente, isSupervisor, userId }: MetasClientProps) {
   const [dashboard, setDashboard] = useState<MetasDashboardData | null>(null)
   const [usuarios, setUsuarios]   = useState<Usuario[]>([])
   const [loading, setLoading]     = useState(true)
@@ -590,8 +592,8 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
             </TabsTrigger>
           )}
           {isGerente && (
-            <TabsTrigger value="gerenciar">
-              <Users className="h-3.5 w-3.5 mr-1.5" /> Gerenciar
+            <TabsTrigger value="comissoes">
+              <DollarSign className="h-3.5 w-3.5 mr-1.5" /> Comissões
             </TabsTrigger>
           )}
         </TabsList>
@@ -601,33 +603,59 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
           {loading ? (
             <MetasGridSkeleton />
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  {isGerente ? 'Todas as metas' : 'Metas da equipe'}
-                </h3>
-                {metas.length === 0 ? (
-                  <div className="rounded-xl border bg-white p-10 text-center">
-                    <Target className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p>
-                    {isGerente && (
-                      <Button size="sm" variant="outline" className="mt-4" onClick={openCreate}>
-                        <Plus className="h-3.5 w-3.5 mr-1.5" /> Criar primeira meta
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {metas.map(m => (
-                      <MetaCard key={m.id} meta={m} isGerente={isGerente} onEdit={openEdit} onDelete={handleDelete} />
-                    ))}
-                  </div>
-                )}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    {isGerente ? 'Todas as metas' : 'Metas da equipe'}
+                  </h3>
+                  {metas.length === 0 ? (
+                    <div className="rounded-xl border bg-white p-10 text-center">
+                      <Target className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p>
+                      {isGerente && (
+                        <Button size="sm" variant="outline" className="mt-4" onClick={openCreate}>
+                          <Plus className="h-3.5 w-3.5 mr-1.5" /> Criar primeira meta
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {metas.map(m => (
+                        <MetaCard key={m.id} meta={m} isGerente={isGerente} onEdit={openEdit} onDelete={handleDelete} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Ranking</h3>
+                  <RankingCard ranking={ranking} />
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Ranking</h3>
-                <RankingCard ranking={ranking} />
-              </div>
+
+              {isGerente && metas.length > 0 && (
+                <div className="rounded-xl border bg-white shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-[#16255c] mb-4 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" /> Indicadores de Status
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Atingidas', filter: (p: number) => p >= 100, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+                      { label: 'Em dia',    filter: (p: number) => p >= 80 && p < 100, color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200'    },
+                      { label: 'Em risco',  filter: (p: number) => p >= 50 && p < 80,  color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200'   },
+                      { label: 'Abaixo',    filter: (p: number) => p < 50,             color: 'text-red-700',     bg: 'bg-red-50 border-red-200'       },
+                    ].map(({ label, filter, color, bg }) => {
+                      const count = metas.filter(m => filter(m.percentual_atingido ?? 0)).length
+                      return (
+                        <div key={label} className={`rounded-lg border p-3 text-center ${bg}`}>
+                          <p className={`text-2xl font-bold ${color}`}>{count}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -650,63 +678,16 @@ export function MetasClient({ lojaId, isGerente, userId }: MetasClientProps) {
           )}
         </TabsContent>
 
-        {/* Gerenciar (gerente) */}
-        <TabsContent value="gerenciar" className="mt-4">
-          {loading ? (
-            <MetasGridSkeleton />
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Metas Cadastradas</h3>
-                  {metas.length === 0 ? (
-                    <div className="rounded-xl border bg-white p-10 text-center">
-                      <Target className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                      <p className="text-sm text-muted-foreground">Nenhuma meta cadastrada.</p>
-                      <Button size="sm" variant="outline" className="mt-4" onClick={openCreate}>
-                        <Plus className="h-3.5 w-3.5 mr-1.5" /> Criar primeira meta
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {metas.map(m => (
-                        <MetaCard key={m.id} meta={m} isGerente={true} onEdit={openEdit} onDelete={handleDelete} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Ranking</h3>
-                  <RankingCard ranking={ranking} />
-                </div>
-              </div>
-
-              {metas.length > 0 && (
-                <div className="rounded-xl border bg-white shadow-sm p-5">
-                  <h3 className="text-sm font-semibold text-[#16255c] mb-4 flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" /> Indicadores de Status
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { label: 'Atingidas', filter: (p: number) => p >= 100, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-                      { label: 'Em dia', filter: (p: number) => p >= 80 && p < 100, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-                      { label: 'Em risco', filter: (p: number) => p >= 50 && p < 80, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-                      { label: 'Abaixo', filter: (p: number) => p < 50, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
-                    ].map(({ label, filter, color, bg }) => {
-                      const count = metas.filter(m => filter(m.percentual_atingido ?? 0)).length
-                      return (
-                        <div key={label} className={`rounded-lg border p-3 text-center ${bg}`}>
-                          <p className={`text-2xl font-bold ${color}`}>{count}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
+        {/* Comissões */}
+        {isGerente && (
+          <TabsContent value="comissoes" className="mt-4">
+            <ComissoesTab
+              lojaId={lojaId}
+              isGerente={isGerente}
+              isSupervisor={isSupervisor}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Dialog de criação/edição */}

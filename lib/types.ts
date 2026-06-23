@@ -287,6 +287,88 @@ export interface MetasDashboardData {
   ranking: MetaRankingItem[]
 }
 
+// ─── Comissões ───────────────────────────────────────────────────────────────
+
+export type MetodoComissao = 'markup' | 'pontuacao'
+export type StatusFechamento = 'rascunho' | 'aprovado' | 'pago'
+
+export interface FaixaMeta {
+  de: number
+  ate: number | null
+  percentual: number
+}
+
+export interface FaixaPontos {
+  de: number
+  ate: number | null
+  valor_ponto: number
+}
+
+export interface ComissaoConfig {
+  ativo: boolean
+  metodo: MetodoComissao
+  faixas_meta: FaixaMeta[]
+  divisor_pontos: number
+  faixas_pontos: FaixaPontos[]
+}
+
+export const COMISSAO_CONFIG_PADRAO: ComissaoConfig = {
+  ativo: false,
+  metodo: 'markup',
+  faixas_meta: [
+    { de: 0,   ate: 79,   percentual: 2 },
+    { de: 80,  ate: 99,   percentual: 3 },
+    { de: 100, ate: null, percentual: 4 },
+  ],
+  divisor_pontos: 1000,
+  faixas_pontos: [
+    { de: 0,   ate: 100,  valor_ponto: 5 },
+    { de: 101, ate: 300,  valor_ponto: 7 },
+    { de: 300, ate: null, valor_ponto: 10 },
+  ],
+}
+
+export interface ComissaoPreviewItem {
+  usuario_id: number
+  usuario_nome: string
+  qtd_vendas: number
+  valor_vendas: number
+  valor_meta: number
+  percentual_atingimento: number
+  valor_custo: number
+  markup_gerado: number
+  pontos_acumulados: number
+  valor_ponto: number | null
+  percentual_comissao: number
+  valor_comissao: number
+}
+
+export interface ComissaoFechamento {
+  id: number
+  loja_id: number
+  usuario_id: number
+  usuario_nome: string
+  periodo_inicio: string
+  periodo_fim: string
+  metodo: MetodoComissao
+  valor_vendas: number
+  valor_custo: number
+  markup_gerado: number
+  pontos_acumulados: number
+  percentual_atingimento: number
+  percentual_comissao: number
+  valor_comissao: number
+  observacoes: string | null
+  status: StatusFechamento
+  fechado_por: number | null
+  fechado_em: string | null
+  aprovado_por: number | null
+  aprovado_em: string | null
+  pago_em: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ─── Pós-Venda ───────────────────────────────────────────────────────────────
 
 export interface PosVendaColuna {

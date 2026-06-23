@@ -31,6 +31,7 @@ require_once __DIR__ . '/handlers/lead-notificacoes-handler.php';
 require_once __DIR__ . '/handlers/lead-venda-realizada-handler.php';
 require_once __DIR__ . '/handlers/meta-comercial-handler.php';
 require_once __DIR__ . '/handlers/pos-venda-handler.php';
+require_once __DIR__ . '/handlers/comissao-handler.php';
 
 // Carregar endpoints
 require_once __DIR__ . '/endpoints/leads.php';
@@ -51,6 +52,7 @@ require_once __DIR__ . '/endpoints/lead-notificacoes.php';
 require_once __DIR__ . '/endpoints/presence.php';
 require_once __DIR__ . '/endpoints/metas.php';
 require_once __DIR__ . '/endpoints/pos-vendas.php';
+require_once __DIR__ . '/endpoints/comissoes.php';
 
 // Criar tabelas novas se necessário
 add_action('init', function () {
@@ -65,5 +67,6 @@ add_action('init', function () {
   Lead_Venda_Realizada_Handler::maybe_create_table();
   Meta_Comercial_Handler::maybe_create_table();
   Pos_Venda_Handler::maybe_create_tables();
+  Comissao_Handler::maybe_create_table();
 }, 5);
 
