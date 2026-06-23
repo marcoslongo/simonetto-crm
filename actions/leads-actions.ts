@@ -1,6 +1,6 @@
 'use server'
 
-import { getAllLeadsServer, getLeadsServer } from "@/lib/server-leads-service"
+import { getAllLeadsServer, getLeadsServer, exportLeadsServer } from "@/lib/server-leads-service"
 import { getLojaLeads, getMultiLojaLeads, getConversaoPorLoja, getLojaFunilSaude } from "@/lib/api-loja"
 import { getSession } from "@/lib/auth"
 
@@ -25,6 +25,15 @@ export async function fetchAllLeadsForExport(filters?: ExportFilters) {
 export async function fetchLojaLeadsForExport(lojaId: number, responsavelId?: number) {
   const { leads } = await getLojaLeads(lojaId, 1, 10000, undefined, undefined, undefined, undefined, responsavelId)
   return leads
+}
+
+export async function exportLeadsByOrigem(
+  lojaIds: number[],
+  origem?: 'industria' | 'proprio',
+) {
+  const session = await getSession()
+  if (!session) throw new Error('Não autenticado')
+  return exportLeadsServer({ lojaIds, origem })
 }
 
 export async function fetchLojaLeadsPaginated(lojaId: number, page: number) {

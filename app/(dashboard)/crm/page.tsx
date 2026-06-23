@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAuth, isSupervisor, isGerente as checkIsGerente } from '@/lib/auth'
+import { requireAuth, isSupervisor, isGerente as checkIsGerente, podeAtribuirLeads } from '@/lib/auth'
 import {
   getMultiLojaStats,
   getMultiLojaStatusFunil,
@@ -8,7 +8,9 @@ import {
   getMultiLojaAtendanteStats,
   getMultiLojaFunilSaude,
 } from '@/lib/api-loja'
+import { getLeadsLast12MonthsServer } from '@/lib/server-leads-service'
 import { getLojas } from '@/lib/api'
+import { ChartCaptacaoOrigens } from '@/components/crm/chart-captacao-origens'
 import { StatsCards } from '@/components/lojas/stats-cards'
 import { KanbanStatsCards } from '@/components/dashboard/kanban-stats-cards'
 import { LeadsTemperature } from '@/components/dashboard/leads-temperature'
@@ -297,13 +299,39 @@ function AtendenteDashboardSkeleton() {
   )
 }
 
+async function CaptacaoOrigensWrapper({
+  lojaIds,
+  showProprio,
+  lojaNome,
+}: {
+  lojaIds: number[]
+  showProprio: boolean
+  lojaNome?: string
+}) {
+  const lojaParam = lojaIds.length > 0 ? lojaIds.join(',') : undefined
+  const [dataInd, dataProp] = await Promise.all([
+    getLeadsLast12MonthsServer('industria', lojaParam),
+    showProprio ? getLeadsLast12MonthsServer('proprio', lojaParam) : Promise.resolve([]),
+  ])
+  return (
+    <ChartCaptacaoOrigens
+      dataIndustria={dataInd}
+      dataProprio={dataProp}
+      showProprio={showProprio}
+      lojaIds={lojaIds}
+      lojaNome={lojaNome}
+    />
+  )
+}
+
 export default async function CrmDashboardPage() {
   const user = await requireAuth()
 
-  const isLoja    = user.role === 'loja'
-  const lojaIds   = isLoja ? user.loja_ids : []
-  const isGerente = checkIsGerente(user)
-  const isSupv    = isSupervisor(user)
+  const isLoja      = user.role === 'loja'
+  const lojaIds     = isLoja ? user.loja_ids : []
+  const isGerente   = checkIsGerente(user)
+  const isSupv      = isSupervisor(user)
+  const canProprio  = podeAtribuirLeads(user)
 
   // Quando o perfil não permite ver não-atribuídos, stats vêm filtradas pelo backend
   const verNaoAtribuidos = user.perfil_acesso?.ver_leads_nao_atribuidos ?? user.is_gerente ?? false
@@ -355,6 +383,17 @@ export default async function CrmDashboardPage() {
             />
           </Suspense>
         </div>
+      )}
+
+      {/* Gráfico de captação Indústria vs Próprio */}
+      {isLoja && isGerente && lojaIds.length > 0 && (
+        <Suspense fallback={<Skeleton className="h-105 rounded-2xl" />}>
+          <CaptacaoOrigensWrapper
+            lojaIds={lojaIds}
+            showProprio={canProprio}
+            lojaNome={user.loja_nome || user.name}
+          />
+        </Suspense>
       )}
 
       {/* Saúde da Operação — só para gerentes */}

@@ -160,6 +160,13 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true',
   ]);
 
+  // GET /api/v1/leads/export — export completo sem paginação
+  register_rest_route('api/v1', '/leads/export', [
+    'methods'             => 'GET',
+    'callback'            => 'mytheme_api_leads_export',
+    'permission_callback' => 'mytheme_api_is_authenticated',
+  ]);
+
   // GET /api/v1/leads-classificacao
   register_rest_route('api/v1', '/leads-classificacao', [
     'methods' => 'GET',
@@ -931,6 +938,103 @@ function mytheme_api_leads_stats(WP_REST_Request $request)
   return new WP_REST_Response([
     'success' => true,
     'data' => $rows,
+  ], 200);
+}
+
+/**
+ * GET /api/v1/leads/export
+ * Retorna todos os leads (sem paginação) respeitando escopo do usuário logado.
+ * Query params: loja_id (ou loja_ids separados por vírgula), origem, from, to
+ */
+function mytheme_api_leads_export(WP_REST_Request $request)
+{
+  global $wpdb;
+
+  $table_leads = $wpdb->prefix . 'leads';
+
+  $origem = sanitize_text_field($request->get_param('origem') ?? '');
+  if (!in_array($origem, ['industria', 'proprio'], true)) {
+    $origem = '';
+  }
+
+  $from = sanitize_text_field($request->get_param('from') ?? '');
+  $to   = sanitize_text_field($request->get_param('to')   ?? '');
+
+  // loja_id pode ser único ou lista separada por vírgula
+  $loja_id_param = sanitize_text_field($request->get_param('loja_id') ?? '');
+  $loja_ids_param = array_filter(array_map('intval', explode(',', $loja_id_param)));
+
+  $where_clauses  = [];
+  $prepare_values = [];
+
+  // Escopo de lojas — respeita permissões do usuário
+  $loja_ids_acessiveis = crm_get_user_loja_ids_acessiveis();
+  if (!empty($loja_ids_param)) {
+    // Se usuário pediu lojas específicas, intersecta com o que ele pode ver
+    if ($loja_ids_acessiveis !== null) {
+      $lojas_efetivas = array_intersect($loja_ids_param, $loja_ids_acessiveis);
+    } else {
+      $lojas_efetivas = $loja_ids_param;
+    }
+    if (empty($lojas_efetivas)) {
+      return new WP_REST_Response(['success' => true, 'data' => [], 'total' => 0], 200);
+    }
+    $placeholders   = implode(',', array_fill(0, count($lojas_efetivas), '%d'));
+    $where_clauses[]  = "l.loja_id IN ($placeholders)";
+    $prepare_values  = array_merge($prepare_values, array_values($lojas_efetivas));
+  } elseif ($loja_ids_acessiveis !== null) {
+    $placeholders   = implode(',', array_fill(0, count($loja_ids_acessiveis), '%d'));
+    $where_clauses[]  = "l.loja_id IN ($placeholders)";
+    $prepare_values  = array_merge($prepare_values, $loja_ids_acessiveis);
+  }
+
+  if ($origem) {
+    $where_clauses[]  = 'l.origem = %s';
+    $prepare_values[] = $origem;
+  }
+
+  if ($from) {
+    $where_clauses[]  = 'DATE(l.data_criacao) >= %s';
+    $prepare_values[] = $from;
+  }
+
+  if ($to) {
+    $where_clauses[]  = 'DATE(l.data_criacao) <= %s';
+    $prepare_values[] = $to;
+  }
+
+  // Filtro de responsável para perfis sem escopo global
+  $resp_filter = crm_stats_responsavel_filter();
+  if ($resp_filter) {
+    $where_clauses[]  = 'l.responsavel_id = %d';
+    $prepare_values[] = $resp_filter;
+  }
+
+  $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+  $sql = "SELECT l.*, u.display_name AS responsavel_nome
+          FROM {$table_leads} l
+          LEFT JOIN {$wpdb->users} u ON u.ID = l.responsavel_id
+          {$where_sql}
+          ORDER BY l.data_criacao DESC";
+
+  if ($prepare_values) {
+    $rows = $wpdb->get_results($wpdb->prepare($sql, ...$prepare_values), ARRAY_A);
+  } else {
+    $rows = $wpdb->get_results($sql, ARRAY_A);
+  }
+
+  if ($wpdb->last_error) {
+    return new WP_REST_Response([
+      'success' => false,
+      'mensagem' => 'Erro ao exportar leads: ' . $wpdb->last_error,
+    ], 500);
+  }
+
+  return new WP_REST_Response([
+    'success' => true,
+    'total'   => count($rows),
+    'data'    => $rows,
   ], 200);
 }
 

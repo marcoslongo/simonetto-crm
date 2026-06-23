@@ -256,3 +256,26 @@ export async function getLeadsLast12MonthsServer(origem?: 'industria' | 'proprio
   const token = await getToken()
   return getLeadsLast12Months(token, origem, lojaId)
 }
+
+export async function exportLeadsServer(params: {
+  lojaIds?: number[]
+  origem?: 'industria' | 'proprio'
+  from?: string
+  to?: string
+}) {
+  const token = await getToken()
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL
+  const qs = new URLSearchParams()
+  if (params.lojaIds?.length) qs.set('loja_id', params.lojaIds.join(','))
+  if (params.origem)          qs.set('origem',  params.origem)
+  if (params.from)            qs.set('from',    params.from)
+  if (params.to)              qs.set('to',      params.to)
+
+  const res = await fetch(`${API_BASE}/leads/export?${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  const json = await res.json()
+  return (json.data ?? []) as Record<string, unknown>[]
+}
