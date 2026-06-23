@@ -1460,10 +1460,16 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
     return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id inválido.'], 400);
   }
 
+  // Respeita hierarquia de permissões: gerente atribuível vê apenas seus leads
+  $responsavel_id = crm_user_is_supervisor() ? 0 : crm_stats_responsavel_filter();
+  $resp_filter    = $responsavel_id > 0
+    ? $wpdb->prepare(' AND responsavel_id = %d', $responsavel_id)
+    : '';
+
   // Total de leads ativos
   $active_leads = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$table_leads}
-     WHERE loja_id = %d AND status NOT IN ('venda_realizada', 'venda_nao_realizada')",
+     WHERE loja_id = %d AND status NOT IN ('venda_realizada', 'venda_nao_realizada'){$resp_filter}",
     $loja_id
   ));
 
@@ -1471,7 +1477,7 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
   $sla_nao_atendido = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$table_leads}
      WHERE loja_id = %d AND status = 'nao_atendido'
-       AND data_criacao < DATE_SUB(NOW(), INTERVAL 2 HOUR)",
+       AND data_criacao < DATE_SUB(NOW(), INTERVAL 2 HOUR){$resp_filter}",
     $loja_id
   ));
 
@@ -1480,7 +1486,7 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
     "SELECT COUNT(*) FROM {$table_leads}
      WHERE loja_id = %d
        AND status NOT IN ('nao_atendido', 'venda_realizada', 'venda_nao_realizada')
-       AND data_atualizacao < DATE_SUB(NOW(), INTERVAL 3 DAY)",
+       AND data_atualizacao < DATE_SUB(NOW(), INTERVAL 3 DAY){$resp_filter}",
     $loja_id
   ));
 
@@ -1491,22 +1497,27 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
   $score_medio = (float) ($wpdb->get_var($wpdb->prepare(
     "SELECT ROUND(AVG(score), 1) FROM {$table_leads}
      WHERE loja_id = %d AND status NOT IN ('venda_realizada', 'venda_nao_realizada')
-       AND score IS NOT NULL AND score > 0",
+       AND score IS NOT NULL AND score > 0{$resp_filter}",
     $loja_id
   )) ?? 0);
 
   // Follow-up compliance: vencidos (passado) vs concluídos
+  // O JOIN com wp_leads permite filtrar por responsavel_id da mesma forma
+  $resp_filter_join = $responsavel_id > 0
+    ? $wpdb->prepare(' AND l.responsavel_id = %d', $responsavel_id)
+    : '';
+
   $followups_vencidos = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$table_followups} f
      INNER JOIN {$table_leads} l ON l.id = f.lead_id
-     WHERE l.loja_id = %d AND f.agendado_para < NOW()",
+     WHERE l.loja_id = %d AND f.agendado_para < NOW(){$resp_filter_join}",
     $loja_id
   ));
 
   $followups_concluidos = (int) $wpdb->get_var($wpdb->prepare(
     "SELECT COUNT(*) FROM {$table_followups} f
      INNER JOIN {$table_leads} l ON l.id = f.lead_id
-     WHERE l.loja_id = %d AND f.concluido = 1 AND f.agendado_para < NOW()",
+     WHERE l.loja_id = %d AND f.concluido = 1 AND f.agendado_para < NOW(){$resp_filter_join}",
     $loja_id
   ));
 
