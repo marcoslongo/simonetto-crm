@@ -626,8 +626,16 @@ function mytheme_api_get_loja_leads($request)
     $perfil          = crm_get_perfil_acesso($current_user_id);
 
     if ($perfil) {
-      // Restringe aos próprios leads se não pode ver não-atribuídos OU não pode atribuir
-      if (!$perfil['ver_leads_nao_atribuidos'] || !$perfil['pode_atribuir_leads']) {
+      if ($perfil['ver_leads_nao_atribuidos']) {
+        // Ver todos os leads da loja — sem filtro de responsável
+        $responsavel_id     = 0;
+        $include_unassigned = false;
+      } elseif ($perfil['pode_atribuir_leads']) {
+        // Pode atribuir mas não vê não-atribuídos — vê próprios + inbox
+        $responsavel_id     = $current_user_id;
+        $include_unassigned = true;
+      } else {
+        // Atendente simples — só os próprios leads
         $responsavel_id     = $current_user_id;
         $include_unassigned = false;
       }
