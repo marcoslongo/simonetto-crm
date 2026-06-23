@@ -155,6 +155,27 @@ add_action('rest_api_init', function () {
     'permission_callback' => 'mytheme_api_is_administrator',
   ]);
 
+  // GET/POST /api/v1/lojas/{id}/interesses — interesses customizados da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/interesses', [
+    [
+      'methods'             => 'GET',
+      'callback'            => 'mytheme_api_get_loja_interesses',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+    [
+      'methods'             => 'POST',
+      'callback'            => 'mytheme_api_add_loja_interesse',
+      'permission_callback' => 'mytheme_api_is_authenticated',
+    ],
+  ]);
+
+  // DELETE /api/v1/lojas/{id}/interesses/{value} — remove interesse customizado da loja
+  register_rest_route('api/v1', '/lojas/(?P<id>\d+)/interesses/(?P<value>[^/]+)', [
+    'methods'             => 'DELETE',
+    'callback'            => 'mytheme_api_delete_loja_interesse',
+    'permission_callback' => 'mytheme_api_is_gerente',
+  ]);
+
   // GET /api/v1/lojas/{id}/saude-funil — saúde operacional da loja (SLA, score médio, follow-up)
   register_rest_route('api/v1', '/lojas/(?P<id>\d+)/saude-funil', [
     'methods'             => 'GET',
@@ -1539,6 +1560,70 @@ function mytheme_api_get_saude_funil(WP_REST_Request $request): WP_REST_Response
       'followup_compliance'   => $compliance_pct,
     ],
   ], 200);
+}
+
+/**
+ * GET /api/v1/lojas/:id/interesses
+ * Retorna a lista de interesses customizados desta loja (post_meta).
+ */
+function mytheme_api_get_loja_interesses(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id = intval($request['id']);
+  if (!$loja_id) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'loja_id inválido.'], 400);
+  }
+
+  $customizados = get_post_meta($loja_id, 'crm_interesses_customizados', true);
+  if (!is_array($customizados)) $customizados = [];
+
+  return new WP_REST_Response(['success' => true, 'data' => array_values($customizados)], 200);
+}
+
+/**
+ * POST /api/v1/lojas/:id/interesses
+ * Body: { "interesse": "sala de tv" }
+ * Adiciona um interesse customizado à lista da loja (sem duplicatas).
+ */
+function mytheme_api_add_loja_interesse(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id   = intval($request['id']);
+  $interesse = sanitize_text_field(strtolower(trim($request->get_param('interesse') ?? '')));
+
+  if (!$loja_id || !$interesse) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Parâmetros inválidos.'], 400);
+  }
+
+  $customizados = get_post_meta($loja_id, 'crm_interesses_customizados', true);
+  if (!is_array($customizados)) $customizados = [];
+
+  if (!in_array($interesse, $customizados, true)) {
+    $customizados[] = $interesse;
+    update_post_meta($loja_id, 'crm_interesses_customizados', $customizados);
+  }
+
+  return new WP_REST_Response(['success' => true, 'data' => array_values($customizados)], 200);
+}
+
+/**
+ * DELETE /api/v1/lojas/:id/interesses/:value
+ * Remove um interesse customizado da lista da loja (apenas gerentes).
+ */
+function mytheme_api_delete_loja_interesse(WP_REST_Request $request): WP_REST_Response
+{
+  $loja_id   = intval($request['id']);
+  $value     = sanitize_text_field(strtolower(trim($request['value'] ?? '')));
+
+  if (!$loja_id || !$value) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => 'Parâmetros inválidos.'], 400);
+  }
+
+  $customizados = get_post_meta($loja_id, 'crm_interesses_customizados', true);
+  if (!is_array($customizados)) $customizados = [];
+
+  $customizados = array_values(array_filter($customizados, fn($i) => $i !== $value));
+  update_post_meta($loja_id, 'crm_interesses_customizados', $customizados);
+
+  return new WP_REST_Response(['success' => true, 'data' => $customizados], 200);
 }
 
 /**

@@ -222,6 +222,17 @@ export function LeadDetailsModal({
   const [savingDados, setSavingDados] = useState(false);
   const [localNome, setLocalNome] = useState(lead.nome);
   const [editCustomInput, setEditCustomInput] = useState("");
+  const [lojaInteresses, setLojaInteresses] = useState<string[]>([]);
+
+  // Carrega interesses customizados da loja ao abrir o painel de edição
+  useEffect(() => {
+    if (editingDados && lead.loja_id) {
+      fetch(`/api/lojas/${lead.loja_id}/interesses`)
+        .then(r => r.json())
+        .then(d => { if (d.success) setLojaInteresses(d.data ?? []) })
+        .catch(() => {})
+    }
+  }, [editingDados, lead.loja_id]);
 
   function addEditCustomInteresse() {
     const val = editCustomInput.trim().toLowerCase();
@@ -231,6 +242,18 @@ export function LeadDetailsModal({
       interesses: f.interesses.includes(val) ? f.interesses : [...f.interesses, val],
     }));
     setEditCustomInput("");
+    // Salva na loja se ainda não existe na lista
+    const jaExiste = INTEREST_OPTIONS.some(o => o.value === val) || lojaInteresses.includes(val);
+    if (lead.loja_id && !jaExiste) {
+      fetch(`/api/lojas/${lead.loja_id}/interesses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interesse: val }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.success) setLojaInteresses(d.data ?? []) })
+        .catch(() => {});
+    }
   }
 
   const [editingLoja, setEditingLoja] = useState(false);
@@ -1761,8 +1784,13 @@ export function LeadDetailsModal({
             <div className="space-y-1.5">
               <Label>Interesse</Label>
               <div className="flex flex-wrap gap-2">
-                {/* Chips pré-definidos */}
-                {INTEREST_OPTIONS.map(({ value, label }) => {
+                {/* Chips pré-definidos + customizados desta loja */}
+                {[
+                  ...INTEREST_OPTIONS,
+                  ...lojaInteresses
+                    .filter(i => !INTEREST_OPTIONS.some(o => o.value === i))
+                    .map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) })),
+                ].map(({ value, label }) => {
                   const selected = editForm.interesses.includes(value);
                   return (
                     <button
@@ -1787,9 +1815,12 @@ export function LeadDetailsModal({
                   );
                 })}
 
-                {/* Chips customizados (não pré-definidos) */}
+                {/* Chips selecionados mas ainda não salvos na loja (fallback se API falhou) */}
                 {editForm.interesses
-                  .filter(i => !INTEREST_OPTIONS.some(o => o.value === i))
+                  .filter(i =>
+                    !INTEREST_OPTIONS.some(o => o.value === i) &&
+                    !lojaInteresses.includes(i)
+                  )
                   .map(custom => (
                     <span
                       key={custom}

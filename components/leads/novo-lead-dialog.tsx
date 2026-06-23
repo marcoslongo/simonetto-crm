@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Plus, Loader2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -106,6 +106,16 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
   const [form, setForm] = useState<FormData>(EMPTY)
   const [salvando, setSalvando] = useState(false)
   const [customInput, setCustomInput] = useState("")
+  const [lojaInteresses, setLojaInteresses] = useState<string[]>([])
+
+  // Carrega interesses customizados quando a loja é selecionada
+  useEffect(() => {
+    if (!form.loja_id) { setLojaInteresses([]); return }
+    fetch(`/api/lojas/${form.loja_id}/interesses`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setLojaInteresses(d.data ?? []) })
+      .catch(() => {})
+  }, [form.loja_id])
 
   const set = <K extends keyof FormData>(field: K, value: FormData[K]) =>
     setForm(prev => ({ ...prev, [field]: value }))
@@ -127,6 +137,18 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
       interesses: prev.interesses.includes(val) ? prev.interesses : [...prev.interesses, val],
     }))
     setCustomInput("")
+    // Salva na loja se ainda não existe
+    const jaExiste = interestOptions.some(o => o.value === val) || lojaInteresses.includes(val)
+    if (form.loja_id && !jaExiste) {
+      fetch(`/api/lojas/${form.loja_id}/interesses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interesse: val }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.success) setLojaInteresses(d.data ?? []) })
+        .catch(() => {})
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -284,8 +306,13 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
           <div className="space-y-1.5">
             <Label>Interesse</Label>
             <div className="flex flex-wrap gap-2">
-              {/* Chips pré-definidos */}
-              {interestOptions.map(({ value, label }) => {
+              {/* Chips pré-definidos + customizados desta loja */}
+              {[
+                ...interestOptions,
+                ...lojaInteresses
+                  .filter(i => !interestOptions.some(o => o.value === i))
+                  .map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) })),
+              ].map(({ value, label }) => {
                 const selected = form.interesses.includes(value)
                 return (
                   <button
@@ -305,9 +332,12 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
                 )
               })}
 
-              {/* Chips customizados (não pré-definidos) */}
+              {/* Chips selecionados ainda não salvos na loja (fallback se API falhou) */}
               {form.interesses
-                .filter(i => !interestOptions.some(o => o.value === i))
+                .filter(i =>
+                  !interestOptions.some(o => o.value === i) &&
+                  !lojaInteresses.includes(i)
+                )
                 .map(custom => (
                   <span
                     key={custom}
