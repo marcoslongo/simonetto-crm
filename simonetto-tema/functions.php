@@ -150,16 +150,19 @@ define('CRM_NIVEIS_SUPERVISOR', ['master', 'supervisor', 'industria']);
 define('CRM_NIVEIS_GERENTE', ['master', 'supervisor', 'industria', 'gerente']);
 
 /**
- * Retorna o responsavel_id a ser usado como filtro em queries de stats.
- * Retorna 0 quando o usuário pode ver todos os leads da loja.
- * Restringe ao próprio usuário se: não pode ver não-atribuídos OU não pode atribuir leads.
+ * Retorna o responsavel_id a ser usado como filtro em queries de stats/leads.
+ * Retorna 0 (sem filtro) quando o usuário pode ver todos os leads da loja.
+ * Restringe ao próprio usuário SOMENTE se não pode ver não-atribuídos E não pode atribuir.
  */
 function crm_stats_responsavel_filter(): int {
   if (current_user_can('administrator')) return 0;
+  if (crm_user_is_supervisor()) return 0;
   $uid    = get_current_user_id();
   $perfil = crm_get_perfil_acesso($uid);
   if ($perfil) {
-    $restringir = !$perfil['ver_leads_nao_atribuidos'] || !$perfil['pode_atribuir_leads'];
+    // && (AND): restringe só quando ambas as permissões estão desativadas.
+    // Se ver_leads_nao_atribuidos=true OU pode_atribuir_leads=true → vê todos.
+    $restringir = !$perfil['ver_leads_nao_atribuidos'] && !$perfil['pode_atribuir_leads'];
     return $restringir ? $uid : 0;
   }
   // fallback legado: atendente com ocultar ativo
