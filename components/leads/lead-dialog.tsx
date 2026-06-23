@@ -49,6 +49,7 @@ import {
   History,
   Paperclip,
   ArrowLeftRight,
+  Plus,
 } from "lucide-react";
 import { Lead, VendaNaoRealizada, VendaRealizada, FormaPagamento, Etiqueta } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
@@ -220,6 +221,17 @@ export function LeadDetailsModal({
   });
   const [savingDados, setSavingDados] = useState(false);
   const [localNome, setLocalNome] = useState(lead.nome);
+  const [editCustomInput, setEditCustomInput] = useState("");
+
+  function addEditCustomInteresse() {
+    const val = editCustomInput.trim().toLowerCase();
+    if (!val) return;
+    setEditForm(f => ({
+      ...f,
+      interesses: f.interesses.includes(val) ? f.interesses : [...f.interesses, val],
+    }));
+    setEditCustomInput("");
+  }
 
   const [editingLoja, setEditingLoja] = useState(false);
   const [selectedLojaId, setSelectedLojaId] = useState<string>(lead.loja_id ?? "");
@@ -1749,6 +1761,7 @@ export function LeadDetailsModal({
             <div className="space-y-1.5">
               <Label>Interesse</Label>
               <div className="flex flex-wrap gap-2">
+                {/* Chips pré-definidos */}
                 {INTEREST_OPTIONS.map(({ value, label }) => {
                   const selected = editForm.interesses.includes(value);
                   return (
@@ -1773,6 +1786,46 @@ export function LeadDetailsModal({
                     </button>
                   );
                 })}
+
+                {/* Chips customizados (não pré-definidos) */}
+                {editForm.interesses
+                  .filter(i => !INTEREST_OPTIONS.some(o => o.value === i))
+                  .map(custom => (
+                    <span
+                      key={custom}
+                      className="flex items-center gap-1 rounded-full border border-[#16255c] bg-[#16255c] text-white px-3 py-1 text-xs font-medium capitalize"
+                    >
+                      {custom}
+                      <button
+                        type="button"
+                        onClick={() => setEditForm(f => ({ ...f, interesses: f.interesses.filter(i => i !== custom) }))}
+                        className="ml-0.5 opacity-80 hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))
+                }
+
+                {/* Input para adicionar interesse customizado */}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={editCustomInput}
+                    onChange={e => setEditCustomInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEditCustomInteresse(); } }}
+                    placeholder="Outro ambiente…"
+                    className="h-7 w-32 rounded-full border border-dashed border-border bg-background px-3 text-xs text-muted-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-[#16255c] focus:text-foreground"
+                  />
+                  <button
+                    type="button"
+                    onClick={addEditCustomInteresse}
+                    disabled={!editCustomInput.trim()}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-[#16255c] hover:text-[#16255c] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Plus, Loader2, Check } from "lucide-react"
+import { Plus, Loader2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -105,6 +105,7 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<FormData>(EMPTY)
   const [salvando, setSalvando] = useState(false)
+  const [customInput, setCustomInput] = useState("")
 
   const set = <K extends keyof FormData>(field: K, value: FormData[K]) =>
     setForm(prev => ({ ...prev, [field]: value }))
@@ -116,6 +117,16 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
         ? prev.interesses.filter(i => i !== value)
         : [...prev.interesses, value],
     }))
+  }
+
+  const addCustomInteresse = () => {
+    const val = customInput.trim().toLowerCase()
+    if (!val) return
+    setForm(prev => ({
+      ...prev,
+      interesses: prev.interesses.includes(val) ? prev.interesses : [...prev.interesses, val],
+    }))
+    setCustomInput("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -273,6 +284,7 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
           <div className="space-y-1.5">
             <Label>Interesse</Label>
             <div className="flex flex-wrap gap-2">
+              {/* Chips pré-definidos */}
               {interestOptions.map(({ value, label }) => {
                 const selected = form.interesses.includes(value)
                 return (
@@ -292,6 +304,46 @@ export function NovoLeadDialog({ lojas, onLeadCriado }: NovoLeadDialogProps) {
                   </button>
                 )
               })}
+
+              {/* Chips customizados (não pré-definidos) */}
+              {form.interesses
+                .filter(i => !interestOptions.some(o => o.value === i))
+                .map(custom => (
+                  <span
+                    key={custom}
+                    className="flex items-center gap-1 rounded-full border border-[#16255c] bg-[#16255c] text-white px-3 py-1 text-xs font-medium capitalize"
+                  >
+                    {custom}
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, interesses: prev.interesses.filter(i => i !== custom) }))}
+                      className="ml-0.5 opacity-80 hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))
+              }
+
+              {/* Input para adicionar interesse customizado */}
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomInteresse(); } }}
+                  placeholder="Outro ambiente…"
+                  className="h-7 w-32 rounded-full border border-dashed border-border bg-background px-3 text-xs text-muted-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-[#16255c] focus:text-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomInteresse}
+                  disabled={!customInput.trim()}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-[#16255c] hover:text-[#16255c] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
