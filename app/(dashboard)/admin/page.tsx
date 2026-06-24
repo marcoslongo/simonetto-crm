@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { requireAdmin, isMaster } from '@/lib/auth'
+import { requireAdmin, isMaster, isAdmin } from '@/lib/auth'
 import {
   StatsCardsSkeleton,
   ChartCardSkeleton,
@@ -14,21 +14,16 @@ import {
   ConversaoRedeSection,
   TopBottomConversoesSection,
 } from '@/components/dashboard/dashboard-sections'
-import { DateFilterClient } from '@/components/ui/date-filter-client'
 import { OnlineUsers } from '@/components/dashboard/online-users'
 
 export const metadata = {
   title: 'Dashboard | Noxus',
 }
 
-interface AdminDashboardPageProps {
-  searchParams: Promise<{ from?: string; to?: string }>
-}
-
-export default async function AdminDashboardPage({ searchParams }: AdminDashboardPageProps) {
+export default async function AdminDashboardPage() {
   const user = await requireAdmin()
   const master = isMaster(user)
-  const { from, to } = await searchParams
+  const origemFilter = isAdmin(user) && !master ? 'industria' as const : undefined
 
   return (
     <div className="space-y-6">
@@ -41,13 +36,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         </p>
       </div>
 
-      {/* Suspense obrigatório: DateFilterClient usa useSearchParams() */}
-      <Suspense fallback={null}>
-        <DateFilterClient />
-      </Suspense>
-
       <Suspense fallback={<StatsCardsSkeleton />}>
-        <StatsSection />
+        <StatsSection origem={origemFilter} />
       </Suspense>
 
       {master && (
@@ -59,27 +49,27 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       {master && <OnlineUsers />}
 
       <Suspense fallback={<StatsCardsSkeleton />}>
-        <ComparativoSemanalSection />
+        <ComparativoSemanalSection origem={origemFilter} />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-20" />}>
         <SlaRedeSection />
       </Suspense>
 
-      <Suspense key={`conversao-${from}-${to}`} fallback={<StatsCardsSkeleton />}>
-        <ConversaoRedeSection from={from} to={to} />
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <ConversaoRedeSection origem={origemFilter} />
       </Suspense>
 
-      <Suspense key={`topbottom-${from}-${to}`} fallback={<ChartCardSkeleton height="h-64" />}>
-        <TopBottomConversoesSection from={from} to={to} />
+      <Suspense fallback={<ChartCardSkeleton height="h-64" />}>
+        <TopBottomConversoesSection />
       </Suspense>
 
-      <Suspense key={`30dias-${from}-${to}`} fallback={<ChartCardSkeleton height="h-[300px]" />}>
-        <Leads30DaysSection from={from} to={to} showProprio={master} />
+      <Suspense fallback={<ChartCardSkeleton height="h-[300px]" />}>
+        <Leads30DaysSection showProprio={master} origem={origemFilter} />
       </Suspense>
 
       <Suspense fallback={<ChartCardSkeleton height="h-[500px]" />}>
-        <Leads12MonthsSection showProprio={master} />
+        <Leads12MonthsSection showProprio={master} origem={origemFilter} />
       </Suspense>
     </div>
   )

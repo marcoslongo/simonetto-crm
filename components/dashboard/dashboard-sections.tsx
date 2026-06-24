@@ -54,9 +54,13 @@ import { ChartUtmContentMedium } from './chart-utm-content-medium'
 import { ChartLeads12Months } from './chart-leads-12-months'
 import { InfluenciadoresSection } from './influenciadores-section'
 
-export async function StatsSection() {
+interface StatsSectionProps {
+  origem?: 'industria' | 'proprio'
+}
+
+export async function StatsSection({ origem }: StatsSectionProps = {}) {
   const [statsGeral] = await Promise.all([
-    getLeadsStatsGeralServer(),
+    getLeadsStatsGeralServer(origem),
   ])
 
   return (
@@ -205,16 +209,21 @@ interface Leads30DaysSectionProps {
   from?: string
   to?: string
   showProprio?: boolean
+  origem?: 'industria' | 'proprio'
 }
 
-export async function Leads30DaysSection({ from, to, showProprio = true }: Leads30DaysSectionProps = {}) {
-  const leads30Days = await getLeadsLast30DaysServer(from, to)
+export async function Leads30DaysSection({ from, to, showProprio = true, origem }: Leads30DaysSectionProps = {}) {
+  const leads30Days = await getLeadsLast30DaysServer(from, to, origem)
 
   return <ChartLeads30Days data={leads30Days} showProprio={showProprio} />
 }
 
-export async function ComparativoSemanalSection() {
-  const leads30Days = await getLeadsLast30DaysServer()
+interface ComparativoSemanalSectionProps {
+  origem?: 'industria' | 'proprio'
+}
+
+export async function ComparativoSemanalSection({ origem }: ComparativoSemanalSectionProps = {}) {
+  const leads30Days = await getLeadsLast30DaysServer(undefined, undefined, origem)
 
   const now = new Date()
   let thisWeek = 0, lastWeek = 0
@@ -329,23 +338,23 @@ export async function SlaRedeSection() {
 
 interface Leads12MonthsSectionProps {
   showProprio?: boolean
+  origem?: 'industria' | 'proprio'
 }
 
-export async function Leads12MonthsSection({ showProprio = true }: Leads12MonthsSectionProps = {}) {
-  const data = await getLeadsLast12MonthsServer()
+export async function Leads12MonthsSection({ showProprio = true, origem }: Leads12MonthsSectionProps = {}) {
+  const data = await getLeadsLast12MonthsServer(origem)
 
   return <ChartLeads12Months data={data} showProprio={showProprio} />
 }
 
 interface ConversaoRedeSectionProps {
-  from?: string
-  to?: string
+  origem?: 'industria' | 'proprio'
 }
 
-export async function ConversaoRedeSection({ from, to }: ConversaoRedeSectionProps = {}) {
+export async function ConversaoRedeSection({ origem }: ConversaoRedeSectionProps = {}) {
   const [statusTotal, conversaoPorLoja] = await Promise.all([
-    getLeadsStatusTotalServer(from, to),
-    getConversaoPorLoja([], from, to),
+    getLeadsStatusTotalServer(undefined, undefined, undefined, origem),
+    getConversaoPorLoja([]),
   ])
 
   const total =
@@ -393,13 +402,8 @@ export async function ConversaoRedeSection({ from, to }: ConversaoRedeSectionPro
   )
 }
 
-interface TopBottomConversoesSectionProps {
-  from?: string
-  to?: string
-}
-
-export async function TopBottomConversoesSection({ from, to }: TopBottomConversoesSectionProps = {}) {
-  const ranking = await getConversaoRanking(from, to, 5)
+export async function TopBottomConversoesSection() {
+  const ranking = await getConversaoRanking(undefined, undefined, 5)
   if (!ranking || ranking.total_lojas < 2) return null
 
   const { top, bottom, avg, total_lojas } = ranking
