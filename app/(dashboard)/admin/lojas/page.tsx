@@ -166,25 +166,14 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                 return (
                   <div
                     key={loja.id}
-                    className={cn(
-                      'loja-card group relative flex flex-col rounded-2xl border bg-white',
-                      'transition-shadow duration-200 hover:shadow-lg hover:-translate-y-0.5',
-                      isBest  ? 'border-emerald-200 shadow-md shadow-emerald-100/60' :
-                      isWorst ? 'border-amber-200 shadow-sm' :
-                      'border-slate-200 shadow-sm',
-                    )}
+                    className="loja-card group relative flex flex-col rounded-2xl border bg-white transition-shadow duration-200 hover:shadow-lg hover:-translate-y-0.5 border-slate-200 shadow-sm"
                     style={{ animationDelay: `${index * 45}ms` }}
                   >
 
                     {/* Header */}
                     <div className="flex items-start justify-between gap-2 p-4 sm:p-5 pb-3 sm:pb-4">
                       <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                        <div className={cn(
-                          'flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl',
-                          isBest  ? 'bg-emerald-100 text-emerald-700' :
-                          isWorst ? 'bg-amber-50 text-amber-600' :
-                          'bg-[#eef0f8] text-[#16255c]',
-                        )}>
+                        <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8] text-[#16255c]">
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -236,32 +225,21 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                         <p className="text-base sm:text-xl font-extrabold text-[#16255c] tabular-nums leading-tight mt-0.5">
                           {loja.totalLeads.toLocaleString('pt-BR')}
                         </p>
-                        {loja.leadsHoje > 0
-                          ? <p className="text-[10px] text-emerald-600 tabular-nums">+{loja.leadsHoje} hoje</p>
-                          : <p className="text-[10px] text-slate-400">0 hoje</p>}
+                        <p className="text-[10px] text-slate-400 tabular-nums">
+                          {loja.leadsHoje > 0 ? `+${loja.leadsHoje} hoje` : '0 hoje'}
+                        </p>
                       </div>
 
                       {/* Conversão */}
-                      <div className={cn(
-                        'px-2 sm:px-3 py-2.5 sm:py-3',
-                        taxaConversao === undefined ? 'bg-slate-50/70' :
-                        taxaConversao >= 20 ? 'bg-emerald-50' :
-                        taxaConversao >= 10 ? 'bg-amber-50' : 'bg-red-50/70',
-                      )}>
+                      <div className="bg-slate-50/70 px-2 sm:px-3 py-2.5 sm:py-3">
                         <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400">Conv.</p>
                         {taxaConversao !== undefined ? (
                           <>
-                            <p className={cn(
-                              'text-base sm:text-xl font-extrabold tabular-nums leading-tight mt-0.5',
-                              taxaConversao >= 20 ? 'text-emerald-700' :
-                              taxaConversao >= 10 ? 'text-amber-700' : 'text-red-600',
-                            )}>
+                            <p className="text-base sm:text-xl font-extrabold text-[#16255c] tabular-nums leading-tight mt-0.5">
                               {taxaConversao}%
                             </p>
-                            <p className="text-[10px] text-slate-400 leading-tight">
-                              {vsMedia !== null && (vsMedia >= 0
-                                ? <span className="text-emerald-600">+{vsMedia}%</span>
-                                : <span className="text-red-500">{vsMedia}%</span>)}
+                            <p className="text-[10px] text-slate-400 leading-tight tabular-nums">
+                              {vsMedia !== null && `${vsMedia >= 0 ? '+' : ''}${vsMedia}%`}
                             </p>
                           </>
                         ) : (
@@ -272,14 +250,11 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                       {/* Ativos */}
                       <div className="bg-slate-50/70 px-2 sm:px-3 py-2.5 sm:py-3">
                         <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400">Ativos</p>
-                        <p className={cn(
-                          'text-base sm:text-xl font-extrabold tabular-nums leading-tight mt-0.5',
-                          saude?.active_leads ? 'text-blue-600' : 'text-slate-400',
-                        )}>
+                        <p className="text-base sm:text-xl font-extrabold text-[#16255c] tabular-nums leading-tight mt-0.5">
                           {saude?.active_leads ?? '—'}
                         </p>
                         {saude?.sla_breach_pct !== undefined && saude.sla_breach_pct > 0 && (
-                          <p className="text-[10px] text-red-500 leading-tight">{saude.sla_breach_pct}% SLA</p>
+                          <p className="text-[10px] text-slate-400 leading-tight">{saude.sla_breach_pct}% SLA</p>
                         )}
                       </div>
                     </div>
@@ -297,11 +272,7 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-slate-100">
                           <div
-                            className={cn(
-                              'h-1.5 rounded-full transition-all duration-700',
-                              taxaConversao >= 20 ? 'bg-emerald-500' :
-                              taxaConversao >= 10 ? 'bg-amber-400' : 'bg-red-400',
-                            )}
+                            className="h-1.5 rounded-full bg-[#16255c]/70 transition-all duration-700"
                             style={{ width: `${Math.min(taxaConversao * 3.5, 100)}%` }}
                           />
                         </div>
