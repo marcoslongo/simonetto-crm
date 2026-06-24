@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -13,12 +13,15 @@ export function DateFilterClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [from, setFrom] = useState<Date | undefined>(
-    searchParams.get('from') ? new Date(searchParams.get('from')!) : undefined
-  )
-  const [to, setTo] = useState<Date | undefined>(
-    searchParams.get('to') ? new Date(searchParams.get('to')!) : undefined
-  )
+  const parseDate = (s: string | null) => s ? new Date(s + 'T12:00:00') : undefined
+
+  const [from, setFrom] = useState<Date | undefined>(() => parseDate(searchParams.get('from')))
+  const [to,   setTo]   = useState<Date | undefined>(() => parseDate(searchParams.get('to')))
+
+  useEffect(() => {
+    setFrom(parseDate(searchParams.get('from')))
+    setTo(parseDate(searchParams.get('to')))
+  }, [searchParams])
 
   const isFiltered = !!searchParams.get('from') || !!searchParams.get('to')
 
