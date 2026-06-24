@@ -12,11 +12,12 @@ interface Props {
   data: TempoPorEtapaItem[]
 }
 
+const ALLOWED_STATUSES = new Set(['nao_atendido', 'em_negociacao', 'tentando_contato'])
+
 const STATUS_COLORS: Record<string, string> = {
-  nao_atendido:        "#f59e0b",
-  em_negociacao:       "#3b82f6",
-  venda_realizada:     "#10b981",
-  venda_nao_realizada: "#ef4444",
+  nao_atendido:      "#f59e0b",
+  em_negociacao:     "#3b82f6",
+  tentando_contato:  "#8b5cf6",
 }
 
 function formatHoras(h: number) {
@@ -52,7 +53,9 @@ function CustomTooltip({ active, payload }: any) {
   )
 }
 
-export function ChartTempoPorEtapa({ data }: Props) {
+export function ChartTempoPorEtapa({ data: rawData }: Props) {
+  const data = rawData.filter(d => ALLOWED_STATUSES.has(d.status))
+
   if (!data.length) {
     return (
       <Card className="border-0 card-surface-elevated">
