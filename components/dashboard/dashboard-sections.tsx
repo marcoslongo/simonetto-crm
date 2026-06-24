@@ -53,6 +53,7 @@ import { ChartHorarioLeads } from './chart-horario-leads'
 import { ChartUtmContentMedium } from './chart-utm-content-medium'
 import { ChartLeads12Months } from './chart-leads-12-months'
 import { InfluenciadoresSection } from './influenciadores-section'
+import { CapacidadeMonitorList } from './capacidade-monitor-list'
 
 interface StatsSectionProps {
   origem?: 'industria' | 'proprio'
@@ -112,8 +113,6 @@ export async function CapacidadeMonitorSection() {
   if (!capacidade || !capacidade.lojas.length) return null
 
   const { avg, lojas } = capacidade
-  const top15 = lojas.slice(0, 15)
-  const maxLeads = top15[0]?.active_leads ?? 1
 
   return (
     <div className="rounded-2xl border border-border/50 bg-linear-to-br from-slate-50 to-slate-100 shadow-md overflow-hidden">
@@ -137,33 +136,7 @@ export async function CapacidadeMonitorSection() {
           <span className="flex items-center gap-1 text-amber-600"><span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />Atenção (&gt;1.5×)</span>
         </div>
       </div>
-      <div className="p-5 space-y-2">
-        {top15.map((l, i) => {
-          const isOverload = l.status === 'overload'
-          const isWarning  = l.status === 'warning'
-          const barPct     = Math.min(100, Math.round(l.active_leads / maxLeads * 100))
-          const barColor   = isOverload ? 'bg-red-500' : isWarning ? 'bg-amber-400' : 'bg-blue-400'
-          const textColor  = isOverload ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600'
-          return (
-            <Link key={l.loja_id} href={`/admin/lojas/${l.loja_id}`} className="flex items-center gap-3 rounded-lg hover:bg-white/60 transition-colors px-2 py-1.5 -mx-2 group">
-              <span className="text-xs text-slate-500 w-4 shrink-0 font-medium">{i + 1}.</span>
-              <span className="text-sm font-medium text-slate-700 w-36 shrink-0 truncate group-hover:text-[#16255c]">{l.loja_nome}</span>
-              <div className="flex-1 h-3 bg-slate-200/60 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${barPct}%` }} />
-              </div>
-              <span className={`text-sm font-bold tabular-nums w-8 text-right shrink-0 ${textColor}`}>{l.active_leads}</span>
-              {(isOverload || isWarning) && (
-                <span className={`text-xs font-medium shrink-0 ${textColor}`}>{l.ratio.toFixed(1)}×</span>
-              )}
-            </Link>
-          )
-        })}
-        {lojas.length > 15 && (
-          <p className="text-xs text-slate-400 text-center pt-2">
-            Exibindo 15 de {lojas.length} franqueados com leads ativos
-          </p>
-        )}
-      </div>
+      <CapacidadeMonitorList lojas={lojas} />
     </div>
   )
 }
