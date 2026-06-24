@@ -53,7 +53,7 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ChartTempoPorEtapa({ data: rawData }: Props) {
-  const data = rawData.filter(d => d.status !== 'venda_nao_realizada')
+  const data = rawData.filter(d => d.status !== 'venda_nao_realizada' && d.status !== 'venda_realizada')
 
   if (!data.length) {
     return (
