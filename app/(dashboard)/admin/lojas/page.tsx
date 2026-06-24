@@ -272,7 +272,7 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-slate-100">
                           <div
-                            className="h-1.5 rounded-full bg-[#16255c]/70 transition-all duration-700"
+                            className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
                             style={{ width: `${Math.min(taxaConversao * 3.5, 100)}%` }}
                           />
                         </div>
