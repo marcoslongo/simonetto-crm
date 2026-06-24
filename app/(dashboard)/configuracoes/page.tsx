@@ -1,4 +1,4 @@
-import { requireAuth, isGerente } from '@/lib/auth'
+import { requireAuth, isGerente, isMaster } from '@/lib/auth'
 import { getLojaIntegration } from '@/lib/api-loja'
 import { ConfiguracoesTabs } from './configuracoes-tabs'
 
@@ -11,6 +11,7 @@ export default async function ConfiguracoesPage() {
 
   const isLoja        = user.loja_ids.length > 0
   const gerenteFlag   = isGerente(user)
+  const masterFlag    = isMaster(user)
   const primaryLojaId = isLoja ? String(user.loja_ids[0]) : null
   const integration   = isLoja ? await getLojaIntegration(user.loja_ids[0]) : null
 
@@ -30,6 +31,7 @@ export default async function ConfiguracoesPage() {
           avatar_url: user.avatar_url ?? null,
           loja_nome:  user.loja_nome ?? null,
           is_gerente: gerenteFlag,
+          is_master:  masterFlag,
         }}
         isLoja={isLoja}
         primaryLojaId={primaryLojaId}

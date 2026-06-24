@@ -23,6 +23,7 @@ interface UserProps {
   avatar_url: string | null
   loja_nome: string | null
   is_gerente: boolean
+  is_master: boolean
 }
 
 interface Props {
@@ -39,7 +40,7 @@ const roleLabels: Record<string, string> = {
 }
 
 export function ConfiguracoesTabs({ user, isLoja, primaryLojaId, integration, siteUrl }: Props) {
-  const isMasterAdmin = user.role === 'administrator' && user.id === 1
+  const isMasterAdmin = user.is_master
   const showOperacao  = isLoja && user.is_gerente
 
   return (
