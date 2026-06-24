@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -73,6 +74,124 @@ const TIPO_LABEL: Record<string, string> = Object.fromEntries(TIPOS.map(t => [t.
 const TIPO_COR:   Record<string, string> = Object.fromEntries(TIPOS.map(t => [t.value, t.cor]))
 
 const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+// ── DayEventsModal ─────────────────────────────────────────────────────────
+
+function DayEventsModal({
+  open, onOpenChange, day, events, onEventClick,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  day: Date | null
+  events: Evento[]
+  onEventClick: (e: React.MouseEvent, evento: Evento) => void
+}) {
+  if (!day) return null
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            {format(day, "dd 'de' MMMM", { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}
+          </DialogTitle>
+          <DialogDescription>
+            {events.length} compromisso{events.length !== 1 ? 's' : ''}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 py-1 max-h-80 overflow-y-auto">
+          {events.map(ev => (
+            <button
+              key={ev.id}
+              onClick={e => { e.stopPropagation(); onOpenChange(false); onEventClick(e, ev) }}
+              className="w-full text-left text-[10px] leading-tight px-1.5 py-1.5 rounded font-medium truncate transition-opacity hover:opacity-75 block"
+              style={{
+                backgroundColor: (ev.sala_cor ?? ev.cor) + '25',
+                color: ev.sala_cor ?? ev.cor,
+                borderLeft: `2px solid ${ev.sala_cor ?? ev.cor}`,
+              }}
+            >
+              <span className="font-semibold">{format(parseISO(ev.inicio), 'HH:mm')}</span>{' '}
+              {ev.titulo}
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── DayCell ────────────────────────────────────────────────────────────────
+
+function DayCell({
+  day, events, inMonth, showBorderRight, showBorderBottom, onDayClick, onEventClick,
+}: {
+  day: Date
+  events: Evento[]
+  inMonth: boolean
+  showBorderRight: boolean
+  showBorderBottom: boolean
+  onDayClick: () => void
+  onEventClick: (e: React.MouseEvent, evento: Evento) => void
+}) {
+  const today = isToday(day)
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const MAX_VISIBLE = 3
+  const visible = events.slice(0, MAX_VISIBLE)
+  const overflow = events.length - MAX_VISIBLE
+
+  return (
+    <div
+      onClick={onDayClick}
+      className={cn(
+        'min-h-22.5 lg:min-h-27.5 p-1.5 transition-colors cursor-pointer',
+        inMonth ? 'hover:bg-muted/30' : 'bg-muted/10 hover:bg-muted/20',
+        showBorderRight && 'border-r',
+        showBorderBottom && 'border-b',
+      )}
+    >
+      <div className={cn(
+        'h-5 w-5 flex items-center justify-center rounded-full text-xs font-semibold mb-1 select-none',
+        today ? 'bg-[#16255c] text-white' : inMonth ? 'text-foreground' : 'text-muted-foreground/40',
+      )}>
+        {format(day, 'd')}
+      </div>
+
+      <div className="space-y-0.5">
+        {visible.map(ev => (
+          <button
+            key={ev.id}
+            onClick={e => onEventClick(e, ev)}
+            className="w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate transition-opacity hover:opacity-75 block"
+            style={{
+              backgroundColor: (ev.sala_cor ?? ev.cor) + '25',
+              color: ev.sala_cor ?? ev.cor,
+              borderLeft: `2px solid ${ev.sala_cor ?? ev.cor}`,
+            }}
+          >
+            <span className="font-semibold">{format(parseISO(ev.inicio), 'HH:mm')}</span>{' '}
+            {ev.titulo}
+          </button>
+        ))}
+        {overflow > 0 && (
+          <button
+            onClick={e => { e.stopPropagation(); setOverflowOpen(true) }}
+            className="text-[10px] text-[#16255c] font-semibold px-1.5 hover:underline"
+          >
+            +{overflow} mais
+          </button>
+        )}
+      </div>
+
+      <DayEventsModal
+        open={overflowOpen}
+        onOpenChange={setOverflowOpen}
+        day={day}
+        events={events}
+        onEventClick={onEventClick}
+      />
+    </div>
+  )
+}
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -371,55 +490,18 @@ export function AgendaCompartilhadaView({
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
-          {days.map((day, i) => {
-            const inMonth   = isSameMonth(day, currentDate)
-            const today     = isToday(day)
-            const dayEvents = eventosDoDia(day)
-            const overflow  = dayEvents.length > 3
-
-            return (
-              <div
-                key={i}
-                onClick={() => openCreate(day)}
-                className={cn(
-                  'min-h-22.5 lg:min-h-27.5 p-1.5 transition-colors cursor-pointer',
-                  inMonth  ? 'hover:bg-muted/30' : 'bg-muted/10 hover:bg-muted/20',
-                  i % 7 !== 6 && 'border-r',
-                  i < total - 7 && 'border-b',
-                )}
-              >
-                <div className={cn(
-                  'h-5 w-5 flex items-center justify-center rounded-full text-xs font-semibold mb-1 select-none',
-                  today
-                    ? 'bg-[#16255c] text-white'
-                    : inMonth ? 'text-foreground' : 'text-muted-foreground/40',
-                )}>
-                  {format(day, 'd')}
-                </div>
-
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map(ev => (
-                    <button
-                      key={ev.id}
-                      onClick={e => openView(e, ev)}
-                      className="w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate transition-opacity hover:opacity-75 block"
-                      style={{
-                        backgroundColor: (ev.sala_cor ?? ev.cor) + '25',
-                        color: ev.sala_cor ?? ev.cor,
-                        borderLeft: `2px solid ${ev.sala_cor ?? ev.cor}`,
-                      }}
-                    >
-                      <span className="font-semibold">{format(parseISO(ev.inicio), 'HH:mm')}</span>{' '}
-                      {ev.titulo}
-                    </button>
-                  ))}
-                  {overflow && (
-                    <p className="text-[10px] text-muted-foreground px-1.5">+{dayEvents.length - 3} mais</p>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {days.map((day, i) => (
+            <DayCell
+              key={i}
+              day={day}
+              events={eventosDoDia(day)}
+              inMonth={isSameMonth(day, currentDate)}
+              showBorderRight={i % 7 !== 6}
+              showBorderBottom={i < total - 7}
+              onDayClick={() => openCreate(day)}
+              onEventClick={openView}
+            />
+          ))}
         </div>
       </div>
 
