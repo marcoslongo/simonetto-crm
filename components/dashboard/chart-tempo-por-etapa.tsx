@@ -12,11 +12,17 @@ interface Props {
   data: TempoPorEtapaItem[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  nao_atendido:        "#f59e0b",
-  em_negociacao:       "#3b82f6",
-  venda_realizada:     "#10b981",
-  venda_nao_realizada: "#ef4444",
+const PALETTE = [
+  "#3b82f6", "#f59e0b", "#8b5cf6", "#10b981",
+  "#ef4444", "#06b6d4", "#f97316", "#ec4899",
+  "#84cc16", "#6366f1",
+]
+
+function statusColor(status: string, index: number): string {
+  // Deterministic: hash do slug para índice fixo na paleta
+  let h = 0
+  for (let i = 0; i < status.length; i++) h = (h * 31 + status.charCodeAt(i)) >>> 0
+  return PALETTE[(h + index) % PALETTE.length]
 }
 
 function formatHoras(h: number) {
@@ -39,7 +45,7 @@ function CustomTooltip({ active, payload }: any) {
       <div className="space-y-1 text-xs">
         <div className="flex justify-between gap-6">
           <span className="text-slate-500">Tempo médio</span>
-          <span className="font-bold tabular-nums" style={{ color: STATUS_COLORS[d.status] ?? '#64748b' }}>
+          <span className="font-bold tabular-nums" style={{ color: d._color ?? '#64748b' }}>
             {formatHoras(d.tempo_medio_horas)}
           </span>
         </div>
@@ -53,7 +59,9 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function ChartTempoPorEtapa({ data: rawData }: Props) {
-  const data = rawData.filter(d => d.status !== 'venda_nao_realizada' && d.status !== 'venda_realizada')
+  const data = rawData
+    .filter(d => d.status !== 'venda_nao_realizada' && d.status !== 'venda_realizada')
+    .map((d, i) => ({ ...d, _color: statusColor(d.status, i) }))
 
   if (!data.length) {
     return (
@@ -129,10 +137,7 @@ export function ChartTempoPorEtapa({ data: rawData }: Props) {
                   style={{ fontSize: 11, fontWeight: 700, fill: "#475569" }}
                 />
                 {data.map(entry => (
-                  <Cell
-                    key={entry.status}
-                    fill={STATUS_COLORS[entry.status] ?? "#94a3b8"}
-                  />
+                  <Cell key={entry.status} fill={entry._color} />
                 ))}
               </Bar>
             </BarChart>
@@ -151,7 +156,7 @@ export function ChartTempoPorEtapa({ data: rawData }: Props) {
             >
               <div
                 className="h-8 w-1 rounded-full shrink-0"
-                style={{ backgroundColor: STATUS_COLORS[item.status] ?? "#94a3b8" }}
+                style={{ backgroundColor: item._color }}
               />
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide leading-tight truncate">
