@@ -311,7 +311,7 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                     {/* CTA */}
                     <Link
                       href={`/admin/lojas/${loja.id}`}
-                      className="mt-auto mx-4 sm:mx-5 mb-4 sm:mb-5 block rounded-xl bg-[#16255c] px-4 py-3 text-center text-sm font-semibold text-white transition-all hover:bg-[#1e3380] active:scale-[0.98]"
+                      className="mt-auto mx-4 sm:mx-5 mb-4 sm:mb-5 block rounded-md bg-[#16255c] px-4 py-3 text-center text-sm font-semibold text-white transition-all hover:bg-[#1e3380] active:scale-[0.98]"
                     >
                       Ver detalhes →
                     </Link>
