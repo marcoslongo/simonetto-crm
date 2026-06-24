@@ -175,16 +175,6 @@ export default async function AdminLojasPage({ searchParams }: AdminLojasPagePro
                     )}
                     style={{ animationDelay: `${index * 45}ms` }}
                   >
-                    {/* Rank badge */}
-                    <div className={cn(
-                      'absolute -top-2.5 right-4 flex h-6 items-center rounded-full px-2.5 text-[11px] font-bold shadow-sm',
-                      rank === 1 ? 'bg-amber-400 text-white' :
-                      rank === 2 ? 'bg-slate-400 text-white' :
-                      rank === 3 ? 'bg-orange-400 text-white' :
-                      'bg-slate-100 text-slate-500',
-                    )}>
-                      #{rank}
-                    </div>
 
                     {/* Header */}
                     <div className="flex items-start justify-between gap-2 p-4 sm:p-5 pb-3 sm:pb-4">
