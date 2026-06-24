@@ -16,6 +16,10 @@ interface KanbanStatsCardsProps {
   description?: string
   from?: string
   to?: string
+  currentUserId?: number
+  isGerente?: boolean
+  isSupervisor?: boolean
+  isAdmin?: boolean
 }
 
 const SLUG_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -60,6 +64,10 @@ export function KanbanStatsCards({
   description = 'Acompanhamento em tempo real da jornada de vendas',
   from,
   to,
+  currentUserId,
+  isGerente,
+  isSupervisor,
+  isAdmin,
 }: KanbanStatsCardsProps) {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
 
@@ -147,6 +155,10 @@ export function KanbanStatsCards({
           statusBadgeClass={COLOR_STYLES[selected.cor]?.badge ?? COLOR_STYLES.gray.badge}
           from={from}
           to={to}
+          currentUserId={currentUserId}
+          isGerente={isGerente}
+          isSupervisor={isSupervisor}
+          isAdmin={isAdmin}
         />
       )}
     </>

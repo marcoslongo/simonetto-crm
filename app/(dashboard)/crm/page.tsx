@@ -39,7 +39,15 @@ async function StatsCardsWrapper({ lojaIds, sublabel }: { lojaIds: number[]; sub
   return <StatsCards stats={stats} sublabel={sublabel} />
 }
 
-async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
+async function KanbanStatsWrapper({
+  lojaIds, userId, isGerente, isSupervisor, isAdmin,
+}: {
+  lojaIds: number[]
+  userId: number
+  isGerente: boolean
+  isSupervisor: boolean
+  isAdmin: boolean
+}) {
   const [statusFunil, colunas] = await Promise.all([
     getMultiLojaStatusFunil(lojaIds),
     getMultiLojaKanbanColumns(lojaIds),
@@ -49,6 +57,10 @@ async function KanbanStatsWrapper({ lojaIds }: { lojaIds: number[] }) {
       data={statusFunil}
       colunas={colunas}
       description="Acompanhamento da jornada de vendas da sua unidade"
+      currentUserId={userId}
+      isGerente={isGerente}
+      isSupervisor={isSupervisor}
+      isAdmin={isAdmin}
     />
   )
 }
@@ -420,7 +432,13 @@ export default async function CrmDashboardPage() {
 
       {/* Status do Funil */}
       <Suspense fallback={<KanbanStatsCardsSkeleton />}>
-        <KanbanStatsWrapper lojaIds={lojaIds} />
+        <KanbanStatsWrapper
+          lojaIds={lojaIds}
+          userId={user.id}
+          isGerente={isGerente}
+          isSupervisor={isSupv}
+          isAdmin={user.role === 'administrator'}
+        />
       </Suspense>
 
       {/* Temperatura */}

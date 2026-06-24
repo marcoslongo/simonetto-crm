@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { fetchLeadsByStatusPaginated } from '@/actions/leads-actions'
+import { LeadDialog } from '@/components/leads/lead-dialog'
 import type { Lead } from '@/lib/types'
 
 const CLASSIF_COLORS: Record<string, string> = {
@@ -25,6 +26,10 @@ interface LeadsStatusModalProps {
   statusBadgeClass: string
   from?: string
   to?: string
+  currentUserId?: number
+  isGerente?: boolean
+  isSupervisor?: boolean
+  isAdmin?: boolean
 }
 
 export function LeadsStatusModal({
@@ -35,12 +40,18 @@ export function LeadsStatusModal({
   statusBadgeClass,
   from,
   to,
+  currentUserId,
+  isGerente,
+  isSupervisor,
+  isAdmin,
 }: LeadsStatusModalProps) {
   const [page, setPage] = useState(1)
   const [leads, setLeads] = useState<Lead[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (open) setPage(1)
@@ -52,7 +63,7 @@ export function LeadsStatusModal({
     fetchLeadsByStatusPaginated({ status, page, from, to })
       .then(r => { setLeads(r.leads); setTotal(r.total); setTotalPages(r.totalPages) })
       .finally(() => setLoading(false))
-  }, [open, status, page, from, to])
+  }, [open, status, page, from, to, refreshKey])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,7 +96,8 @@ export function LeadsStatusModal({
               {leads.map(lead => (
                 <div
                   key={lead.id}
-                  className="rounded-lg border border-border/60 bg-card p-3.5 hover:bg-slate-50 transition-colors"
+                  onClick={() => setSelectedLead(lead)}
+                  className="rounded-lg border border-border/60 bg-card p-3.5 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -162,5 +174,21 @@ export function LeadsStatusModal({
         )}
       </DialogContent>
     </Dialog>
+
+    {selectedLead && (
+      <LeadDialog
+        lead={selectedLead}
+        open={!!selectedLead}
+        onOpenChange={open => { if (!open) setSelectedLead(null) }}
+        currentUserId={currentUserId}
+        isGerente={isGerente}
+        isSupervisor={isSupervisor}
+        isAdmin={isAdmin}
+        onLeadRemoved={() => {
+          setSelectedLead(null)
+          setRefreshKey(k => k + 1)
+        }}
+      />
+    )}
   )
 }
