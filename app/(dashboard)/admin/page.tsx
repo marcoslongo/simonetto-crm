@@ -10,7 +10,6 @@ import {
   StatsSection,
   StatsByOrigemSection,
   ComparativoSemanalSection,
-  SlaRedeSection,
   ConversaoRedeSection,
   TopBottomConversoesSection,
 } from '@/components/dashboard/dashboard-sections'
@@ -50,10 +49,6 @@ export default async function AdminDashboardPage() {
 
       <Suspense fallback={<StatsCardsSkeleton />}>
         <ComparativoSemanalSection origem={origemFilter} />
-      </Suspense>
-
-      <Suspense fallback={<ChartCardSkeleton height="h-20" />}>
-        <SlaRedeSection />
       </Suspense>
 
       <Suspense fallback={<StatsCardsSkeleton />}>
