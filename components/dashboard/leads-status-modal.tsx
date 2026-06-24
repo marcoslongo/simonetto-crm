@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { fetchLeadsByStatusPaginated } from '@/actions/leads-actions'
-import { LeadDialog } from '@/components/leads/lead-dialog'
+import { LeadDetailsModal } from '@/components/leads/lead-dialog'
 import type { Lead } from '@/lib/types'
 
 const CLASSIF_COLORS: Record<string, string> = {
@@ -177,7 +177,7 @@ export function LeadsStatusModal({
     </Dialog>
 
     {selectedLead && (
-      <LeadDialog
+      <LeadDetailsModal
         lead={selectedLead}
         open={!!selectedLead}
         onOpenChange={open => { if (!open) setSelectedLead(null) }}
