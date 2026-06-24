@@ -66,6 +66,7 @@ export function LeadsStatusModal({
   }, [open, status, page, from, to, refreshKey])
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
@@ -190,5 +191,6 @@ export function LeadsStatusModal({
         }}
       />
     )}
+    </>
   )
 }
