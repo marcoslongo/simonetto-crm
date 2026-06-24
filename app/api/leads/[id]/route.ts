@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin, requireGerente, getSession } from '@/lib/auth'
-import { cookies } from 'next/headers'
+import { getSession } from '@/lib/auth'
 
 const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || process.env.NEXT_PUBLIC_API_URL?.replace('/wp-json/api/v1', '')
 
@@ -9,24 +8,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireGerente()
-
-    const { id } = await params
-
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth_token')?.value
-
-    if (!token) {
+    const session = await getSession()
+    if (!session) {
       return NextResponse.json(
-        { success: false, mensagem: 'Token não encontrado.' },
+        { success: false, mensagem: 'Não autenticado.' },
         { status: 401 }
       )
     }
 
+    const { id } = await params
+
     const res = await fetch(`${WP_API_BASE}/wp-json/api/v1/leads/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${session.token}`,
         'Accept': 'application/json',
       },
     })
