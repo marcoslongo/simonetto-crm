@@ -378,6 +378,26 @@ class Pos_Venda_Handler
   }
 
   /**
+   * Exclui um pós-venda e todos os registros relacionados (histórico, notas, assistências).
+   */
+  public static function delete(int $id): bool|WP_Error
+  {
+    global $wpdb;
+
+    $pv = $wpdb->get_row($wpdb->prepare("SELECT id FROM " . self::t_pv() . " WHERE id = %d", $id));
+    if (!$pv) {
+      return new WP_Error('not_found', 'Pós-venda não encontrado.', ['status' => 404]);
+    }
+
+    $wpdb->delete(self::t_hist(), ['pos_venda_id' => $id], ['%d']);
+    $wpdb->delete(self::t_nota(), ['pos_venda_id' => $id], ['%d']);
+    $wpdb->delete(self::t_asst(), ['pos_venda_id' => $id], ['%d']);
+    $wpdb->delete(self::t_pv(), ['id' => $id], ['%d']);
+
+    return true;
+  }
+
+  /**
    * Atualiza o responsável de um pós-venda.
    */
   public static function update_responsavel(int $id, int $responsavel_id, string $responsavel_nome): bool

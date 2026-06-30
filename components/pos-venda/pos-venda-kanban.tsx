@@ -852,6 +852,7 @@ export function PosVendaKanban({ lojaIds, currentUser, isGerente }: PosVendaKanb
             isGerente={isGerente}
             currentUserId={currentUser.id}
             onUpdated={updated => setItems(prev => prev.map(p => p.id === updated.id ? updated : p))}
+            onDeleted={deletedId => setItems(prev => prev.filter(p => p.id !== deletedId))}
           />
         )}
       </>

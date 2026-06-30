@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isGerente } from '@/lib/auth'
 import { PosVendaKanban } from '@/components/pos-venda/pos-venda-kanban'
 
 export const metadata = {
@@ -33,7 +33,7 @@ export default async function PosVendaPage() {
       <PosVendaKanban
         lojaIds={lojaIds}
         currentUser={{ id: user.id, nome: user.name }}
-        isGerente={user.is_gerente}
+        isGerente={isGerente(user)}
       />
     </div>
   )

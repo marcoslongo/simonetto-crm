@@ -7,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -665,14 +675,34 @@ interface PosVendaCardDialogProps {
   isGerente?: boolean
   currentUserId: number
   onUpdated: (pv: PosVenda) => void
+  onDeleted?: (id: number) => void
 }
 
-export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, currentUserId, onUpdated }: PosVendaCardDialogProps) {
+export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, currentUserId, onUpdated, onDeleted }: PosVendaCardDialogProps) {
   const [pv, setPv] = useState<PosVenda>(posVenda)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     setPv(posVenda)
   }, [posVenda])
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/pos-vendas/${pv.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        toast.success('Pós-venda excluído.')
+        setConfirmDeleteOpen(false)
+        onOpenChange(false)
+        onDeleted?.(pv.id)
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao excluir.')
+      }
+    } catch { toast.error('Erro ao excluir pós-venda.') }
+    finally { setDeleting(false) }
+  }
 
   const assistenciasAbertas = pv.assistencias_abertas ?? 0
 
@@ -709,8 +739,42 @@ export function PosVendaCardDialog({ posVenda, open, onOpenChange, isGerente, cu
                 )}
               </div>
             </div>
+            {isGerente && (
+              <div className="flex items-center gap-2 mt-3">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2 cursor-pointer"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                >
+                  <Trash2 size={14} />
+                  Excluir pós-venda
+                </Button>
+              </div>
+            )}
           </DialogHeader>
         </div>
+
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir pós-venda?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação remove o registro de pós-venda e todo o seu histórico, anotações e assistências. Não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              >
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Excluir'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* ── Tabs ───────────────────────────────────────────────────────────── */}
         <Tabs defaultValue="resumo" className="flex flex-col flex-1 overflow-hidden min-h-0">

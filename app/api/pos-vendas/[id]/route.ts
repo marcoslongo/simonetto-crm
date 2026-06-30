@@ -26,3 +26,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   })
   return NextResponse.json(await res.json(), { status: res.status })
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ success: false }, { status: 401 })
+  const { id } = await params
+  const res = await fetch(`${API}/pos-vendas/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${session.token}` },
+  })
+  return NextResponse.json(await res.json(), { status: res.status })
+}

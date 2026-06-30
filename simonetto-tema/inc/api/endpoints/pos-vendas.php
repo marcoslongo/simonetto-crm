@@ -6,6 +6,7 @@
  * POST   /api/v1/pos-vendas                       — cria registro (autenticado)
  * GET    /api/v1/pos-vendas/{id}                  — detalhe (autenticado)
  * PATCH  /api/v1/pos-vendas/{id}                  — atualiza etapa/responsável (autenticado)
+ * DELETE /api/v1/pos-vendas/{id}                  — exclui registro (gerente)
  *
  * GET    /api/v1/pos-vendas/{id}/historico        — lista histórico (autenticado)
  * POST   /api/v1/pos-vendas/{id}/historico        — adiciona comentário (autenticado)
@@ -42,8 +43,9 @@ add_action('rest_api_init', function () {
 
   // ── pos-vendas (detalhe + edição) ───────────────────────────────────────
   register_rest_route('api/v1', '/pos-vendas/(?P<id>\d+)', [
-    ['methods' => 'GET',   'callback' => 'mytheme_pos_venda_get',    'permission_callback' => 'mytheme_api_is_authenticated'],
-    ['methods' => 'PATCH', 'callback' => 'mytheme_pos_venda_update', 'permission_callback' => 'mytheme_api_is_authenticated'],
+    ['methods' => 'GET',    'callback' => 'mytheme_pos_venda_get',    'permission_callback' => 'mytheme_api_is_authenticated'],
+    ['methods' => 'PATCH',  'callback' => 'mytheme_pos_venda_update', 'permission_callback' => 'mytheme_api_is_authenticated'],
+    ['methods' => 'DELETE', 'callback' => 'mytheme_pos_venda_delete', 'permission_callback' => 'mytheme_api_is_gerente'],
   ]);
 
   // ── histórico ────────────────────────────────────────────────────────────
@@ -223,6 +225,19 @@ function mytheme_pos_venda_update(WP_REST_Request $req): WP_REST_Response
 
   $updated = Pos_Venda_Handler::get_by_id($id);
   return new WP_REST_Response(['success' => true, 'data' => $updated], 200);
+}
+
+function mytheme_pos_venda_delete(WP_REST_Request $req): WP_REST_Response
+{
+  $id = intval($req->get_param('id'));
+
+  $result = Pos_Venda_Handler::delete($id);
+
+  if (is_wp_error($result)) {
+    return new WP_REST_Response(['success' => false, 'mensagem' => $result->get_error_message()], $result->get_error_data()['status'] ?? 500);
+  }
+
+  return new WP_REST_Response(['success' => true, 'mensagem' => 'Pós-venda excluído.'], 200);
 }
 
 // ── handlers: histórico ──────────────────────────────────────────────────────
