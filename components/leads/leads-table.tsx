@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { LeadDetailsModal } from "./lead-dialog";
 import { Lead } from "@/lib/types";
-import { OrigemBadge } from "./origem-badge";
+import { OrigemBadge, UtmSourceBadge } from "./origem-badge";
 
 interface LojaOption {
   id: number;
@@ -195,7 +195,10 @@ export function LeadsTable({ leads, showLoja = false, isAdmin, isGerente, isSupe
                   </div>
                 </TableCell>
                 <TableCell className="py-3">
-                  <OrigemBadge lead={lead} />
+                  <div className="flex flex-col gap-1">
+                    <OrigemBadge lead={lead} />
+                    <UtmSourceBadge utm_source={lead.utm_source} />
+                  </div>
                 </TableCell>
 
                 <TableCell className="py-3">
