@@ -85,7 +85,7 @@ import { NovoLeadDialog } from './novo-lead-dialog'
 import { VendaNaoRealizadaDialog } from './venda-nao-realizada-dialog'
 import { VendaRealizadaDialog } from './venda-realizada-dialog'
 import { Lead, KanbanColuna, Etiqueta, VendasRealizadasConfig, VendaRealizada, VENDAS_CONFIG_PADRAO } from '@/lib/types'
-import { OrigemBadge } from './origem-badge'
+import { OrigemBadge, UtmSourceBadge } from './origem-badge'
 import { EtiquetaBadge, EtiquetasPicker } from './etiquetas-picker'
 import { useIsMobile } from '@/components/ui/use-mobile'
 
@@ -1936,6 +1936,7 @@ const DraggableLeadRow = React.memo(function DraggableLeadRow({ lead, onLeadClic
               >
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <OrigemBadge lead={lead} size="xs" />
+                  <UtmSourceBadge utm_source={lead.utm_source} size="xs" />
 
                   {lead.classificacao === "quente" && (
                     <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">

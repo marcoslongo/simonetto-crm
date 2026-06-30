@@ -474,6 +474,7 @@ class Lead_Handler
 
     $table_msgs      = $wpdb->prefix . 'mensagens';
     $table_followups = $wpdb->prefix . 'leads_followups';
+    $table_tracking  = $wpdb->prefix . 'lead_tracking';
 
     $leads = $wpdb->get_results($wpdb->prepare(
       "SELECT l.*,
@@ -486,7 +487,10 @@ class Lead_Handler
           ORDER BY f.agendado_para ASC LIMIT 1) AS proximo_followup_em,
          (SELECT f.descricao FROM {$table_followups} f
           WHERE f.lead_id = l.id AND f.concluido = 0
-          ORDER BY f.agendado_para ASC LIMIT 1) AS proximo_followup_descricao
+          ORDER BY f.agendado_para ASC LIMIT 1) AS proximo_followup_descricao,
+         (SELECT LOWER(t.utm_source) FROM {$table_tracking} t
+          WHERE t.lead_id = l.id AND t.utm_source IS NOT NULL AND t.utm_source != ''
+          ORDER BY t.id ASC LIMIT 1) AS utm_source
        FROM {$table_name} l
        {$where_sql}
        ORDER BY l.data_criacao DESC
@@ -994,6 +998,18 @@ class Lead_Handler
 
     $lid = (int) $lead['id'];
     $lead['etiquetas'] = $etiquetas_map[$lid] ?? Etiqueta_Handler::get_lead_etiquetas($lid);
+
+    // utm_source: vem da listagem via subquery; no get_by_id faz lookup pontual
+    if (!array_key_exists('utm_source', $lead)) {
+      $table_tracking = $wpdb->prefix . 'lead_tracking';
+      $raw = $wpdb->get_var($wpdb->prepare(
+        "SELECT utm_source FROM {$table_tracking} WHERE lead_id = %d AND utm_source IS NOT NULL AND utm_source != '' ORDER BY id ASC LIMIT 1",
+        $lid
+      ));
+      $lead['utm_source'] = $raw ? strtolower($raw) : null;
+    } else {
+      $lead['utm_source'] = $lead['utm_source'] ?: null;
+    }
 
     $lead['responsavel_id'] = isset($lead['responsavel_id']) && $lead['responsavel_id']
       ? (int) $lead['responsavel_id']

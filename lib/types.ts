@@ -112,6 +112,7 @@ export interface Lead {
   proximo_followup_em?: string | null;
   proximo_followup_descricao?: string | null;
   etiquetas?: Etiqueta[];
+  utm_source?: string | null;
 }
 
 export interface LeadsResponse {
