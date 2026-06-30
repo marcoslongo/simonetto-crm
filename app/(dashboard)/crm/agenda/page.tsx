@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isGerente } from '@/lib/auth'
 import { AgendaCompartilhadaView } from '@/components/crm/agenda-compartilhada-view'
 import { redirect } from 'next/navigation'
 
@@ -32,7 +32,7 @@ export default async function AgendaCompartilhadaPage() {
         lojaId={primaryLojaId}
         lojaIds={user.loja_ids}
         isAdmin={user.role === 'administrator'}
-        isGerente={user.is_gerente}
+        isGerente={isGerente(user)}
         currentUserId={user.id}
         currentUserName={user.name}
       />
