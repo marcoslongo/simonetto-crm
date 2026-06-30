@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -48,6 +49,7 @@ import {
   Pencil,
   Check,
   X,
+  Save,
 } from 'lucide-react'
 import {
   Select,
@@ -64,7 +66,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { PosVenda, PosVendaHistorico, PosVendaNota, PosVendaAssistencia, StatusAssistencia } from '@/lib/types'
+import type { PosVenda, PosVendaHistorico, PosVendaNota, PosVendaAssistencia, StatusAssistencia, FormaPagamento, VendaRealizada } from '@/lib/types'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function formatMoeda(valor?: number | null) {
@@ -125,11 +127,54 @@ function AbaResumo({ pv, isGerente, onUpdated }: { pv: PosVenda; isGerente?: boo
   const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(false)
 
+  const [editingVenda, setEditingVenda] = useState(false)
+  const [vendaForm, setVendaForm] = useState<Partial<VendaRealizada>>({})
+  const [savingVenda, setSavingVenda] = useState(false)
+
   useEffect(() => {
     setSelectedResponsavelId(pv.responsavel_id ? String(pv.responsavel_id) : 'none')
     setCurrentResponsavelNome(pv.responsavel_nome ?? '')
     setEditingResponsavel(false)
+    setEditingVenda(false)
   }, [pv.id])
+
+  const handleEditVenda = () => {
+    setVendaForm({
+      valor: pv.venda_valor ?? null,
+      data_venda: pv.venda_data_venda ?? null,
+      forma_pagamento: pv.venda_forma_pagamento ?? null,
+      numero_pedido: pv.venda_numero_pedido ?? null,
+      observacoes: pv.venda_observacoes ?? null,
+    })
+    setEditingVenda(true)
+  }
+
+  const handleSaveVenda = async () => {
+    setSavingVenda(true)
+    try {
+      const res = await fetch(`/api/leads/${pv.lead_id}/venda-realizada`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendaForm),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setEditingVenda(false)
+        onUpdated?.({
+          ...pv,
+          venda_valor: vendaForm.valor ?? null,
+          venda_data_venda: vendaForm.data_venda ?? null,
+          venda_forma_pagamento: vendaForm.forma_pagamento ?? null,
+          venda_numero_pedido: vendaForm.numero_pedido ?? null,
+          venda_observacoes: vendaForm.observacoes ?? null,
+        })
+        toast.success('Dados da venda salvos com sucesso.')
+      } else {
+        toast.error(data.mensagem ?? 'Erro ao salvar dados da venda.')
+      }
+    } catch { toast.error('Erro ao salvar dados da venda.') }
+    finally { setSavingVenda(false) }
+  }
 
   const handleEditResponsavel = async () => {
     setEditingResponsavel(true)
@@ -190,24 +235,130 @@ function AbaResumo({ pv, isGerente, onUpdated }: { pv: PosVenda; isGerente?: boo
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+              <DollarSign className="h-4 w-4 text-emerald-600" />
+            </div>
+            <p className="text-sm font-semibold">Dados da Venda</p>
           </div>
-          <p className="text-sm font-semibold">Dados da Venda</p>
+          {!editingVenda && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleEditVenda}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-card-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Editar dados da venda</TooltipContent>
+            </Tooltip>
+          )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InfoRow icon={DollarSign} label="Valor"         value={formatMoeda(pv.venda_valor)} />
-          <InfoRow icon={Calendar}   label="Data da Venda" value={formatDate(pv.venda_data_venda)} />
-          <InfoRow icon={CreditCard} label="Forma Pgto."   value={pv.venda_forma_pagamento ? pv.venda_forma_pagamento.split(',').map(v => FORMA_PAGAMENTO_LABEL[v] ?? v).join(' + ') : undefined} />
-          <InfoRow icon={Package}    label="Nº do Pedido"  value={pv.venda_numero_pedido ? `#${pv.venda_numero_pedido}` : undefined} />
-          <InfoRow icon={User}       label="Vendedor"      value={pv.venda_atendente_nome} />
-        </div>
-        {pv.venda_observacoes && (
-          <div className="mt-4 rounded-lg bg-muted/40 p-3">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-medium mb-1">Observações da Venda</p>
-            <p className="text-sm text-foreground whitespace-pre-line">{pv.venda_observacoes}</p>
+
+        {editingVenda ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pv-valor" className="text-xs">Valor da venda (R$)</Label>
+                <Input
+                  id="pv-valor"
+                  placeholder="0,00"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={vendaForm.valor != null ? String(vendaForm.valor) : ''}
+                  onChange={e => setVendaForm(f => ({ ...f, valor: e.target.value ? Number(e.target.value) : null }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pv-data" className="text-xs">Data da venda</Label>
+                <Input
+                  id="pv-data"
+                  type="date"
+                  value={vendaForm.data_venda ?? ''}
+                  onChange={e => setVendaForm(f => ({ ...f, data_venda: e.target.value || null }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Forma de pagamento</Label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.entries(FORMA_PAGAMENTO_LABEL) as [FormaPagamento, string][]).map(([value, label]) => {
+                  const selected = vendaForm.forma_pagamento?.split(',').includes(value) ?? false
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setVendaForm(prev => {
+                        const current = prev.forma_pagamento ? prev.forma_pagamento.split(',') : []
+                        const updated = selected ? current.filter(v => v !== value) : [...current, value]
+                        return { ...prev, forma_pagamento: updated.length > 0 ? updated.join(',') : null }
+                      })}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs border transition-colors',
+                        selected
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white text-foreground border-border hover:border-emerald-400'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pv-pedido" className="text-xs">Número do pedido</Label>
+              <Input
+                id="pv-pedido"
+                placeholder="Ex.: 001234"
+                value={vendaForm.numero_pedido ?? ''}
+                onChange={e => setVendaForm(f => ({ ...f, numero_pedido: e.target.value || null }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pv-obs" className="text-xs">Observações</Label>
+              <Textarea
+                id="pv-obs"
+                placeholder="Informações adicionais..."
+                value={vendaForm.observacoes ?? ''}
+                onChange={e => setVendaForm(f => ({ ...f, observacoes: e.target.value || null }))}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleSaveVenda} disabled={savingVenda} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+                {savingVenda ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {savingVenda ? 'Salvando...' : 'Salvar dados'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditingVenda(false)} disabled={savingVenda}>
+                Cancelar
+              </Button>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InfoRow icon={DollarSign} label="Valor"         value={formatMoeda(pv.venda_valor)} />
+              <InfoRow icon={Calendar}   label="Data da Venda" value={formatDate(pv.venda_data_venda)} />
+              <InfoRow icon={CreditCard} label="Forma Pgto."   value={pv.venda_forma_pagamento ? pv.venda_forma_pagamento.split(',').map(v => FORMA_PAGAMENTO_LABEL[v] ?? v).join(' + ') : undefined} />
+              <InfoRow icon={Package}    label="Nº do Pedido"  value={pv.venda_numero_pedido ? `#${pv.venda_numero_pedido}` : undefined} />
+              <InfoRow icon={User}       label="Vendedor"      value={pv.venda_atendente_nome} />
+            </div>
+            {pv.venda_observacoes && (
+              <div className="mt-4 rounded-lg bg-muted/40 p-3">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-medium mb-1">Observações da Venda</p>
+                <p className="text-sm text-foreground whitespace-pre-line">{pv.venda_observacoes}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
